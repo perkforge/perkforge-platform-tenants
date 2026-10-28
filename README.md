@@ -2,14 +2,16 @@
 
 Platform-owned, explicit **paused tenant enrollment**. Cluster roots select small
 tenant folders; those folders point to external tenant app repositories under
-scoped identities. This repository has no Big Bang app configuration, charts,
-namespace/RBAC provisioning, credentials or live bootstrap.
+scoped identities. This illustration has no Big Bang app configuration, charts, implemented tenant
+foundation controls, credentials or live bootstrap. Platform-owned reusable
+tenant foundations and per-tenant overrides (namespace/RBAC, NetworkPolicy,
+quota and enrollment) belong here as they are reviewed, not in app repositories.
 
 - [local](clusters/local/kustomization.yaml) and [dev](clusters/dev/kustomization.yaml)
   explicitly select [portal enrollment](tenants/portal/README.md).
 - Omit a tenant resource from a cluster root to omit enrollment on that cluster.
   There is no automatic repository or directory discovery.
-- The platform repository owns prerequisites and references this repository with
+- The platform bootstrap owns cluster/provider prerequisites and references this repository with
   a pinned GitRepository/Flux Kustomization. Tenant repositories own app manifests
   and values; tenants cannot edit this privileged enrollment boundary.
 

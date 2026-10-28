@@ -22,8 +22,12 @@ not enroll every cluster or provision anything.
   This repository owns no app HelmRelease and contains no Big Bang package values.
 
 All accounts, namespaces, secret references and permissions are prerequisites,
-not created grants. Platform owns namespace/quota/PSA/network/admission, scoped
-identities, credentials and recovery outside this repository. RBAC plus admission
+not created grants. Platform owns tenant namespace/quota/PSA/network/admission,
+scoped identities and enrollment definitions in this repository: reuse reviewed
+shared foundations with explicit per-tenant opt-in/overrides, rather than
+duplicating every tenant foundation. Those controls are not implemented in this
+illustration. Cluster/provider bootstrap remains in the platform repository;
+credentials are provisioned separately, never stored here. RBAC plus admission
 must constrain allowed release/source refs, identities, target/storage namespaces,
 image/runtime/secret references and release-storage access. RBAC alone cannot
 constrain arbitrary CR fields. Missing prerequisites must fail closed. No broad
