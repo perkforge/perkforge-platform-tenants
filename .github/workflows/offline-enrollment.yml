@@ -13,8 +13,7 @@ jobs:
       run: |
         kubectl version --client
         kubectl kustomize clusters/local > "$RUNNER_TEMP/enrollment-local.yaml"
-        kubectl kustomize clusters/dev-il2 > "$RUNNER_TEMP/enrollment-dev-il2.yaml"
-        kubectl kustomize clusters/dev-il5 > "$RUNNER_TEMP/enrollment-dev-il5.yaml"
+        kubectl kustomize clusters/dev > "$RUNNER_TEMP/enrollment-dev.yaml"
     - name: Verify an explicitly empty cluster enrolls nothing
       run: |
         mkdir -p "$RUNNER_TEMP/enrollment-empty"

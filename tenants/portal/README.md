@@ -39,15 +39,14 @@ RBAC, live secrets or fake proof of tenant isolation is supplied here.
 ## Pin and readiness limits
 
 The exact review-stage portal pin is
-`a75735107b222d92183ab9aafb539a38422028d2` from portal PR #5. It contains the
+`4bad492e26d09f81faf43c888f57a8881787d688` from portal PR #5. It contains the
 paused tenant-owned named-cluster entrypoints and references the existing
 `bundles/portal/chart` (`household-portal` 0.1.0), rather than copying the chart.
 Application values default disabled; no image or client-secret value is approved.
 A source-read Secret name is a reference only, not a credential in Git.
 The app roots choose their own environment inputs; enrollment Git does not copy
-app environment values. The `dev-il2` and `dev-il5` roots share dev environment settings but select
-il2 and il5 app profiles respectively. All three cluster roots now explicitly
-enroll their matching app entrypoints; no directory is automatically discovered.
+app environment values. Only `local` and `dev` roots are supplied, both using il2;
+each explicitly enrolls its matching app entrypoint. No directory is automatically discovered.
 
 `spec.suspend: true` stops both enrollment objects; `prune: false` adds no
 root deletion authority. The caller's platform root and the app release are also
@@ -63,7 +62,7 @@ new controller or replacement Flux lifecycle is introduced.
 
 Selection annotations must match the platform parent's declared cluster,
 environment and profile and the app root's actual environment/profile resources.
-The IL5 example is an unassessed target, not an implemented IL5 boundary. App
+The il2 profile is illustrative, not an implemented IL authorization boundary. App
 profiles only select illustrative app audiences; they cannot supply platform
 RBAC/network/admission controls. Those controls require platform-owned design,
 review and future enforcement independent of any app annotation or label.
