@@ -31,13 +31,11 @@ No empty/fake foundation policy profiles are added here; reviewed platform-owned
 controls remain unfinished and cannot be configured by app profile values.
 
 All sources/reconcilers are suspended; this is review-stage configuration only.
-The current portal pin is a feature commit from
-[portal PR #5](https://github.com/perkforge/perkforge-tenant-portal/pull/5), not an
-approved production revision. Review order: portal app PR first, then update the
-enrollment pin to its approved merged commit and revalidate/merge enrollment;
-then update/revalidate the platform proposal's enrollment pin and merge that.
-Squash/rebase merges can change SHAs. Nothing automatically advances pins or
-unsuspends after merge; activation and live security tests need separate approval.
+Portal PR #5 is merged; the source pins its verified main commit
+`5a60023a2d1f6d36bd824a6e3ef66a06b6793e80`. Merge enrollment next after checks;
+then pause to advance/revalidate platform PR #47's enrollment pin to the actual
+merged commit. Squash/rebase can change SHAs. Nothing automatically advances
+pins or unsuspends after merge; activation and live security tests need separate approval.
 
 Offline build checks (no API access):
 

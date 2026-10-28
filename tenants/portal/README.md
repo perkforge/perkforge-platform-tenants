@@ -38,8 +38,8 @@ RBAC, live secrets or fake proof of tenant isolation is supplied here.
 
 ## Pin and readiness limits
 
-The exact review-stage portal pin is
-`4bad492e26d09f81faf43c888f57a8881787d688` from portal PR #5. It contains the
+The verified merged-main portal pin is
+`5a60023a2d1f6d36bd824a6e3ef66a06b6793e80` from merged portal PR #5. It contains the
 paused tenant-owned named-cluster entrypoints and references the existing
 `bundles/portal/chart` (`household-portal` 0.1.0), rather than copying the chart.
 Application values default disabled; no image or client-secret value is approved.
