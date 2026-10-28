@@ -7,7 +7,7 @@ foundation controls, credentials or live bootstrap. Platform-owned reusable
 tenant foundations and per-tenant overrides (namespace/RBAC, NetworkPolicy,
 quota and enrollment) belong here as they are reviewed, not in app repositories.
 
-- [local](clusters/local/kustomization.yaml) and [dev](clusters/dev/kustomization.yaml)
+- [local](clusters/local/kustomization.yaml), [dev](clusters/dev/kustomization.yaml),
   and [dev-secondary](clusters/dev-secondary/kustomization.yaml) explicitly select
   [portal enrollment](tenants/portal/README.md).
 - Omit a tenant resource from a cluster root to omit enrollment on that cluster.

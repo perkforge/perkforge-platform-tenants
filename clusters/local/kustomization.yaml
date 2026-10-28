@@ -7,7 +7,10 @@ patches:
     group: kustomize.toolkit.fluxcd.io
     kind: Kustomization
     name: tenant-portal
-  patch: "- op: replace\n  path: /spec/path\n  value: ./gitops/clusters/local"
+  patch: |-
+    - op: replace
+      path: /spec/path
+      value: ./gitops/clusters/local
 commonAnnotations:
   example.perkforge.io/cluster: local
   example.perkforge.io/environment: local
