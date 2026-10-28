@@ -1,7 +1,9 @@
 # Portal enrollment: platform-owned, paused
 
 `source.yaml` pins the external tenant deployment repository;
-`reconcile.yaml` selects its `gitops/portal` entrypoint. The local Kustomize file
+each cluster root selects `gitops/clusters/<name>` with a single `spec.path`
+patch on `reconcile.yaml`. The reusable base deliberately has no valid default
+cluster path, so forgetting a selection fails rather than choosing local silently. The local Kustomize file
 puts these two paused objects in proposed namespace `tenant-example-portal`.
 Both cluster roots explicitly select this folder. The definition alone does
 not enroll every cluster or provision anything.
@@ -16,7 +18,8 @@ not enroll every cluster or provision anything.
   and targetNamespace `tenant-example-portal`. It may apply only approved tenant
   app release/config objects and cannot change platform policy, identities,
   enrollment sources/reconcilers or privileged namespaces.
-- The tenant repository owns `gitops/portal` and its HelmRelease/values. That
+- The tenant repository owns `gitops/clusters/<name>`, shared app defaults,
+  environment values and its HelmRelease. That
   release sets `spec.serviceAccountName: portal-deployer` and separate
   `storageNamespace: tenant-example-portal-release`; runtime uses `portal-runtime`.
   This repository owns no app HelmRelease and contains no Big Bang package values.
@@ -36,11 +39,14 @@ RBAC, live secrets or fake proof of tenant isolation is supplied here.
 ## Pin and readiness limits
 
 The exact review-stage portal pin is
-`c42274c4a5fffd237d4351ad5126d865fcaab8f6` from portal PR #5. It contains the
-paused tenant-owned `gitops/portal` entrypoint and references the existing
+`43ea0aba6f4c66fd6aa4d87800ac62fb6d0459e0` from portal PR #5. It contains the
+paused tenant-owned named-cluster entrypoints and references the existing
 `bundles/portal/chart` (`household-portal` 0.1.0), rather than copying the chart.
 Application values default disabled; no image or client-secret value is approved.
 A source-read Secret name is a reference only, not a credential in Git.
+The app roots choose their own environment inputs; enrollment Git does not copy
+app environment values. The extra app-only `dev-secondary` root shares dev
+settings but is not automatically enrolled here.
 
 `spec.suspend: true` stops both enrollment objects; `prune: false` adds no
 root deletion authority. The caller's platform root and the app release are also

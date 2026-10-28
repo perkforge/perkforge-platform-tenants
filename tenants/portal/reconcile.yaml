@@ -7,7 +7,7 @@ spec:
   suspend: true
   interval: 5m
   timeout: 5m
-  path: ./gitops/portal # Tenant-owned entrypoint on the reviewed feature branch.
+  path: ./gitops/clusters/CHOOSE-CLUSTER # Each cluster root must select its app path.
   sourceRef:
     kind: GitRepository
     name: tenant-portal

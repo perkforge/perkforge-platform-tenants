@@ -15,6 +15,11 @@ quota and enrollment) belong here as they are reviewed, not in app repositories.
   a pinned GitRepository/Flux Kustomization. Tenant repositories own app manifests
   and values; tenants cannot edit this privileged enrollment boundary.
 
+Each cluster root explicitly selects the tenant app's named-cluster path with a
+small one-field patch. App environment selection stays in app Git; multiple app
+clusters can share environment defaults without adding platform/Big Bang values.
+The local/dev source pins and paths must be advanced and validated together.
+
 All sources/reconcilers are suspended; this is review-stage configuration only.
 The current portal pin is a feature commit from
 [portal PR #5](https://github.com/perkforge/perkforge-tenant-portal/pull/5), not an
