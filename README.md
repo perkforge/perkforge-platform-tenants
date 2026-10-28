@@ -31,11 +31,14 @@ No empty/fake foundation policy profiles are added here; reviewed platform-owned
 controls remain unfinished and cannot be configured by app profile values.
 
 All sources/reconcilers are suspended; this is review-stage configuration only.
-Portal PR #5 is merged; the source pins its verified main commit
-`5a60023a2d1f6d36bd824a6e3ef66a06b6793e80`. Merge enrollment next after checks;
-then pause to advance/revalidate platform PR #47's enrollment pin to the actual
-merged commit. Squash/rebase can change SHAs. Nothing automatically advances
-pins or unsuspends after merge; activation and live security tests need separate approval.
+Portal config release `v0.1.0` is published and selected by `spec.ref.tag`.
+`release-evidence.json` records its resolved source commit separately; CI rejects
+missing/unpublished or moved tags and validates the actual checked-out app paths.
+Merge this tag-reference PR next, then review/merge its generated enrollment
+release PR. Only the new enrollment release will contain this conversion;
+platform must not select enrollment v0.1.0 and claim the chain is tag-based.
+Platform's dependency/bootstrap conversion follows that release in separate PRs.
+No merge or release unsuspends anything; live security tests need separate approval.
 
 Offline build checks (no API access):
 
@@ -45,7 +48,8 @@ kubectl kustomize clusters/dev > /tmp/tenant-enrollments-dev.yaml
 ```
 
 CI uses the runner's existing kubectl to build both roots and the empty opt-out
-case, without installing dependencies or contacting a Kubernetes API. Local
+case. PyYAML parses test inputs; read-only GitHub calls verify the published app
+tag before its checkout/path/context tests. No Kubernetes API is contacted. Local
 cross-repository checks also verify pins/paths, scoped field contracts and app
 chart inactivity. These checks do not prove live authorization or isolation.
 

@@ -36,9 +36,9 @@ portal chart/image versions are independent; this does not bump either of those.
    Resolve and verify the tag before any gated bootstrap apply. The resulting
    platform release includes the tag-aware bootstrap. No floating main/latest ref.
 
-These are separate sequential PRs because **none of these repos has a release
-at setup time**. Current verified commit refs intentionally remain until the
-corresponding releases exist. No missing tag is accepted as a deployment input.
+The initial v0.1.0 releases now exist. This enrollment change selects portal
+v0.1.0; its own next release must publish before platform can select a compatible
+enrollment tag. Platform/bootstrap commit refs remain until those staged PRs. No missing tag is accepted as a deployment input.
 Big Bang's existing 3.35.1 tag/commit verification and third-party Action SHA pins
 remain independent and unchanged. All deployment stays paused/disabled.
 
@@ -85,3 +85,23 @@ same gated workflow or use a separately reviewed event/token design.
 Offline tests use the actual release-please 17.3.0 library bundled by the action,
 plus simulated read-only tag lookups. No API writes occur in tests. Keep the
 library test version and action pin synchronized on upgrades.
+
+## Enrollment dependency checks
+
+`tenants/portal/source.yaml` uses `ref.tag`; `release-evidence.json` separately
+records the reviewed resolution. On updates, verify the published tag first,
+update both small files in a PR, and run configuration checks. CI compares live
+release/tag resolution with recorded evidence before checking out the exact tag.
+It then compares source URL, selected paths, environment/profile, identities and
+paused state against the actual app build; a moved tag is a failure, not a refresh.
+Local offline tests need `TENANT_APP_CHECKOUT` at the recorded tag/commit:
+
+```sh
+TENANT_APP_CHECKOUT=/path/to/perkforge-tenant-portal \
+  python3 scripts/test_enrollment_release.py
+```
+
+Merge with a Conventional `fix` subject to propose the next patch release
+(expected 0.1.1 if no other eligible changes intervene). Verify that published
+release contains this tag selection before updating platform. No tag is created
+by this feature PR, and no existing version is overwritten.
