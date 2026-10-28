@@ -54,3 +54,8 @@ explicit app selections; no il5 deployment input is included. To add a tenant,
 add a small platform-owned folder under `tenants/`, declare its reviewed foundation
 and scoped identity contracts, then include it only in the intended cluster roots.
 Never place those controls in the app repository.
+
+## Configuration versions
+
+See [RELEASING.md](RELEASING.md) for reviewed release PRs, immutable-tag
+expectations, first-release ordering and the staged switch to tag-based refs.
