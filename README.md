@@ -7,8 +7,8 @@ foundation controls, credentials or live bootstrap. Platform-owned reusable
 tenant foundations and per-tenant overrides (namespace/RBAC, NetworkPolicy,
 quota and enrollment) belong here as they are reviewed, not in app repositories.
 
-- [local](clusters/local/kustomization.yaml), [dev](clusters/dev/kustomization.yaml),
-  and [dev-secondary](clusters/dev-secondary/kustomization.yaml) explicitly select
+- [local](clusters/local/kustomization.yaml), [dev-il2](clusters/dev-il2/kustomization.yaml),
+  and [dev-il5](clusters/dev-il5/kustomization.yaml) explicitly select
   [portal enrollment](tenants/portal/README.md).
 - Omit a tenant resource from a cluster root to omit enrollment on that cluster.
   There is no automatic repository or directory discovery.
@@ -19,11 +19,11 @@ quota and enrollment) belong here as they are reviewed, not in app repositories.
 Each cluster root explicitly selects the tenant app's named-cluster path with a
 small one-field patch. App environment selection stays in app Git; multiple app
 clusters can share environment defaults without adding platform/Big Bang values.
-The local/dev source pins and paths must be advanced and validated together.
+The local/dev-il2/dev-il5 source pins and paths must be advanced and validated together.
 
 Cluster context is explicit native YAML: `commonAnnotations` records cluster,
 environment and profile on the built enrollment objects. Local selects local/il2;
-dev selects dev/il2; dev-secondary selects dev/il5. App Git selects matching
+dev-il2 selects dev/il2; dev-il5 selects dev/il5. App Git selects matching
 reusable environment/profile inputs. Cross-repository tests compare protected
 platform selection, enrollment metadata/path and app metadata/inputs at exact
 pins, including deliberately mismatched environment/profile/target cases.
@@ -44,7 +44,7 @@ Offline build checks (no API access):
 
 ```sh
 kubectl kustomize clusters/local > /tmp/tenant-enrollments-local.yaml
-kubectl kustomize clusters/dev > /tmp/tenant-enrollments-dev.yaml
+kubectl kustomize clusters/dev-il2 > /tmp/tenant-enrollments-dev-il2.yaml
 ```
 
 CI uses the runner's existing kubectl to build both roots and the empty opt-out

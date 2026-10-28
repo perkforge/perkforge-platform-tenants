@@ -39,13 +39,13 @@ RBAC, live secrets or fake proof of tenant isolation is supplied here.
 ## Pin and readiness limits
 
 The exact review-stage portal pin is
-`158fb714fb059252c8e113179c401a413db2b818` from portal PR #5. It contains the
+`a75735107b222d92183ab9aafb539a38422028d2` from portal PR #5. It contains the
 paused tenant-owned named-cluster entrypoints and references the existing
 `bundles/portal/chart` (`household-portal` 0.1.0), rather than copying the chart.
 Application values default disabled; no image or client-secret value is approved.
 A source-read Secret name is a reference only, not a credential in Git.
 The app roots choose their own environment inputs; enrollment Git does not copy
-app environment values. The `dev` and `dev-secondary` roots share dev environment settings but select
+app environment values. The `dev-il2` and `dev-il5` roots share dev environment settings but select
 il2 and il5 app profiles respectively. All three cluster roots now explicitly
 enroll their matching app entrypoints; no directory is automatically discovered.
 

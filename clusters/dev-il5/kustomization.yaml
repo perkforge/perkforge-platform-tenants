@@ -10,8 +10,8 @@ patches:
   patch: |-
     - op: replace
       path: /spec/path
-      value: ./gitops/clusters/dev
+      value: ./gitops/clusters/dev-il5
 commonAnnotations:
-  example.perkforge.io/cluster: dev
+  example.perkforge.io/cluster: dev-il5
   example.perkforge.io/environment: dev
-  example.perkforge.io/profile: il2
+  example.perkforge.io/profile: il5
