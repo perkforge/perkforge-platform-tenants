@@ -38,10 +38,11 @@ RBAC, live secrets or fake proof of tenant isolation is supplied here.
 
 ## Pin and readiness limits
 
-The verified merged-main portal pin is
-`5a60023a2d1f6d36bd824a6e3ef66a06b6793e80` from merged portal PR #5. It contains the
-paused tenant-owned named-cluster entrypoints and references the existing
-`bundles/portal/chart` (`household-portal` 0.1.0), rather than copying the chart.
+The source selects published portal config release **`v0.1.0`** with `ref.tag`.
+Its resolved commit and publication evidence live in root `release-evidence.json`,
+not deployment configuration. CI verifies the stable release/tag resolution and
+checks its actual paused named-cluster entrypoints. The release references the
+existing `bundles/portal/chart` (`household-portal` 0.1.0), not a copied chart.
 Application values default disabled; no image or client-secret value is approved.
 A source-read Secret name is a reference only, not a credential in Git.
 The app roots choose their own environment inputs; enrollment Git does not copy

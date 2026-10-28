@@ -12,6 +12,39 @@ jobs:
       KUBECONFIG: /dev/null
     steps:
     - uses: actions/checkout@v4
+    - run: python3 -m pip install PyYAML==6.0.3
+    # Test fixture selection only; this is not tenant discovery or a config generator.
+    - name: Read reviewed app release evidence
+      id: app
+      run: |
+        python3 - <<'PYTHON'
+        import os
+        from scripts.test_enrollment_release import selected_release
+        release = selected_release()
+        with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+            for key in ('repository', 'tag', 'resolvedCommit'):
+                output.write(key + '=' + release[key] + '\n')
+        PYTHON
+    - name: Reject missing or moved release before checkout
+      env:
+        GH_TOKEN: ${{ github.token }}
+        APP_REPOSITORY: ${{ steps.app.outputs.repository }}
+        APP_TAG: ${{ steps.app.outputs.tag }}
+        APP_COMMIT: ${{ steps.app.outputs.resolvedCommit }}
+      run: |
+        set -euo pipefail
+        scripts/verify-release-ref.sh "$APP_REPOSITORY" "$APP_TAG" "$APP_COMMIT" | tee -a "$GITHUB_STEP_SUMMARY"
+    - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      with:
+        repository: ${{ steps.app.outputs.repository }}
+        ref: ${{ steps.app.outputs.tag }}
+        path: .inputs/app
+        fetch-depth: 0
+        persist-credentials: false
+    - name: Verify actual released app paths, context and paused scope
+      env:
+        TENANT_APP_CHECKOUT: ${{ github.workspace }}/.inputs/app
+      run: python3 scripts/test_enrollment_release.py
     - name: Build explicit cluster selections without API access
       run: |
         kubectl version --client
