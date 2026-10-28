@@ -1,0 +1,14 @@
+# Platform-owned enrollment of the tenant-owned application repository.
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: tenant-portal
+spec:
+  suspend: true
+  interval: 10m
+  url: https://github.com/perkforge/perkforge-tenant-portal.git
+  ref:
+    # Review-stage feature commit from portal PR #5; advance after its merge.
+    commit: c42274c4a5fffd237d4351ad5126d865fcaab8f6
+  secretRef:
+    name: portal-source-read # Scoped read reference only; not provisioned.
