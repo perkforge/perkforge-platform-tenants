@@ -9,6 +9,6 @@ spec:
   url: https://github.com/perkforge/perkforge-tenant-portal.git
   ref:
     # Review-stage feature commit from portal PR #5; advance after its merge.
-    commit: 43ea0aba6f4c66fd6aa4d87800ac62fb6d0459e0
+    commit: 158fb714fb059252c8e113179c401a413db2b818
   secretRef:
     name: portal-source-read # Scoped read reference only; not provisioned.

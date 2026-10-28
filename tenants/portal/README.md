@@ -39,14 +39,15 @@ RBAC, live secrets or fake proof of tenant isolation is supplied here.
 ## Pin and readiness limits
 
 The exact review-stage portal pin is
-`43ea0aba6f4c66fd6aa4d87800ac62fb6d0459e0` from portal PR #5. It contains the
+`158fb714fb059252c8e113179c401a413db2b818` from portal PR #5. It contains the
 paused tenant-owned named-cluster entrypoints and references the existing
 `bundles/portal/chart` (`household-portal` 0.1.0), rather than copying the chart.
 Application values default disabled; no image or client-secret value is approved.
 A source-read Secret name is a reference only, not a credential in Git.
 The app roots choose their own environment inputs; enrollment Git does not copy
-app environment values. The extra app-only `dev-secondary` root shares dev
-settings but is not automatically enrolled here.
+app environment values. The `dev` and `dev-secondary` roots share dev environment settings but select
+il2 and il5 app profiles respectively. All three cluster roots now explicitly
+enroll their matching app entrypoints; no directory is automatically discovered.
 
 `spec.suspend: true` stops both enrollment objects; `prune: false` adds no
 root deletion authority. The caller's platform root and the app release are also
@@ -59,3 +60,10 @@ The [official Flux multi-tenancy example](https://github.com/fluxcd/flux2-multi-
 provides the parent/child pattern. Explicit per-cluster Kustomize resources are
 the selection mechanism here; no Argo-style generator, Flux Operator ResourceSet,
 new controller or replacement Flux lifecycle is introduced.
+
+Selection annotations must match the platform parent's declared cluster,
+environment and profile and the app root's actual environment/profile resources.
+The IL5 example is an unassessed target, not an implemented IL5 boundary. App
+profiles only select illustrative app audiences; they cannot supply platform
+RBAC/network/admission controls. Those controls require platform-owned design,
+review and future enforcement independent of any app annotation or label.

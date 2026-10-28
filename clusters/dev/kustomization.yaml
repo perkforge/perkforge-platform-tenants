@@ -7,7 +7,8 @@ patches:
     group: kustomize.toolkit.fluxcd.io
     kind: Kustomization
     name: tenant-portal
-  patch: |-
-    - op: replace
-      path: /spec/path
-      value: ./gitops/clusters/dev
+  patch: "- op: replace\n  path: /spec/path\n  value: ./gitops/clusters/dev"
+commonAnnotations:
+  example.perkforge.io/cluster: dev
+  example.perkforge.io/environment: dev
+  example.perkforge.io/profile: il2
