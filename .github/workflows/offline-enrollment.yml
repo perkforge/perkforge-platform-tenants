@@ -1,0 +1,22 @@
+name: offline-enrollment
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    env:
+      KUBECONFIG: /dev/null
+    steps:
+    - uses: actions/checkout@v4
+    - name: Build explicit cluster selections without API access
+      run: |
+        kubectl version --client
+        kubectl kustomize clusters/local > "$RUNNER_TEMP/enrollment-local.yaml"
+        kubectl kustomize clusters/dev > "$RUNNER_TEMP/enrollment-dev.yaml"
+    - name: Verify an explicitly empty cluster enrolls nothing
+      run: |
+        mkdir -p "$RUNNER_TEMP/enrollment-empty"
+        printf 'apiVersion: kustomize.config.k8s.io/v1beta1\nkind: Kustomization\nresources: []\n' > "$RUNNER_TEMP/enrollment-empty/kustomization.yaml"
+        kubectl kustomize "$RUNNER_TEMP/enrollment-empty" > "$RUNNER_TEMP/enrollment-empty.yaml"
+        test ! -s "$RUNNER_TEMP/enrollment-empty.yaml"

@@ -1,0 +1,17 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+- ../../tenants/portal
+patches:
+- target:
+    group: kustomize.toolkit.fluxcd.io
+    kind: Kustomization
+    name: tenant-portal
+  patch: |-
+    - op: replace
+      path: /spec/path
+      value: ./gitops/clusters/local
+commonAnnotations:
+  example.perkforge.io/cluster: local
+  example.perkforge.io/environment: local
+  example.perkforge.io/profile: il2
