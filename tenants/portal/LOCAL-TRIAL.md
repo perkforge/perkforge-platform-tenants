@@ -49,7 +49,7 @@ separate approval. Offline proposal checks do not validate a future published ch
   `portal-local-tls` and `portal-identity-ca/ca.crt`, then explicitly apply routing.
 - Separately approve read-only GHCR credential delivery as runtime
   `portal-registry-existing` and verify an authenticated pull; never reuse Registry1
-  credentials against GHCR or change package visibility. No delivery is implemented here.
+  credentials against GHCR or change package visibility. The default-off registry delivery playbook still requires separate live approval.
 - Enable only the reviewed portal app and resume protected enrollment/source/
   reconciler/release in order. Test real admin SSO, developer/no-grants denials,
   signed tenant-only fixtures, session/logout, network and scoped identity denials.
@@ -64,18 +64,50 @@ preserve namespaces, credentials, policies and existing Headlamp/Keycloak/Flux.
 No restart is needed. Capture sanitized failures/retries; never widen roles to pass.
 Publication does not authorize credential, security, host/network or workload writes.
 
-## Private registry delivery contract (not implemented)
+## Private registry delivery (default off)
 
 The app references `tenant-portal/portal-registry-existing` as an imagePullSecret.
 It is not a mounted workload credential. Before activation, separately approve a
 read-only GHCR `read:packages` credential with access to only the private portal
 package where supported. Agree its owner, expiry/rotation, owner-only local file
-and exact Secret delivery method. A future explicitly gated, `no_log` delivery
-step must accept a preexisting credential file without printing arguments/data,
-verify private regular-file ownership/mode, and create only that named
+and exact Secret delivery method. `ansible/deliver-portal-registry.yaml` accepts only a preexisting `portal_registry_file`
+with one `auths.ghcr.io.auth` entry. It rejects helpers/other registries, symlinks,
+non-owner/private-mode files and malformed credentials. Its `no_log` gate verifies
+clean published source and exact cluster UID, then creates only that named
 `kubernetes.io/dockerconfigjson` Secret in `tenant-portal` via private stdin.
+It defaults off (`portal_registry_apply: false`), and check mode reads no files/API.
 The current input playbook deliberately delivers only OIDC/TLS/public-CA inputs;
-it does not read or provision registry credentials. Do not use Registry1 credentials
+it does not read or provision registry credentials; the new separate registry
+playbook is the only registry input path. Do not use Registry1 credentials
 for GHCR, persist Docker login, change package visibility, or place credentials in Git.
 Verify an authenticated manifest/pull before unpausing; preserve failed pull evidence
 without credential headers. Secret readers can reuse the credential.
+
+
+## Activation ordering and containment
+
+Preparation changes never clear suspension or set app enablement. Activation is a
+separate reviewed diff: local app `enabled: true` plus local HelmRelease unsuspended;
+local enrollment source/child unsuspended; local platform enrollment source/parent
+unsuspended. Shared defaults and dev stay paused/disabled. Publish and select actual
+release tags in app → enrollment → platform order; never substitute future tags.
+The activation review must update pause-only regression expectations while retaining
+dev/default assertions and adding exact local activation assertions.
+
+Live order after explicit approval: verify UID/releases/headroom; apply generic
+platform and tenant foundations; verify admission warnings/server dry-run denials;
+deliver portal registry/OIDC/TLS/CA inputs and configure the owned client; validate
+TLS, authenticated image pull and routes; select the reviewed platform stage last.
+Sources and child reconciliation then proceed through the reviewed scoped identities.
+No resource relies on Kustomize file order: foundations/inputs are explicit operator
+prerequisites before unpaused app reconciliation. Routing is separately gated.
+
+For containment, suspend root `flux-system/cluster-root` first so it cannot
+restore parent reconciliation, then parent `flux-system/tenant-enrollments`, child
+`tenant-portal-config/tenant-portal`, app HelmRelease `tenant-portal-config/portal`
+and its source. Pause only the portal HelmChart source as needed to stop retries.
+Scale only `tenant-portal/portal` to zero after reconcilers are paused. Preserve
+namespaces, policies, credentials, data and existing Headlamp/Keycloak/Flux Pods.
+The shared root pause temporarily stops GitOps changes, not running services.
+Return to a reviewed paused platform stage/tag before resuming that root; an old
+app tag alone cannot override admission or automatically remove portal safely.

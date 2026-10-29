@@ -1,0 +1,30 @@
+# Included only inside the explicit no_log approval gate. No Docker login.
+- name: Inspect the credential file without following symbolic links
+  ansible.builtin.stat: {path: '{{ portal_registry_file }}', follow: false}
+  register: portal_registry_stat
+- name: Require a private regular file owned by the operator
+  ansible.builtin.assert:
+    that:
+    - portal_registry_stat.stat.isreg | default(false)
+    - not (portal_registry_stat.stat.islnk | default(false))
+    - portal_registry_stat.stat.mode == '0600'
+    - portal_registry_stat.stat.pw_name == lookup('ansible.builtin.env', 'USER')
+    - portal_registry_stat.stat.size > 0
+- name: Parse only the approved existing credential file
+  ansible.builtin.set_fact:
+    portal_registry_config: "{{ lookup('ansible.builtin.file', portal_registry_file) | from_json }}"
+    cacheable: false
+- name: Reject other registries, helpers and malformed credentials
+  ansible.builtin.assert:
+    that:
+    - portal_registry_config is mapping
+    - portal_registry_config.keys() | list == ['auths']
+    - portal_registry_config.auths is mapping
+    - portal_registry_config.auths.keys() | list == ['ghcr.io']
+    - portal_registry_config.auths['ghcr.io'] is mapping
+    - portal_registry_config.auths['ghcr.io'].keys() | list == ['auth']
+    - portal_registry_config.auths['ghcr.io'].auth is string
+    - portal_registry_config.auths['ghcr.io'].auth is match('^[A-Za-z0-9+/]+={0,2}$')
+    - "':' in (portal_registry_config.auths['ghcr.io'].auth | b64decode)"
+    - (portal_registry_config.auths['ghcr.io'].auth | b64decode).split(':', 1)[0] | length > 0
+    - (portal_registry_config.auths['ghcr.io'].auth | b64decode).split(':', 1)[1] | length > 0
