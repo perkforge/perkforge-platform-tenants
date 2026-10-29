@@ -13,7 +13,7 @@ serviceAccountsEnabled: false
 fullScopeAllowed: false
 redirectUris: [https://portal-local-il2.local-lab.test/auth/callback]
 webOrigins: [https://portal-local-il2.local-lab.test]
-defaultClientScopes: [profile]
+defaultClientScopes: [basic, profile]
 optionalClientScopes: []
 attributes:
   perkforge-managed-by: platform-tenants/local-portal

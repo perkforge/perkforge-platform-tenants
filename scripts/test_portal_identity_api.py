@@ -20,7 +20,7 @@ class PortalIdentityAPITests(unittest.TestCase):
         subprocess.run(['openssl','req','-x509','-newkey','rsa:2048','-nodes','-days','1','-subj','/CN=localhost',
                         '-addext','subjectAltName=DNS:localhost','-keyout',str(self.work/'key.pem'),'-out',str(self.work/'ca.pem')],
                        check=True,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
-        self.state = {'client': None, 'role': None, 'mappings': {}, 'writes': [], 'requests': 0}
+        self.state = {'client': None, 'role': None, 'mappings': {}, 'writes': [], 'requests': 0, 'basicMappers': [{'name':'sub','protocolMapper':'oidc-sub-mapper'}, {'name':'auth_time','protocolMapper':'oidc-usersessionmodel-note-mapper'}]}
         state = self.state
         class Handler(BaseHTTPRequestHandler):
             def log_message(self,*args): pass
@@ -29,12 +29,20 @@ class PortalIdentityAPITests(unittest.TestCase):
                 self.send_response(code);self.send_header('Content-Type','application/json');self.end_headers();self.wfile.write(data)
             def do_GET(self):
                 state['requests']+=1; path=urlsplit(self.path).path
+                if path.endswith('/client-scopes'): return self.reply(200,[{'id':'basic-scope-id','name':'basic','protocol':'openid-connect'}])
+                if path.endswith('/client-scopes/basic-scope-id/protocol-mappers/models'): return self.reply(200,state['basicMappers'])
+                if path == '/auth/admin/realms/perkforge/clients/portal-client-id': return self.reply(200,state['client'])
                 if path.endswith('/clients'): return self.reply(200,[state['client']] if state['client'] else [])
                 if path.endswith('/client-secret'): return self.reply(200,{'value':state['client']['secret']})
                 if path.endswith('/groups'): return self.reply(200,[{'id':'platform-id','path':'/platform'}])
                 if path.endswith('/groups/platform-id/children'): return self.reply(200,[{'id':'admins-id','path':'/platform/admins'}])
                 if path.endswith('/roles/tenant-reader'): return self.reply(200 if state['role'] else 404,state['role'])
                 if '/scope-mappings/' in path or '/role-mappings/' in path: return self.reply(200,state['mappings'].get(path,[]))
+                return self.reply(404)
+            def do_PUT(self):
+                state['requests']+=1;path=urlsplit(self.path).path
+                if path.endswith('/clients/portal-client-id/default-client-scopes/basic-scope-id'):
+                    state['writes'].append((path,None));state['client']['defaultClientScopes']=['basic','profile'];return self.reply(204)
                 return self.reply(404)
             def do_POST(self):
                 state['requests']+=1; path=urlsplit(self.path).path;raw=self.rfile.read(int(self.headers.get('Content-Length','0')))
@@ -75,8 +83,8 @@ class PortalIdentityAPITests(unittest.TestCase):
                     for name in ['portal-identity-inputs.yaml','portal-identity-client.yaml','portal-identity-role.yaml']]}]}]
         (self.work/'ansible/test.yaml').write_text(yaml.safe_dump(wrapper,sort_keys=False))
 
-    def run_play(self):
-        result=subprocess.run(['ansible-playbook','-i','localhost,',str(self.work/'ansible/test.yaml')],capture_output=True,text=True,timeout=60,
+    def run_play(self, extra=None):
+        result=subprocess.run(['ansible-playbook','-i','localhost,',str(self.work/'ansible/test.yaml'),*(extra or [])],capture_output=True,text=True,timeout=60,
             env={**os.environ,'ANSIBLE_LOCAL_TEMP':str(self.work/'local'),'ANSIBLE_REMOTE_TEMP':str(self.work/'remote')})
         for marker in ['synthetic-bootstrap-secret','synthetic-portal-secret','synthetic-admin-session']:
             self.assertNotIn(marker,result.stdout+result.stderr)
@@ -105,6 +113,21 @@ class PortalIdentityAPITests(unittest.TestCase):
         for path in mappings:
             self.state['mappings']=deepcopy(mappings);self.state['mappings'][path].append({'name':'unexpected-role'})
             result=self.run_play();self.assertNotEqual(result.returncode,0);self.assertEqual(self.state['writes'],writes)
+
+    def test_existing_subject_scope_needs_approval_and_only_assigns_basic(self):
+        first=self.run_play();self.assertEqual(first.returncode,0,first.stdout+first.stderr)
+        writes=deepcopy(self.state['writes']);self.state['client']['defaultClientScopes']=['profile']
+        denied=self.run_play();self.assertNotEqual(denied.returncode,0);self.assertEqual(self.state['writes'],writes)
+        granted=self.run_play(['-e','portal_subject_scope_apply=true']);self.assertEqual(granted.returncode,0,granted.stdout+granted.stderr)
+        self.assertEqual(self.state['writes'][:-1],writes)
+        self.assertEqual(self.state['writes'][-1],('/auth/admin/realms/perkforge/clients/portal-client-id/default-client-scopes/basic-scope-id',None))
+        complete=deepcopy(self.state['writes'])
+        repeated=self.run_play(['-e','portal_subject_scope_apply=true']);self.assertEqual(repeated.returncode,0);self.assertEqual(self.state['writes'],complete)
+        for scopes in [['profile','roles'],['basic','profile','basic']]:
+            self.state['client']['defaultClientScopes']=scopes
+            denied=self.run_play(['-e','portal_subject_scope_apply=true']);self.assertNotEqual(denied.returncode,0);self.assertEqual(self.state['writes'],complete)
+        self.state['client']['defaultClientScopes']=['profile'];self.state['basicMappers'].append({'name':'unexpected','protocolMapper':'oidc-usermodel-client-role-mapper'})
+        denied=self.run_play(['-e','portal_subject_scope_apply=true']);self.assertNotEqual(denied.returncode,0);self.assertEqual(self.state['writes'],complete)
 
     def test_exposed_input_refused_before_any_authentication(self):
         (self.work/'client-secret').chmod(0o644)

@@ -37,7 +37,7 @@
 - name: Reject drift instead of silently rewriting an existing client
   ansible.builtin.assert:
     that: portal_client[item.key] == item.value
-  loop: "{{ portal_desired | dict2items | rejectattr('key', 'in', ['secret', 'protocolMappers', 'attributes']) | list }}"
+  loop: "{{ portal_desired | dict2items | rejectattr('key', 'in', ['secret', 'protocolMappers', 'attributes', 'defaultClientScopes']) | list }}"
 # Keycloak 26.8.0 setupClientDefaults adds the two logout defaults; its
 # ModelToRepresentation computes realm_client=false for this ordinary client.
 # Do not drop unknown attributes or ignore any requested attribute's value.
@@ -79,3 +79,15 @@
   vars:
     current: "{{ portal_client.protocolMappers | selectattr('name', 'equalto', item.name) | first }}"
   loop: '{{ portal_desired.protocolMappers }}'
+
+- name: Validate the exact default client scope set after all client checks
+  ansible.builtin.assert:
+    that:
+    - portal_desired.defaultClientScopes | sort == ['basic', 'profile']
+    - portal_client.defaultClientScopes is sequence
+    - portal_client.defaultClientScopes is not string
+    - portal_client.defaultClientScopes | unique | length == portal_client.defaultClientScopes | length
+    - (portal_client.defaultClientScopes | sort) in [['profile'], ['basic', 'profile']]
+- name: Add only the reviewed missing basic scope under its separate approval gate
+  ansible.builtin.include_tasks: portal-subject-scope.yaml
+  when: portal_client.defaultClientScopes | sort == ['profile']

@@ -4,6 +4,7 @@
   gather_facts: false
   vars:
     portal_identity_apply: false
+    portal_subject_scope_apply: false
     enrollment_tag: UNCONFIGURED
     identity_private_dir: /UNCONFIGURED/identity
     portal_private_dir: /UNCONFIGURED/portal

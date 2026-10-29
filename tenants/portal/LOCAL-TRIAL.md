@@ -137,3 +137,19 @@ comparison is retained; wrong claim values/types and unknown fields still fail.
 CI also exercises the full Ansible client/role/mapping sequence against an isolated
 HTTPS fixture with the observed client defaults, including idempotence and rejected
 role/container/composite/mapping drift. This is not a live role-mapping result.
+
+
+## Required subject claim
+
+The portal verifier still requires signed `sub`, `exp` and `iat`, correct issuer,
+audience/authorized party, exact admin group and portal reader role. This pinned
+Keycloak version supplies the access-token subject through the existing `basic`
+client scope; the portal therefore declares exactly `[basic, profile]` defaults.
+Scope order is irrelevant, but duplicates and extra scopes fail. No realm scope is
+created/edited. For the already-created profile-only client, a separate default-off
+`portal_subject_scope_apply` flag authorizes only assigning the verified existing
+basic scope after all managed fields, secret custody and mappers pass. Unexpected
+basic mapper names/types fail; only the built-in sub/auth_time pair is accepted.
+The playbook reads back the exact scope set; repeated execution does not reassign.
+This adds subject/authentication-time claims, not roles, memberships, token-validator
+exceptions or Kubernetes authority. Publish/review before live assignment/resume.

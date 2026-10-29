@@ -1,0 +1,43 @@
+# Called only after ownership, managed fields, secret and mapper verification.
+# Do not change a realm scope or silently repair any other client drift.
+- name: Require explicit approval for the existing client's subject scope
+  ansible.builtin.assert: {that: portal_subject_scope_apply | default(false) | bool}
+- name: Read existing realm client scopes without creating any
+  ansible.builtin.uri:
+    url: '{{ portal_api }}/client-scopes'
+    headers: '{{ portal_headers }}'
+  register: portal_realm_scopes
+- name: Select only the existing basic OpenID Connect scope
+  ansible.builtin.assert:
+    that: portal_basic | length == 1
+  vars:
+    portal_basic: "{{ portal_realm_scopes.json | selectattr('name', 'equalto', 'basic') | selectattr('protocol', 'equalto', 'openid-connect') | list }}"
+- name: Record existing basic scope identity
+  ansible.builtin.set_fact:
+    portal_basic_scope: "{{ portal_realm_scopes.json | selectattr('name', 'equalto', 'basic') | first }}"
+- name: Read its existing mapper definitions
+  ansible.builtin.uri:
+    url: '{{ portal_api }}/client-scopes/{{ portal_basic_scope.id }}/protocol-mappers/models'
+    headers: '{{ portal_headers }}'
+  register: portal_basic_mappers
+- name: Refuse unexpected basic scope semantics
+  ansible.builtin.assert:
+    that:
+    - portal_basic_mappers.json | map(attribute='name') | sort == ['auth_time', 'sub']
+    - portal_basic_mappers.json | selectattr('name', 'equalto', 'sub') | map(attribute='protocolMapper') | list == ['oidc-sub-mapper']
+    - portal_basic_mappers.json | selectattr('name', 'equalto', 'auth_time') | map(attribute='protocolMapper') | list == ['oidc-usersessionmodel-note-mapper']
+- name: Assign only this existing scope to the verified owned portal client
+  ansible.builtin.uri:
+    url: '{{ portal_api }}/clients/{{ portal_client.id }}/default-client-scopes/{{ portal_basic_scope.id }}'
+    headers: '{{ portal_headers }}'
+    method: PUT
+    status_code: 204
+  changed_when: true
+- name: Read back the exact client default scopes
+  ansible.builtin.uri:
+    url: '{{ portal_api }}/clients/{{ portal_client.id }}'
+    headers: '{{ portal_headers }}'
+  register: portal_subject_verified
+- name: Verify exact assignment without extra scopes
+  ansible.builtin.assert:
+    that: portal_subject_verified.json.defaultClientScopes | sort == ['basic', 'profile']
