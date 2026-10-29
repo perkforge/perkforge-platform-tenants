@@ -1,0 +1,44 @@
+- name: Configure only the owned portal client in the existing local realm
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    portal_identity_apply: false
+    enrollment_tag: UNCONFIGURED
+    identity_private_dir: /UNCONFIGURED/identity
+    portal_private_dir: /UNCONFIGURED/portal
+    identity_ca_file: /UNCONFIGURED/identity-ca.crt
+    identity_url: https://keycloak-local-il2.local-lab.test/auth
+    portal_api: '{{ identity_url }}/admin/realms/perkforge'
+  module_defaults:
+    ansible.builtin.uri:
+      validate_certs: true
+      ca_path: '{{ identity_ca_file }}'
+      follow_redirects: none
+      use_netrc: false
+      use_proxy: false
+      timeout: 20
+  tasks:
+  - name: Refuse another identity endpoint
+    ansible.builtin.assert:
+      that:
+      - identity_url == 'https://keycloak-local-il2.local-lab.test/auth'
+      - portal_api == identity_url ~ '/admin/realms/perkforge'
+  - name: Default and check mode read no credentials and call no API
+    ansible.builtin.debug:
+      msg: 'Portal client configuration={{ portal_identity_apply | bool }}; check={{ ansible_check_mode }}'
+  - name: Configure only the separately approved owned portal client
+    when: portal_identity_apply | bool and not ansible_check_mode
+    no_log: true
+    block:
+    - name: Verify published enrollment code
+      ansible.builtin.include_tasks: verify-release.yaml
+    - name: Use existing bootstrap access without logging credentials or tokens
+      ansible.builtin.include_tasks: portal-identity-inputs.yaml
+      no_log: true
+    - name: Configure owned client and exact application role only
+      ansible.builtin.include_tasks: portal-identity-client.yaml
+      no_log: true
+    - name: Bind only the existing exact admin group to the app-specific role
+      ansible.builtin.include_tasks: portal-identity-role.yaml
+      no_log: true

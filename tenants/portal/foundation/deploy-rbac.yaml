@@ -1,0 +1,38 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata: {name: portal-workloads, namespace: tenant-portal}
+rules:
+- apiGroups: [apps]
+  resources: [deployments]
+  verbs: [get, list, watch, create, update, patch, delete]
+- apiGroups: ['']
+  resources: [services]
+  verbs: [get, list, watch, create, update, patch, delete]
+- apiGroups: ['']
+  resources: [pods, events]
+  verbs: [get, list, watch]
+- apiGroups: [apps]
+  resources: [replicasets]
+  verbs: [get, list, watch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata: {name: portal-workloads, namespace: tenant-portal}
+roleRef: {apiGroup: rbac.authorization.k8s.io, kind: Role, name: portal-workloads}
+subjects:
+- {kind: ServiceAccount, name: portal-deployer, namespace: tenant-portal-config}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata: {name: portal-helm-storage, namespace: tenant-portal-release}
+rules:
+- apiGroups: ['']
+  resources: [secrets]
+  verbs: [get, list, watch, create, update, patch, delete]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata: {name: portal-helm-storage, namespace: tenant-portal-release}
+roleRef: {apiGroup: rbac.authorization.k8s.io, kind: Role, name: portal-helm-storage}
+subjects:
+- {kind: ServiceAccount, name: portal-deployer, namespace: tenant-portal-config}

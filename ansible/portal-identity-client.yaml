@@ -1,0 +1,57 @@
+- name: Read exact portal client before any write
+  ansible.builtin.uri:
+    url: '{{ portal_api }}/clients?clientId=portal-local'
+    headers: '{{ portal_headers }}'
+  register: portal_clients
+- name: Require unambiguous client selection
+  ansible.builtin.assert: {that: portal_clients.json | length <= 1}
+- name: Load the native client definition only in this no_log block
+  ansible.builtin.set_fact:
+    portal_desired: "{{ lookup('ansible.builtin.template', playbook_dir ~ '/../tenants/portal/identity/client.yaml') | from_yaml }}"
+- name: Refuse adopting an unrelated existing client
+  ansible.builtin.assert:
+    that: portal_clients.json[0].attributes['perkforge-managed-by'] | default('') == 'platform-tenants/local-portal'
+  when: portal_clients.json | length == 1
+- name: Create only a missing owned portal client
+  ansible.builtin.uri:
+    url: '{{ portal_api }}/clients'
+    method: POST
+    headers: '{{ portal_headers }}'
+    body_format: json
+    body: '{{ portal_desired }}'
+    status_code: 201
+  when: portal_clients.json | length == 0
+  changed_when: true
+- name: Read created or existing exact client
+  ansible.builtin.uri:
+    url: '{{ portal_api }}/clients?clientId=portal-local'
+    headers: '{{ portal_headers }}'
+  register: portal_saved
+- name: Require one exact owned client
+  ansible.builtin.assert:
+    that:
+    - portal_saved.json | length == 1
+    - portal_saved.json[0].clientId == 'portal-local'
+- name: Record server assigned client UUID
+  ansible.builtin.set_fact: {portal_client: '{{ portal_saved.json[0] }}'}
+- name: Reject drift instead of silently rewriting an existing client
+  ansible.builtin.assert:
+    that: portal_client[item.key] == item.value
+  loop: "{{ portal_desired | dict2items | rejectattr('key', 'in', ['secret', 'protocolMappers']) | list }}"
+- name: Read existing client secret without rotation or logging
+  ansible.builtin.uri:
+    url: '{{ portal_api }}/clients/{{ portal_client.id }}/client-secret'
+    headers: '{{ portal_headers }}'
+  register: portal_saved_secret
+- name: Verify credential custody matches the approved external file
+  ansible.builtin.assert:
+    that: portal_saved_secret.json.value == portal_desired.secret
+- name: Verify exact mapper names before checking their claims
+  ansible.builtin.assert:
+    that: portal_client.protocolMappers | map(attribute='name') | sort == portal_desired.protocolMappers | map(attribute='name') | sort
+- name: Verify each mapper definition while allowing only server UUID fields
+  ansible.builtin.assert:
+    that: (current | dict2items | rejectattr('key', 'equalto', 'id') | items2dict) == item
+  vars:
+    current: "{{ portal_client.protocolMappers | selectattr('name', 'equalto', item.name) | first }}"
+  loop: '{{ portal_desired.protocolMappers }}'

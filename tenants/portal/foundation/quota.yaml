@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: ResourceQuota
+metadata: {name: portal-budget, namespace: tenant-portal}
+spec:
+  hard:
+    requests.cpu: 100m
+    requests.memory: 256Mi
+    limits.cpu: 500m
+    limits.memory: 384Mi
+    pods: '2'
+    services: '2'
+    persistentvolumeclaims: '0'
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata: {name: no-runtime-pods, namespace: tenant-portal-config}
+spec:
+  hard: {pods: '0'}
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata: {name: no-runtime-pods, namespace: tenant-portal-release}
+spec:
+  hard: {pods: '0'}

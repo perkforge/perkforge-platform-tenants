@@ -1,0 +1,26 @@
+# Included only by the approved no_log block after TLS and ownership checks.
+- name: Apply only three intended inputs through private stdin
+  ansible.builtin.command:
+    argv: [kubectl, --kubeconfig, '{{ target_kubeconfig }}', apply, --server-side, --field-manager=portal-inputs, -f, '-']
+    stdin: '{{ item | to_nice_yaml }}'
+  loop:
+  - apiVersion: v1
+    kind: Secret
+    metadata: {name: portal-oidc-existing, namespace: tenant-portal}
+    type: Opaque
+    data:
+      client-secret: "{{ lookup('ansible.builtin.file', portal_private_dir ~ '/client-secret') | trim | b64encode }}"
+  - apiVersion: v1
+    kind: Secret
+    metadata: {name: portal-local-tls, namespace: tenant-portal}
+    type: kubernetes.io/tls
+    data:
+      tls.crt: "{{ lookup('ansible.builtin.file', portal_private_dir ~ '/portal.crt') | b64encode }}"
+      tls.key: "{{ lookup('ansible.builtin.file', portal_private_dir ~ '/portal.key') | b64encode }}"
+  - apiVersion: v1
+    kind: ConfigMap
+    metadata: {name: portal-identity-ca, namespace: tenant-portal}
+    data:
+      ca.crt: "{{ lookup('ansible.builtin.file', identity_ca_file) }}"
+  register: portal_delivery
+  changed_when: "'created' in portal_delivery.stdout or 'configured' in portal_delivery.stdout"

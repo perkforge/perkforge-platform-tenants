@@ -50,7 +50,9 @@ def app_selection(parent, app):
         if obj['kind'] == 'HelmRelease':
             assert obj['spec']['suspend'] is True
             assert obj['spec']['serviceAccountName'] == 'portal-deployer'
-            assert obj['spec']['storageNamespace'] == 'tenant-example-portal-release'
+            assert obj['spec']['storageNamespace'] == ('tenant-portal-release' if selected['cluster'] == 'local' else 'tenant-example-portal-release')
+            if selected['cluster'] == 'local':
+                assert obj['spec']['targetNamespace'] == 'tenant-portal'
         elif obj['kind'] == 'ConfigMap':
             assert yaml.safe_load(obj['data']['values.yaml']).get('enabled') is not True
     return objects

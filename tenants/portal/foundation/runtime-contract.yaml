@@ -1,0 +1,6 @@
+# Operator-owned allowlist: published portal source v0.3.0, not deployment enablement.
+apiVersion: v1
+kind: ConfigMap
+metadata: {name: portal-runtime-contract, namespace: tenant-portal}
+data:
+  image: ghcr.io/perkforge/perkforge-portal@sha256:ae13143108562e9753eab40650cfcef4b53d8336e733adc6a94dbccabc0a2616
