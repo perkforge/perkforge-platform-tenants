@@ -37,4 +37,35 @@ class KeycloakAttributeTests(unittest.TestCase):
                 self.assertEqual(result.returncode==0,allowed,result.stdout+result.stderr)
         self.assertEqual(len(cases),13)
 
+    def test_real_mapper_assertions_accept_actual_shape_and_reject_drift(self):
+        tasks=yaml.safe_load((ROOT/'ansible/portal-identity-client.yaml').read_text())
+        selected=[t for t in tasks if t['name'] in ['Verify exact mapper names before checking their claims', 'Verify each mapper definition while allowing only server UUID fields']]
+        self.assertEqual(len(selected),2)
+        desired=yaml.safe_load((ROOT/'tenants/portal/identity/client.yaml').read_text())
+        expected=desired['protocolMappers']
+        for mapper in expected:
+            self.assertEqual(mapper['config']['userinfo.token.claim'],'false')
+        actual=deepcopy(expected)
+        for index,mapper in enumerate(actual):mapper['id']='synthetic-id-'+str(index)
+        cases=[('actual Keycloak shape',actual,True)]
+        for name in ['portal-audience','portal-api-role']:
+            for badvalue in ['true',False]:
+                bad=deepcopy(actual);next(m for m in bad if m['name']==name)['config']['userinfo.token.claim']=badvalue
+                cases.append((name+' wrong userinfo '+str(badvalue),bad,False))
+        for label,change in [('unknown config',lambda m:m['config'].update({'unknown.claim':'false'})),
+                             ('changed audience',lambda m:m['config'].update({'included.client.audience':'headlamp-local'})),
+                             ('unknown field',lambda m:m.update(unexpected=False))]:
+            bad=deepcopy(actual);change(next(m for m in bad if m['name']=='portal-audience'));cases.append((label,bad,False))
+        bad=deepcopy(actual);bad.pop();cases.append(('missing mapper',bad,False))
+        for label,mappers,allowed in cases:
+            with self.subTest(mapper=label), tempfile.TemporaryDirectory() as directory:
+                play=Path(directory)/'test.yaml'
+                play.write_text(yaml.safe_dump([{'hosts':'localhost','connection':'local','gather_facts':False,
+                    'vars':{'portal_client':{'protocolMappers':mappers},'portal_desired':{'protocolMappers':expected}},
+                    'tasks':[{'name':'Synthetic mapper assertions','no_log':True,'block':selected}]}]))
+                result=subprocess.run(['ansible-playbook','-i','localhost,',str(play)],capture_output=True,text=True,
+                    env={**os.environ,'ANSIBLE_LOCAL_TEMP':directory+'/local','ANSIBLE_REMOTE_TEMP':directory+'/remote'},timeout=30)
+                self.assertEqual(result.returncode==0,allowed,result.stdout+result.stderr)
+        self.assertEqual(len(cases),9)
+
 if __name__=='__main__':unittest.main()

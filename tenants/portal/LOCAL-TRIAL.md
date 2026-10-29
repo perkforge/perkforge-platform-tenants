@@ -129,3 +129,11 @@ Versioned upstream sources: [OIDC client creation defaults](https://github.com/k
 and [computed realm-client representation](https://github.com/keycloak/keycloak/blob/26.8.0/server-spi-private/src/main/java/org/keycloak/models/utils/ModelToRepresentation.java#L842).
 After a reviewed release, reuse the owned `portal-local` client and protected
 files at the checkpoint; do not rerun credential generation or realm initialization.
+
+
+The audience and API-role mappers explicitly declare `userinfo.token.claim: 'false'`,
+matching the pinned server response and the existing groups mapper. Exact mapper
+comparison is retained; wrong claim values/types and unknown fields still fail.
+CI also exercises the full Ansible client/role/mapping sequence against an isolated
+HTTPS fixture with the observed client defaults, including idempotence and rejected
+role/container/composite/mapping drift. This is not a live role-mapping result.

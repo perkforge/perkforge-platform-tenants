@@ -38,6 +38,7 @@ protocolMappers:
   consentRequired: false
   config:
     included.client.audience: portal-local
+    userinfo.token.claim: 'false'
     id.token.claim: 'false'
     access.token.claim: 'true'
 - name: portal-api-role
@@ -46,6 +47,7 @@ protocolMappers:
   consentRequired: false
   config:
     usermodel.clientRoleMapping.clientId: portal-local
+    userinfo.token.claim: 'false'
     claim.name: resource_access.portal-local.roles
     jsonType.label: String
     multivalued: 'true'
