@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/perkforge/perkforge-platform-tenants/compare/v0.3.0...v0.4.0) (2026-10-29)
+
+
+### Features
+
+* **portal:** select local tenant activation release ([#10](https://github.com/perkforge/perkforge-platform-tenants/issues/10)) ([bed8fdc](https://github.com/perkforge/perkforge-platform-tenants/commit/bed8fdc248ead2ca7ab4cb32135fef430c9eb360))
+
 ## [0.3.0](https://github.com/perkforge/perkforge-platform-tenants/compare/v0.2.0...v0.3.0) (2026-10-29)
 
 
