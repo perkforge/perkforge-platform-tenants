@@ -45,8 +45,7 @@ class KeycloakAttributeTests(unittest.TestCase):
         expected=desired['protocolMappers']
         for mapper in expected:
             self.assertEqual(mapper['config']['userinfo.token.claim'],'false')
-        actual=deepcopy(expected)
-        for index,mapper in enumerate(actual):mapper['id']='synthetic-id-'+str(index)
+        actual=yaml.safe_load((ROOT/'scripts/fixtures/keycloak26.8-portal-mappers.yaml').read_text())
         cases=[('actual Keycloak shape',actual,True)]
         for name in ['portal-audience','portal-api-role']:
             for badvalue in ['true',False]:
@@ -57,6 +56,10 @@ class KeycloakAttributeTests(unittest.TestCase):
                              ('unknown field',lambda m:m.update(unexpected=False))]:
             bad=deepcopy(actual);change(next(m for m in bad if m['name']=='portal-audience'));cases.append((label,bad,False))
         bad=deepcopy(actual);bad.pop();cases.append(('missing mapper',bad,False))
+        self.assertEqual(next(m for m in expected if m['name']=='portal-groups')['config']['multivalued'],'true')
+        for wrong in ['false',True]:
+            bad=deepcopy(actual);next(m for m in bad if m['name']=='portal-groups')['config']['multivalued']=wrong
+            cases.append(('group multivalued drift '+str(wrong),bad,False))
         for label,mappers,allowed in cases:
             with self.subTest(mapper=label), tempfile.TemporaryDirectory() as directory:
                 play=Path(directory)/'test.yaml'
@@ -66,6 +69,6 @@ class KeycloakAttributeTests(unittest.TestCase):
                 result=subprocess.run(['ansible-playbook','-i','localhost,',str(play)],capture_output=True,text=True,
                     env={**os.environ,'ANSIBLE_LOCAL_TEMP':directory+'/local','ANSIBLE_REMOTE_TEMP':directory+'/remote'},timeout=30)
                 self.assertEqual(result.returncode==0,allowed,result.stdout+result.stderr)
-        self.assertEqual(len(cases),9)
+        self.assertEqual(len(cases),11)
 
 if __name__=='__main__':unittest.main()

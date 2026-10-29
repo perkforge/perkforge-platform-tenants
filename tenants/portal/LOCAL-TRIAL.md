@@ -153,3 +153,6 @@ basic mapper names/types fail; only the built-in sub/auth_time pair is accepted.
 The playbook reads back the exact scope set; repeated execution does not reassign.
 This adds subject/authentication-time claims, not roles, memberships, token-validator
 exceptions or Kubernetes authority. Publish/review before live assignment/resume.
+
+See [the pinned mapper lifecycle review](MAPPER-LIFECYCLE.md) for token-time
+normalization, independent response fixtures, covered providers and known limits.
