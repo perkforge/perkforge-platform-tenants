@@ -37,7 +37,31 @@
 - name: Reject drift instead of silently rewriting an existing client
   ansible.builtin.assert:
     that: portal_client[item.key] == item.value
-  loop: "{{ portal_desired | dict2items | rejectattr('key', 'in', ['secret', 'protocolMappers']) | list }}"
+  loop: "{{ portal_desired | dict2items | rejectattr('key', 'in', ['secret', 'protocolMappers', 'attributes']) | list }}"
+# Keycloak 26.8.0 setupClientDefaults adds the two logout defaults; its
+# ModelToRepresentation computes realm_client=false for this ordinary client.
+# Do not drop unknown attributes or ignore any requested attribute's value.
+- name: Require exact managed attributes and reject unknown server additions
+  ansible.builtin.assert:
+    that:
+    - portal_client.attributes is mapping
+    - (portal_client.attributes | dict2items | rejectattr('key', 'in', portal_server_attributes.keys() | list) | items2dict) == portal_desired.attributes
+  vars:
+    portal_server_attributes:
+      backchannel.logout.session.required: 'true'
+      backchannel.logout.revoke.offline.tokens: 'false'
+      realm_client: 'false'
+- name: Validate each recognized server attribute's exact string value
+  ansible.builtin.assert:
+    that:
+    - item.value is string
+    - item.value == portal_server_attributes[item.key]
+  vars:
+    portal_server_attributes:
+      backchannel.logout.session.required: 'true'
+      backchannel.logout.revoke.offline.tokens: 'false'
+      realm_client: 'false'
+  loop: "{{ portal_client.attributes | dict2items | selectattr('key', 'in', portal_server_attributes.keys() | list) | list }}"
 - name: Read existing client secret without rotation or logging
   ansible.builtin.uri:
     url: '{{ portal_api }}/clients/{{ portal_client.id }}/client-secret'

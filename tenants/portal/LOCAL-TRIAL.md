@@ -112,3 +112,20 @@ namespaces, policies, credentials, data and existing Headlamp/Keycloak/Flux Pods
 The shared root pause temporarily stops GitOps changes, not running services.
 Return to a reviewed paused platform stage/tag before resuming that root; an old
 app tag alone cannot override admission or automatically remove portal safely.
+
+
+## Keycloak response normalization
+
+The pinned Keycloak 26.8.0 server adds logout defaults and the computed
+`realm_client` response field. The drift check tolerates only these extra string
+values when present: `backchannel.logout.session.required: 'true'`,
+`backchannel.logout.revoke.offline.tokens: 'false'`, `realm_client: 'false'`.
+All requested attributes remain exact; unknown additions, wrong types/values,
+client field changes, mapper changes and secret mismatch still stop execution.
+No existing client is rewritten or secret rotated to satisfy this check.
+The regression executes the actual Ansible assertions with 13 synthetic cases.
+
+Versioned upstream sources: [OIDC client creation defaults](https://github.com/keycloak/keycloak/blob/26.8.0/services/src/main/java/org/keycloak/protocol/oidc/OIDCLoginProtocolFactory.java#L705-L709)
+and [computed realm-client representation](https://github.com/keycloak/keycloak/blob/26.8.0/server-spi-private/src/main/java/org/keycloak/models/utils/ModelToRepresentation.java#L842).
+After a reviewed release, reuse the owned `portal-local` client and protected
+files at the checkpoint; do not rerun credential generation or realm initialization.
