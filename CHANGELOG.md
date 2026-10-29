@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/perkforge/perkforge-platform-tenants/compare/v0.2.0...v0.3.0) (2026-10-29)
+
+
+### Features
+
+* **portal:** gate private registry credential delivery ([#8](https://github.com/perkforge/perkforge-platform-tenants/issues/8)) ([ce8402b](https://github.com/perkforge/perkforge-platform-tenants/commit/ce8402bad810d36f05308f8f422711037f702c9d))
+
 ## [0.2.0](https://github.com/perkforge/perkforge-platform-tenants/compare/v0.1.1...v0.2.0) (2026-10-29)
 
 
