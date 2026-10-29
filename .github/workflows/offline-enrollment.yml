@@ -45,6 +45,8 @@ jobs:
       env:
         TENANT_APP_CHECKOUT: ${{ github.workspace }}/.inputs/app
       run: python3 scripts/test_enrollment_release.py
+    - name: Test gated registry delivery with dummy inputs only
+      run: python3 scripts/test_registry_delivery.py
     - name: Build explicit cluster selections without API access
       run: |
         kubectl version --client

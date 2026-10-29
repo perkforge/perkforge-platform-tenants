@@ -1,0 +1,49 @@
+- name: Deliver only the separately approved portal GHCR pull credential
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    portal_registry_apply: false
+    enrollment_tag: UNCONFIGURED
+    portal_registry_file: /UNCONFIGURED/dockerconfigjson
+    target_kubeconfig: /UNCONFIGURED/kubeconfig
+    expected_cluster_uid: UNCONFIGURED
+  tasks:
+  - name: Default and check mode read no credential files or APIs
+    ansible.builtin.debug:
+      msg: 'Registry delivery={{ portal_registry_apply | bool }}; check={{ ansible_check_mode }}'
+  - name: Deliver only after explicit approval
+    when: portal_registry_apply | bool and not ansible_check_mode
+    no_log: true
+    block:
+    - name: Verify clean published enrollment source
+      ansible.builtin.include_tasks: verify-release.yaml
+    - name: Refuse missing target inputs
+      ansible.builtin.assert:
+        that:
+        - portal_registry_file != '/UNCONFIGURED/dockerconfigjson'
+        - target_kubeconfig != '/UNCONFIGURED/kubeconfig'
+        - expected_cluster_uid != 'UNCONFIGURED'
+    - name: Verify intended cluster UID before reading credentials
+      ansible.builtin.command:
+        argv: [kubectl, --kubeconfig, '{{ target_kubeconfig }}', get, namespace, kube-system, -o, 'jsonpath={.metadata.uid}']
+      register: portal_registry_uid
+      changed_when: false
+    - name: Refuse another cluster
+      ansible.builtin.assert: {that: portal_registry_uid.stdout == expected_cluster_uid}
+    - name: Inspect and validate only the approved credential input
+      ansible.builtin.include_tasks: portal-registry-input.yaml
+    - name: Deliver only the approved runtime pull Secret through private stdin
+      ansible.builtin.command:
+        argv: [kubectl, --kubeconfig, '{{ target_kubeconfig }}', apply, --server-side, --field-manager=portal-registry-inputs, -f, '-']
+        stdin: '{{ portal_registry_manifest | to_nice_yaml }}'
+      vars:
+        portal_registry_manifest:
+          apiVersion: v1
+          kind: Secret
+          metadata: {name: portal-registry-existing, namespace: tenant-portal}
+          type: kubernetes.io/dockerconfigjson
+          data:
+            .dockerconfigjson: '{{ portal_registry_config | to_json | b64encode }}'
+      register: portal_registry_delivery
+      changed_when: "'created' in portal_registry_delivery.stdout or 'configured' in portal_registry_delivery.stdout"
