@@ -20,7 +20,8 @@ def selected_release(source=None, evidence=None):
     assert re.fullmatch(r'v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)', evidence['tag'])
     assert re.fullmatch(r'[0-9a-f]{40}', evidence['resolvedCommit'])
     assert source['spec']['url'] == f"https://github.com/{evidence['repository']}.git"
-    assert source['spec']['suspend'] is True
+    selected = source['metadata'].get('annotations', {}).get(PREFIX + 'cluster')
+    assert source['spec']['suspend'] is (selected != 'local')
     return evidence
 
 
@@ -48,13 +49,14 @@ def app_selection(parent, app):
     for obj in objects:
         assert context(obj) == selected
         if obj['kind'] == 'HelmRelease':
-            assert obj['spec']['suspend'] is True
+            assert obj['spec']['suspend'] is (selected['cluster'] != 'local')
             assert obj['spec']['serviceAccountName'] == 'portal-deployer'
             assert obj['spec']['storageNamespace'] == ('tenant-portal-release' if selected['cluster'] == 'local' else 'tenant-example-portal-release')
             if selected['cluster'] == 'local':
                 assert obj['spec']['targetNamespace'] == 'tenant-portal'
         elif obj['kind'] == 'ConfigMap':
-            assert yaml.safe_load(obj['data']['values.yaml']).get('enabled') is not True
+            enabled = yaml.safe_load(obj['data']['values.yaml']).get('enabled')
+            assert (enabled is True) == (selected['cluster'] == 'local' and obj['metadata']['name'] == 'portal-cluster')
     return objects
 
 
@@ -74,7 +76,7 @@ class EnrollmentReleaseTests(unittest.TestCase):
         self.assertEqual(head, release['resolvedCommit'])
         self.assertEqual(tag, head)
 
-    def test_only_local_dev_paths_match_released_app_and_stay_paused(self):
+    def test_local_activation_and_paused_dev_match_released_app(self):
         app = Path(os.environ['TENANT_APP_CHECKOUT'])
         self.assertEqual({p.name for p in (ROOT / 'clusters').iterdir()}, {'local', 'dev'})
         for cluster in ('local', 'dev'):
@@ -84,13 +86,22 @@ class EnrollmentReleaseTests(unittest.TestCase):
                 selected_release(source)
                 parent = next(obj for obj in objects if obj['kind'] == 'Kustomization')
                 self.assertEqual(context(parent), {'cluster': cluster, 'environment': cluster, 'profile': 'il2'})
-                self.assertTrue(parent['spec']['suspend'])
+                self.assertEqual(parent['spec']['suspend'], cluster != 'local')
+                self.assertEqual(source['spec']['suspend'], cluster != 'local')
                 self.assertFalse(parent['spec']['prune'])
                 self.assertEqual(parent['spec']['serviceAccountName'], 'portal-reconciler')
                 self.assertEqual(parent['spec']['sourceRef']['name'], source['metadata']['name'])
                 app_objects = app_selection(parent, app)
                 defaults = next(obj for obj in app_objects if obj['kind'] == 'ConfigMap' and obj['metadata']['name'] == 'portal-defaults')
                 self.assertFalse(yaml.safe_load(defaults['data']['values.yaml'])['enabled'])
+
+    def test_wrong_activation_state_is_rejected(self):
+        for cluster in ('local', 'dev'):
+            objects = build(ROOT / 'clusters' / cluster)
+            source = next(o for o in objects if o['kind'] == 'GitRepository')
+            source['spec']['suspend'] = not source['spec']['suspend']
+            with self.assertRaises(AssertionError):
+                selected_release(source)
 
     def test_mismatched_ref_evidence_and_context_fail(self):
         source = yaml.safe_load((ROOT / 'tenants/portal/source.yaml').read_text())
