@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.3](https://github.com/perkforge/perkforge-platform-tenants/compare/v0.4.2...v0.4.3) (2026-10-29)
+
+
+### Bug Fixes
+
+* **portal:** require existing basic subject scope ([#16](https://github.com/perkforge/perkforge-platform-tenants/issues/16)) ([781da8f](https://github.com/perkforge/perkforge-platform-tenants/commit/781da8f5601678b05d99c31f78f74a3e059cb986))
+
 ## [0.4.2](https://github.com/perkforge/perkforge-platform-tenants/compare/v0.4.1...v0.4.2) (2026-10-29)
 
 
