@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.4](https://github.com/perkforge/perkforge-platform-tenants/compare/v0.4.3...v0.4.4) (2026-10-29)
+
+
+### Bug Fixes
+
+* **portal:** stabilize groups mapper after token use ([#18](https://github.com/perkforge/perkforge-platform-tenants/issues/18)) ([e0d885b](https://github.com/perkforge/perkforge-platform-tenants/commit/e0d885bc06b419bbbcb1f61a2517c11b69926d8a))
+
 ## [0.4.3](https://github.com/perkforge/perkforge-platform-tenants/compare/v0.4.2...v0.4.3) (2026-10-29)
 
 
