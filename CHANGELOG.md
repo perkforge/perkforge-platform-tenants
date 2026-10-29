@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.0](https://github.com/perkforge/perkforge-platform-tenants/compare/v0.1.1...v0.2.0) (2026-10-29)
+
+
+### Features
+
+* **portal:** prepare scoped local tenant enrollment ([#6](https://github.com/perkforge/perkforge-platform-tenants/issues/6)) ([369e1e3](https://github.com/perkforge/perkforge-platform-tenants/commit/369e1e3d29c80a4e3be3b2f1b5f5ced9b5cf5ccc))
+
 ## [0.1.1](https://github.com/perkforge/perkforge-platform-tenants/compare/v0.1.0...v0.1.1) (2026-10-28)
 
 
