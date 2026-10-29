@@ -1,0 +1,36 @@
+# Nonsecret observed portal mapper shape after token use; UUIDs are synthetic.
+- id: fixture-groups
+  name: portal-groups
+  protocol: openid-connect
+  protocolMapper: oidc-group-membership-mapper
+  consentRequired: false
+  config:
+    claim.name: groups
+    full.path: 'true'
+    multivalued: 'true'
+    id.token.claim: 'false'
+    access.token.claim: 'true'
+    userinfo.token.claim: 'false'
+- id: fixture-audience
+  name: portal-audience
+  protocol: openid-connect
+  protocolMapper: oidc-audience-mapper
+  consentRequired: false
+  config:
+    included.client.audience: portal-local
+    id.token.claim: 'false'
+    access.token.claim: 'true'
+    userinfo.token.claim: 'false'
+- id: fixture-role
+  name: portal-api-role
+  protocol: openid-connect
+  protocolMapper: oidc-usermodel-client-role-mapper
+  consentRequired: false
+  config:
+    usermodel.clientRoleMapping.clientId: portal-local
+    claim.name: resource_access.portal-local.roles
+    jsonType.label: String
+    multivalued: 'true'
+    id.token.claim: 'false'
+    access.token.claim: 'true'
+    userinfo.token.claim: 'false'

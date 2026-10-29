@@ -5,6 +5,8 @@ import json
 import os
 from pathlib import Path
 import ssl
+import urllib.request
+import urllib.parse
 import subprocess
 import tempfile
 import threading
@@ -48,6 +50,10 @@ class PortalIdentityAPITests(unittest.TestCase):
                 state['requests']+=1; path=urlsplit(self.path).path;raw=self.rfile.read(int(self.headers.get('Content-Length','0')))
                 if path.endswith('/protocol/openid-connect/token'):
                     values=parse_qs(raw.decode())
+                    if values.get('client_id')==['portal-local'] and values.get('grant_type')==['authorization_code']:
+                        for mapper in state['client']['protocolMappers']:
+                            if mapper['protocolMapper']=='oidc-group-membership-mapper':mapper['config']['multivalued']='true'
+                        return self.reply(200,{'access_token':'synthetic-user-token'})
                     if values.get('password')!=['synthetic-bootstrap-secret']: return self.reply(401)
                     return self.reply(200,{'access_token':'synthetic-admin-session'})
                 body=json.loads(raw);state['writes'].append((path,deepcopy(body)))
@@ -72,7 +78,7 @@ class PortalIdentityAPITests(unittest.TestCase):
         (self.work/'ansible').mkdir();(self.work/'tenants').symlink_to(self.repo/'tenants',target_is_directory=True)
         for name in ['bootstrap-password','client-secret']:
             p=self.work/name;p.write_text('synthetic-bootstrap-secret' if name=='bootstrap-password' else 'synthetic-portal-secret');p.chmod(0o600)
-        url=f'https://localhost:{server.server_port}/auth'
+        url=f'https://localhost:{server.server_port}/auth';self.fixture_url=url
         # Only the fixture wrapper supplies the loopback URL. Production endpoint
         # assertions and release gates are tested separately; never relaxed there.
         wrapper=[{'name':'isolated synthetic client tasks','hosts':'localhost','connection':'local','gather_facts':False,
@@ -128,6 +134,20 @@ class PortalIdentityAPITests(unittest.TestCase):
             denied=self.run_play(['-e','portal_subject_scope_apply=true']);self.assertNotEqual(denied.returncode,0);self.assertEqual(self.state['writes'],complete)
         self.state['client']['defaultClientScopes']=['profile'];self.state['basicMappers'].append({'name':'unexpected','protocolMapper':'oidc-usermodel-client-role-mapper'})
         denied=self.run_play(['-e','portal_subject_scope_apply=true']);self.assertNotEqual(denied.returncode,0);self.assertEqual(self.state['writes'],complete)
+
+    def test_client_validation_is_stable_before_after_and_repeated_token_use(self):
+        first=self.run_play();self.assertEqual(first.returncode,0,first.stdout+first.stderr)
+        writes=deepcopy(self.state['writes']);mappers=deepcopy(self.state['client']['protocolMappers'])
+        # Model the pinned GroupMembershipMapper.setClaim side effect through the
+        # disposable token endpoint; no real token, identity or server is used.
+        for _ in range(2):
+            body=urllib.parse.urlencode({'client_id':'portal-local','grant_type':'authorization_code','code':'synthetic-code'}).encode()
+            context=ssl.create_default_context(cafile=str(self.work/'ca.pem'))
+            with urllib.request.urlopen(urllib.request.Request(self.fixture_url+'/realms/perkforge/protocol/openid-connect/token',data=body),context=context,timeout=10) as response:
+                self.assertEqual(response.status,200)
+            self.assertEqual(self.state['client']['protocolMappers'],mappers)
+            checked=self.run_play();self.assertEqual(checked.returncode,0,checked.stdout+checked.stderr)
+            self.assertEqual(self.state['writes'],writes)
 
     def test_exposed_input_refused_before_any_authentication(self):
         (self.work/'client-secret').chmod(0o644)
