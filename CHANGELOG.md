@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.2](https://github.com/perkforge/perkforge-platform-tenants/compare/v0.4.1...v0.4.2) (2026-10-29)
+
+
+### Bug Fixes
+
+* **portal:** declare normalized mapper userinfo defaults ([#14](https://github.com/perkforge/perkforge-platform-tenants/issues/14)) ([24fd530](https://github.com/perkforge/perkforge-platform-tenants/commit/24fd530841f519f264370e58b69dc0c10a093c76))
+
 ## [0.4.1](https://github.com/perkforge/perkforge-platform-tenants/compare/v0.4.0...v0.4.1) (2026-10-29)
 
 
