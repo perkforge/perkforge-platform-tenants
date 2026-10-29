@@ -1,0 +1,74 @@
+- name: Deliver only reviewed external local portal inputs after live approval
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    portal_inputs_apply: false
+    enrollment_tag: UNCONFIGURED
+    portal_private_dir: /UNCONFIGURED/portal
+    identity_ca_file: /UNCONFIGURED/identity-ca.crt
+    target_kubeconfig: /UNCONFIGURED/kubeconfig
+    expected_cluster_uid: UNCONFIGURED
+  tasks:
+  - name: Default and check mode read no credential files or APIs
+    ansible.builtin.debug:
+      msg: 'Portal input delivery={{ portal_inputs_apply | bool }}; check={{ ansible_check_mode }}'
+  - name: Deliver only separately approved portal inputs
+    when: portal_inputs_apply | bool and not ansible_check_mode
+    no_log: true
+    block:
+    - name: Verify published source
+      ansible.builtin.include_tasks: verify-release.yaml
+    - name: Refuse missing target inputs
+      ansible.builtin.assert:
+        that:
+        - target_kubeconfig != '/UNCONFIGURED/kubeconfig'
+        - expected_cluster_uid != 'UNCONFIGURED'
+        - portal_private_dir != '/UNCONFIGURED/portal'
+        - identity_ca_file != '/UNCONFIGURED/identity-ca.crt'
+    - name: Verify intended cluster UID
+      ansible.builtin.command:
+        argv: [kubectl, --kubeconfig, '{{ target_kubeconfig }}', get, namespace, kube-system, -o, 'jsonpath={.metadata.uid}']
+      register: portal_uid
+      changed_when: false
+    - name: Refuse another cluster
+      ansible.builtin.assert: {that: portal_uid.stdout == expected_cluster_uid}
+    - name: Inspect private regular files without following links
+      ansible.builtin.stat: {path: '{{ portal_private_dir }}/{{ item }}', follow: false}
+      loop: [client-secret, portal.crt, portal.key]
+      register: portal_files
+    - name: Require owner-only nonempty inputs
+      ansible.builtin.assert:
+        that:
+        - item.stat.isreg | default(false)
+        - not (item.stat.islnk | default(false))
+        - item.stat.mode == '0600'
+        - item.stat.pw_name == lookup('ansible.builtin.env', 'USER')
+        - item.stat.size > 0
+      loop: '{{ portal_files.results }}'
+    - name: Refuse accidentally publishing a private CA key
+      ansible.builtin.assert:
+        that:
+        - "'BEGIN CERTIFICATE' in lookup('ansible.builtin.file', identity_ca_file)"
+        - "'PRIVATE KEY' not in lookup('ansible.builtin.file', identity_ca_file)"
+    - name: Verify the portal leaf chain and exact hostname before delivery
+      ansible.builtin.command:
+        argv: '{{ item }}'
+      loop:
+      - [openssl, verify, -CAfile, '{{ identity_ca_file }}', '{{ portal_private_dir }}/portal.crt']
+      - [openssl, x509, -in, '{{ portal_private_dir }}/portal.crt', -noout, -checkhost, portal-local-il2.local-lab.test]
+      changed_when: false
+    - name: Read only the public projection of the leaf key
+      ansible.builtin.command: {argv: [openssl, pkey, -in, '{{ portal_private_dir }}/portal.key', -pubout]}
+      register: portal_public_key
+      changed_when: false
+    - name: Read the certificate public key
+      ansible.builtin.command: {argv: [openssl, x509, -in, '{{ portal_private_dir }}/portal.crt', -pubkey, -noout]}
+      register: portal_certificate_key
+      changed_when: false
+    - name: Reject mismatched leaf key and certificate
+      ansible.builtin.assert: {that: portal_public_key.stdout == portal_certificate_key.stdout}
+    # include_tasks delays loop-item templating until AFTER the approval/check
+    # gate. Direct file lookups in a loop can otherwise run before its when.
+    - name: Render private inputs only after all gates and validation passed
+      ansible.builtin.include_tasks: portal-input-manifests.yaml

@@ -1,0 +1,59 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata: {name: portal-runtime-boundary}
+spec:
+  failurePolicy: Fail
+  paramKind: {apiVersion: v1, kind: ConfigMap}
+  matchConstraints:
+    namespaceSelector: {matchLabels: {platform.perkforge.io/portal-runtime: 'true'}}
+    resourceRules:
+    - apiGroups: [apps]
+      apiVersions: [v1]
+      operations: [CREATE, UPDATE]
+      resources: [deployments]
+  variables:
+  - name: pod
+    expression: object.spec.template.spec
+  validations:
+  - expression: >-
+      object.metadata.name == 'portal' && object.spec.replicas == 1 &&
+      object.spec.strategy.type == 'Recreate' && variables.pod.serviceAccountName == 'portal-runtime' &&
+      variables.pod.nodeSelector['kubernetes.io/hostname'] == 'cks-worker' &&
+      has(variables.pod.automountServiceAccountToken) && variables.pod.automountServiceAccountToken == false &&
+      variables.pod.containers.size() == 1 &&
+      (!has(variables.pod.initContainers) || variables.pod.initContainers.size() == 0)
+    message: Portal runs one non-overlapping Pod without reconciler credentials.
+  - expression: >-
+      params.data.image.matches('^ghcr[.]io/perkforge/perkforge-portal@sha256:[a-f0-9]{64}$') &&
+      variables.pod.containers.all(c, c.image == params.data.image &&
+        !has(c.command) && !has(c.args) && !has(c.envFrom) &&
+        c.securityContext.readOnlyRootFilesystem == true &&
+        c.env.all(e, e.name in ['NODE_EXTRA_CA_CERTS', 'LISTEN_HOST', 'PORTAL_ORIGIN', 'TENANT_SOURCE',
+          'PORTAL_ACCESS_POLICY', 'OIDC_ISSUER', 'OIDC_CLIENT_ID', 'OIDC_AUDIENCE', 'OIDC_CLIENT_SECRET'] &&
+          c.env.filter(other, other.name == e.name).size() == 1) &&
+        c.env.exists(e, e.name == 'PORTAL_ACCESS_POLICY' && e.value == 'platform-admins') &&
+        c.env.exists(e, e.name == 'TENANT_SOURCE' && e.value == 'disabled') &&
+        c.env.exists(e, e.name == 'PORTAL_ORIGIN' && e.value == 'https://portal-local-il2.local-lab.test') &&
+        c.env.exists(e, e.name == 'OIDC_ISSUER' && e.value == 'https://keycloak-local-il2.local-lab.test/auth/realms/perkforge') &&
+        c.env.exists(e, e.name == 'OIDC_CLIENT_ID' && e.value == 'portal-local') &&
+        c.env.exists(e, e.name == 'OIDC_AUDIENCE' && e.value == 'portal-local') &&
+        c.env.exists(e, e.name == 'OIDC_CLIENT_SECRET' && e.valueFrom.secretKeyRef.name == 'portal-oidc-existing' &&
+          e.valueFrom.secretKeyRef.key == 'client-secret'))
+    message: Portal image and server-side admin-only identity settings are operator-approved.
+  - expression: >-
+      variables.pod.volumes.size() == 1 && variables.pod.volumes.all(v,
+        v.name == 'identity-ca' && has(v.configMap) && v.configMap.name == 'portal-identity-ca') &&
+      variables.pod.containers.all(c, c.volumeMounts.size() == 1 && c.volumeMounts.all(v,
+        v.name == 'identity-ca' && v.mountPath == '/etc/portal/identity-ca' && v.readOnly == true))
+    message: Only the public identity CA volume is available to portal workloads.
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata: {name: portal-runtime-boundary}
+spec:
+  policyName: portal-runtime-boundary
+  validationActions: [Deny]
+  paramRef:
+    name: portal-runtime-contract
+    namespace: tenant-portal
+    parameterNotFoundAction: Deny

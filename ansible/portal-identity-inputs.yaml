@@ -1,0 +1,27 @@
+- name: Inspect exact credential inputs without following links
+  ansible.builtin.stat: {path: '{{ item }}', follow: false}
+  loop: ['{{ identity_private_dir }}/bootstrap-password', '{{ portal_private_dir }}/client-secret']
+  register: portal_inputs
+- name: Require private owned nonempty regular files
+  ansible.builtin.assert:
+    that:
+    - item.stat.isreg | default(false)
+    - not (item.stat.islnk | default(false))
+    - item.stat.mode == '0600'
+    - item.stat.pw_name == lookup('ansible.builtin.env', 'USER')
+    - item.stat.size > 0
+  loop: '{{ portal_inputs.results }}'
+- name: Authenticate existing bootstrap admin over verified HTTPS
+  ansible.builtin.uri:
+    url: '{{ identity_url }}/realms/master/protocol/openid-connect/token'
+    method: POST
+    body_format: form-urlencoded
+    body:
+      client_id: admin-cli
+      grant_type: password
+      username: local-bootstrap-admin
+      password: "{{ lookup('ansible.builtin.file', identity_private_dir ~ '/bootstrap-password') | trim }}"
+  register: portal_admin_session
+- name: Keep token in private task state only
+  ansible.builtin.set_fact:
+    portal_headers: {Authorization: 'Bearer {{ portal_admin_session.json.access_token }}'}

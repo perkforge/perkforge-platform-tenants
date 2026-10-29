@@ -1,69 +1,38 @@
-# Portal enrollment: platform-owned, paused
+# Portal enrollment: platform-owned and paused
 
-`source.yaml` pins the external tenant deployment repository;
-each cluster root selects `gitops/clusters/<name>` with a single `spec.path`
-patch on `reconcile.yaml`. The reusable base deliberately has no valid default
-cluster path, so forgetting a selection fails rather than choosing local silently. The local Kustomize file
-puts these two paused objects in proposed namespace `tenant-example-portal`.
-Both cluster roots explicitly select this folder. The definition alone does
-not enroll every cluster or provision anything.
+`source.yaml` selects the published app configuration tag; `clusters/local` and
+`clusters/dev` explicitly choose `gitops/clusters/<name>`. No tenant folder is
+automatically enrolled. The app repository owns HelmRelease and values, never
+Big Bang or platform security configuration.
 
-## Identity and ownership contracts
+The **local trial proposal** adds separately applied boundaries and a scoped
+three-namespace deployment. Start with [LOCAL-TRIAL.md](LOCAL-TRIAL.md) for the
+entrypoint, release order, budget and later live approval. `dev` keeps the prior
+contract-only example; its foundation identities are not provisioned here.
 
-- The platform parent applies this protected enrollment Git as
-  `tenant-enrollment-admin`. It needs only reviewed child source/reconciler
-  permissions in approved tenant namespaces; it must not take desired state from
-  tenant-controlled enrollment Git or grant broad fallback permissions.
-- The child Flux Kustomization sets `spec.serviceAccountName: portal-reconciler`
-  and targetNamespace `tenant-example-portal`. It may apply only approved tenant
-  app release/config objects and cannot change platform policy, identities,
-  enrollment sources/reconcilers or privileged namespaces.
-- The tenant repository owns `gitops/clusters/<name>`, shared app defaults,
-  environment values and its HelmRelease. That
-  release sets `spec.serviceAccountName: portal-deployer` and separate
-  `storageNamespace: tenant-example-portal-release`; runtime uses `portal-runtime`.
-  This repository owns no app HelmRelease and contains no Big Bang package values.
+Local source/child Kustomization live in `tenant-portal-config`; the child
+impersonates `portal-reconciler` there. Tenant Git can apply only ConfigMaps and
+the reviewed HelmRelease. It cannot change its enrollment/source or RBAC.
+The app HelmRelease impersonates `portal-deployer` from that same control namespace,
+targets runtime `tenant-portal` and stores Helm history in `tenant-portal-release`.
+`portal-runtime` has no API grants or mounted API token. Human admin access is an
+application policy; it never grants workload/deployer cluster-admin.
 
-All accounts, namespaces, secret references and permissions are prerequisites,
-not created grants. Platform owns tenant namespace/quota/PSA/network/admission,
-scoped identities and enrollment definitions in this repository: reuse reviewed
-shared foundations with explicit per-tenant opt-in/overrides, rather than
-duplicating every tenant foundation. Those controls are not implemented in this
-illustration. Cluster/provider bootstrap remains in the platform repository;
-credentials are provisioned separately, never stored here. RBAC plus admission
-must constrain allowed release/source refs, identities, target/storage namespaces,
-image/runtime/secret references and release-storage access. RBAC alone cannot
-constrain arbitrary CR fields. Missing prerequisites must fail closed. No broad
-RBAC, live secrets or fake proof of tenant isolation is supplied here.
+`foundation/` is operator-owned namespace/RBAC, PSA, quota, network and native
+admission; it is deliberately absent from the ordinary cluster enrollment root.
+`ansible/prepare-local-portal.yaml` applies it only after published-code/UID guards
+and separate approval. `foundation/routing.yaml` has its own later TLS readiness gate.
+No credentials, tenant memberships, OpenBao/ESO or new controllers are supplied.
 
-## Pin and readiness limits
+The app pin selects published v0.2.0, containing the portal v0.3.0 image digest
+and explicit local admin-only configuration. Source/reconciler/release suspension,
+app disabled defaults keep this proposal inactive. The operator image allowlist
+now matches the published source v0.3.0 digest selected by app v0.2.0. Private GHCR
+credential delivery and all live security steps still require approval. Offline checks are not live tests.
 
-The source selects published portal config release **`v0.1.0`** with `ref.tag`.
-Its resolved commit and publication evidence live in root `release-evidence.json`,
-not deployment configuration. CI verifies the stable release/tag resolution and
-checks its actual paused named-cluster entrypoints. The release references the
-existing `bundles/portal/chart` (`household-portal` 0.1.0), not a copied chart.
-Application values default disabled; no image or client-secret value is approved.
-A source-read Secret name is a reference only, not a credential in Git.
-The app roots choose their own environment inputs; enrollment Git does not copy
-app environment values. Only `local` and `dev` roots are supplied, both using il2;
-each explicitly enrolls its matching app entrypoint. No directory is automatically discovered.
-
-`spec.suspend: true` stops both enrollment objects; `prune: false` adds no
-root deletion authority. The caller's platform root and the app release are also
-paused/disabled in their companion PRs. Merge is not activation. Preserve the
-existing Fleet deployment; never let Fleet and Flux own the same app release.
-Review foundation capacity/security, credential custody, admission/tenant denial
-and recovery tests before any separately approved live action.
-
-The [official Flux multi-tenancy example](https://github.com/fluxcd/flux2-multi-tenancy)
-provides the parent/child pattern. Explicit per-cluster Kustomize resources are
-the selection mechanism here; no Argo-style generator, Flux Operator ResourceSet,
-new controller or replacement Flux lifecycle is introduced.
-
-Selection annotations must match the platform parent's declared cluster,
-environment and profile and the app root's actual environment/profile resources.
-The il2 profile is illustrative, not an implemented IL authorization boundary. App
-profiles only select illustrative app audiences; they cannot supply platform
-RBAC/network/admission controls. Those controls require platform-owned design,
-review and future enforcement independent of any app annotation or label.
+Cluster/environment/profile annotations remain matching selection evidence, not
+security enforcement or IL authorization. App values cannot relax platform
+boundaries; admission negative tests and real authorization/network checks remain
+separate. The protected parent/child pattern follows the
+[official Flux multi-tenancy example](https://github.com/fluxcd/flux2-multi-tenancy).
+No change to the existing Fleet deployment or controller lifecycle is included.

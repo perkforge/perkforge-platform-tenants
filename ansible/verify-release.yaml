@@ -1,0 +1,17 @@
+- name: Require explicit enrollment release
+  ansible.builtin.assert:
+    that: enrollment_tag is match('^v[0-9]+[.][0-9]+[.][0-9]+$')
+- name: Read clean source checkout identity
+  ansible.builtin.command: {argv: [git, -C, '{{ playbook_dir }}/..', status, --porcelain]}
+  register: portal_dirty
+  changed_when: false
+- name: Read source revision
+  ansible.builtin.command: {argv: [git, -C, '{{ playbook_dir }}/..', rev-parse, HEAD]}
+  register: portal_head
+  changed_when: false
+- name: Refuse uncommitted live input
+  ansible.builtin.assert: {that: portal_dirty.stdout | length == 0}
+- name: Verify exact published enrollment tag before mutation
+  ansible.builtin.command:
+    argv: ['{{ playbook_dir }}/../scripts/verify-release-ref.sh', perkforge/perkforge-platform-tenants, '{{ enrollment_tag }}', '{{ portal_head.stdout }}']
+  changed_when: false

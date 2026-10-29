@@ -1,0 +1,27 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata: {name: portal-child-boundary}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    namespaceSelector: {matchLabels: {platform.perkforge.io/portal-control: 'true'}}
+    resourceRules:
+    - apiGroups: [kustomize.toolkit.fluxcd.io]
+      apiVersions: [v1]
+      operations: [CREATE, UPDATE]
+      resources: [kustomizations]
+  validations:
+  - expression: >-
+      !has(object.spec.kubeConfig) && object.metadata.name == 'tenant-portal' &&
+      object.spec.serviceAccountName == 'portal-reconciler' &&
+      object.spec.targetNamespace == 'tenant-portal-config' && object.spec.path == './gitops/clusters/local' &&
+      object.spec.sourceRef.kind == 'GitRepository' && object.spec.sourceRef.name == 'tenant-portal' &&
+      (!has(object.spec.sourceRef.namespace) || object.spec.sourceRef.namespace == 'tenant-portal-config')
+    message: Portal child reconciliation retains its scoped identity and protected source.
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata: {name: portal-child-boundary}
+spec:
+  policyName: portal-child-boundary
+  validationActions: [Deny]

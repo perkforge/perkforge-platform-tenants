@@ -9,6 +9,6 @@ spec:
   url: https://github.com/perkforge/perkforge-tenant-portal.git
   ref:
     # Published configuration release; resolved source evidence is separate.
-    tag: v0.1.0
+    tag: v0.2.0
   secretRef:
     name: portal-source-read # Scoped read reference only; not provisioned.

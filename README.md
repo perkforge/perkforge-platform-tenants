@@ -2,8 +2,9 @@
 
 Platform-owned, explicit **paused tenant enrollment**. Cluster roots select small
 tenant folders; those folders point to external tenant app repositories under
-scoped identities. This illustration has no Big Bang app configuration, charts, implemented tenant
-foundation controls, credentials or live bootstrap. Platform-owned reusable
+scoped identities. This repository has no Big Bang app configuration or charts.
+Local portal boundaries are operator-applied separately; enrollment cannot grant
+its own security permissions. No credentials are stored here. Platform-owned reusable
 tenant foundations and per-tenant overrides (namespace/RBAC, NetworkPolicy,
 quota and enrollment) belong here as they are reviewed, not in app repositories.
 
@@ -27,17 +28,19 @@ reusable environment/profile inputs. Cross-repository tests compare protected
 platform selection, enrollment metadata/path and app metadata/inputs at exact
 pins, including deliberately mismatched environment/profile/target cases.
 Annotations are selection evidence, not policy enforcement or IL authorization.
-No empty/fake foundation policy profiles are added here; reviewed platform-owned
-controls remain unfinished and cannot be configured by app profile values.
+No empty/fake foundation policy profiles are added here; platform controls require
+separate review/live validation and cannot be relaxed by app profile values.
+
+Local portal namespace/RBAC, PSA, quota, network and native admission definitions
+are proposed under `tenants/portal/foundation`; they are not live-verified tenant
+isolation. Start with the focused [local trial plan](tenants/portal/LOCAL-TRIAL.md).
 
 All sources/reconcilers are suspended; this is review-stage configuration only.
-Portal config release `v0.1.0` is published and selected by `spec.ref.tag`.
+Portal config release `v0.2.0` is published and selected by `spec.ref.tag`.
 `release-evidence.json` records its resolved source commit separately; CI rejects
 missing/unpublished or moved tags and validates the actual checked-out app paths.
-Merge this tag-reference PR next, then review/merge its generated enrollment
-release PR. Only the new enrollment release will contain this conversion;
-platform must not select enrollment v0.1.0 and claim the chain is tag-based.
-Platform's dependency/bootstrap conversion follows that release in separate PRs.
+After this enrollment proposal is reviewed, merged and released, platform can select
+that new enrollment tag. Current platform pins do not yet contain these changes.
 No merge or release unsuspends anything; live security tests need separate approval.
 
 Offline build checks (no API access):

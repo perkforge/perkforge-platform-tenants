@@ -1,0 +1,21 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: portal
+  namespace: tenant-portal
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.tls: 'true'
+spec:
+  ingressClassName: traefik
+  tls:
+  - hosts: [portal-local-il2.local-lab.test]
+    secretName: portal-local-tls
+  rules:
+  - host: portal-local-il2.local-lab.test
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service: {name: portal, port: {number: 3000}}

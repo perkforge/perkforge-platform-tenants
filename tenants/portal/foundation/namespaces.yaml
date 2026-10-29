@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: tenant-portal-config
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: v1.36
+    platform.perkforge.io/portal-control: 'true'
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: tenant-portal
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: v1.36
+    platform.perkforge.io/portal-runtime: 'true'
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: tenant-portal-release
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: v1.36

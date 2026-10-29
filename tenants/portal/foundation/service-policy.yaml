@@ -1,0 +1,28 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata: {name: portal-service-boundary}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    namespaceSelector: {matchLabels: {platform.perkforge.io/portal-runtime: 'true'}}
+    resourceRules:
+    - apiGroups: ['']
+      apiVersions: [v1]
+      operations: [CREATE, UPDATE]
+      resources: [services]
+  validations:
+  - expression: >-
+      object.metadata.name == 'portal' && object.spec.type == 'ClusterIP' &&
+      (!has(object.spec.externalIPs) || object.spec.externalIPs.size() == 0) &&
+      (!has(object.spec.loadBalancerIP) || object.spec.loadBalancerIP == '') &&
+      object.spec.ports.size() == 1 && object.spec.ports[0].port == 3000 &&
+      object.spec.ports[0].targetPort == 'http' &&
+      object.spec.selector == {'app.kubernetes.io/name': 'perkforge-portal'}
+    message: Portal exposes only its reviewed internal ClusterIP service.
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata: {name: portal-service-boundary}
+spec:
+  policyName: portal-service-boundary
+  validationActions: [Deny]

@@ -1,0 +1,18 @@
+- name: Read existing app-specific mapping
+  ansible.builtin.uri:
+    url: '{{ portal_api }}{{ mapping_path }}'
+    headers: '{{ portal_headers }}'
+  register: portal_mapping
+- name: Refuse unexpected additional roles for this new owned client
+  ansible.builtin.assert:
+    that: portal_mapping.json | map(attribute='name') | difference(['tenant-reader']) | length == 0
+- name: Add only the reviewed missing reader role
+  ansible.builtin.uri:
+    url: '{{ portal_api }}{{ mapping_path }}'
+    headers: '{{ portal_headers }}'
+    method: POST
+    body_format: json
+    body: ['{{ portal_role.json }}']
+    status_code: 204
+  when: "'tenant-reader' not in portal_mapping.json | map(attribute='name') | list"
+  changed_when: true

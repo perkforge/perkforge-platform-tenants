@@ -1,0 +1,49 @@
+- name: Read the existing platform parent group
+  ansible.builtin.uri:
+    url: '{{ portal_api }}/groups?search=platform&exact=true'
+    headers: '{{ portal_headers }}'
+  register: portal_parents
+- name: Require exact parent group
+  ansible.builtin.assert:
+    that: portal_parents.json | selectattr('path', 'equalto', '/platform') | list | length == 1
+- name: Read only its existing admins child
+  ansible.builtin.uri:
+    url: "{{ portal_api }}/groups/{{ (portal_parents.json | selectattr('path', 'equalto', '/platform') | first).id }}/children?search=admins&exact=true"
+    headers: '{{ portal_headers }}'
+  register: portal_admin_groups
+- name: Require exact existing admin group; never create or change members
+  ansible.builtin.assert:
+    that: portal_admin_groups.json | selectattr('path', 'equalto', '/platform/admins') | list | length == 1
+- name: Read the client specific API role
+  ansible.builtin.uri:
+    url: '{{ portal_api }}/clients/{{ portal_client.id }}/roles/tenant-reader'
+    headers: '{{ portal_headers }}'
+    status_code: [200, 404]
+  register: portal_role_before
+- name: Create only the missing app reader role
+  ansible.builtin.uri:
+    url: '{{ portal_api }}/clients/{{ portal_client.id }}/roles'
+    headers: '{{ portal_headers }}'
+    method: POST
+    body_format: json
+    body: {name: tenant-reader, description: Read the portal directory; no Kubernetes authority}
+    status_code: 201
+  when: portal_role_before.status == 404
+  changed_when: true
+- name: Read role representation
+  ansible.builtin.uri:
+    url: '{{ portal_api }}/clients/{{ portal_client.id }}/roles/tenant-reader'
+    headers: '{{ portal_headers }}'
+  register: portal_role
+- name: Require the non-composite role belongs only to this client
+  ansible.builtin.assert:
+    that:
+    - portal_role.json.clientRole
+    - not portal_role.json.composite
+    - portal_role.json.containerId == portal_client.id
+- name: Add only this role to the client scope and existing admin group
+  ansible.builtin.include_tasks: portal-identity-mapping.yaml
+  loop:
+  - '/clients/{{ portal_client.id }}/scope-mappings/clients/{{ portal_client.id }}'
+  - "/groups/{{ (portal_admin_groups.json | selectattr('path', 'equalto', '/platform/admins') | first).id }}/role-mappings/clients/{{ portal_client.id }}"
+  loop_control: {loop_var: mapping_path}

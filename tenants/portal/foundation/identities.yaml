@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata: {name: portal-reconciler, namespace: tenant-portal-config}
+automountServiceAccountToken: false
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata: {name: portal-deployer, namespace: tenant-portal-config}
+automountServiceAccountToken: false
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata: {name: portal-runtime, namespace: tenant-portal}
+automountServiceAccountToken: false

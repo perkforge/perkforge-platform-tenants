@@ -1,0 +1,43 @@
+- name: Prepare reviewed local portal boundaries only after live approval
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    portal_foundation_apply: false
+    portal_routing_apply: false
+    enrollment_tag: UNCONFIGURED
+    target_kubeconfig: /UNCONFIGURED/kubeconfig
+    expected_cluster_uid: UNCONFIGURED
+  tasks:
+  - name: Report gated preparation without reading credentials or an API
+    ansible.builtin.debug:
+      msg: 'foundation={{ portal_foundation_apply | bool }} routing={{ portal_routing_apply | bool }}'
+  - name: Apply only separately approved local foundations
+    when: portal_foundation_apply | bool and not ansible_check_mode
+    block:
+    - name: Require explicit release and local trial inputs
+      ansible.builtin.assert:
+        that:
+        - enrollment_tag is match('^v[0-9]+[.][0-9]+[.][0-9]+$')
+        - target_kubeconfig != '/UNCONFIGURED/kubeconfig'
+        - expected_cluster_uid != 'UNCONFIGURED'
+    - name: Verify clean published source
+      ansible.builtin.include_tasks: verify-release.yaml
+    - name: Read intended cluster UID
+      ansible.builtin.command:
+        argv: [kubectl, --kubeconfig, '{{ target_kubeconfig }}', get, namespace, kube-system, -o, 'jsonpath={.metadata.uid}']
+      register: portal_uid
+      changed_when: false
+    - name: Refuse wrong cluster
+      ansible.builtin.assert: {that: portal_uid.stdout == expected_cluster_uid}
+    - name: Apply operator-owned foundation; tenant reconciliation does not own it
+      ansible.builtin.command:
+        argv: [kubectl, --kubeconfig, '{{ target_kubeconfig }}', apply, -k, '{{ playbook_dir }}/../tenants/portal/foundation']
+      register: portal_foundation
+      changed_when: "'created' in portal_foundation.stdout or 'configured' in portal_foundation.stdout"
+    - name: Add route only after separate TLS and identity readiness approval
+      ansible.builtin.command:
+        argv: [kubectl, --kubeconfig, '{{ target_kubeconfig }}', apply, -f, '{{ playbook_dir }}/../tenants/portal/foundation/routing.yaml']
+      when: portal_routing_apply | bool
+      register: portal_route
+      changed_when: "'created' in portal_route.stdout or 'configured' in portal_route.stdout"
