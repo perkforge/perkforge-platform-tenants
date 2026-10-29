@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.1](https://github.com/perkforge/perkforge-platform-tenants/compare/v0.4.0...v0.4.1) (2026-10-29)
+
+
+### Bug Fixes
+
+* **portal:** validate Keycloak server-added attributes ([#12](https://github.com/perkforge/perkforge-platform-tenants/issues/12)) ([fe4d279](https://github.com/perkforge/perkforge-platform-tenants/commit/fe4d279d677ff912b1b7772e5489b0ba425902af))
+
 ## [0.4.0](https://github.com/perkforge/perkforge-platform-tenants/compare/v0.3.0...v0.4.0) (2026-10-29)
 
 
