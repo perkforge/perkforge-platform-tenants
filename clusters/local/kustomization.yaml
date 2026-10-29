@@ -21,6 +21,16 @@ patches:
   patch: |-
     - op: remove
       path: /spec/secretRef
+- target: {kind: GitRepository, name: tenant-portal}
+  patch: |-
+    - op: replace
+      path: /spec/suspend
+      value: false
+- target: {kind: Kustomization, name: tenant-portal}
+  patch: |-
+    - op: replace
+      path: /spec/suspend
+      value: false
 commonAnnotations:
   example.perkforge.io/cluster: local
   example.perkforge.io/environment: local

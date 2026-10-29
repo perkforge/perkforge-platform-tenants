@@ -35,13 +35,15 @@ Local portal namespace/RBAC, PSA, quota, network and native admission definition
 are proposed under `tenants/portal/foundation`; they are not live-verified tenant
 isolation. Start with the focused [local trial plan](tenants/portal/LOCAL-TRIAL.md).
 
-All sources/reconcilers are suspended; this is review-stage configuration only.
-Portal config release `v0.2.0` is published and selected by `spec.ref.tag`.
+Only local is declaratively unsuspended; dev and shared defaults stay suspended.
+Publication does not activate the currently pinned identity-only platform stage.
+Portal config release `v0.3.0` is published and selected by `spec.ref.tag`.
 `release-evidence.json` records its resolved source commit separately; CI rejects
 missing/unpublished or moved tags and validates the actual checked-out app paths.
 After this enrollment proposal is reviewed, merged and released, platform can select
 that new enrollment tag. Current platform pins do not yet contain these changes.
-No merge or release unsuspends anything; live security tests need separate approval.
+The current live platform still selects the identity-only stage. Advancing it to
+this activation release and live security tests require separate approval.
 
 Offline build checks (no API access):
 

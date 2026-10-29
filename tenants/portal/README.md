@@ -1,4 +1,4 @@
-# Portal enrollment: platform-owned and paused
+# Portal enrollment: platform-owned
 
 `source.yaml` selects the published app configuration tag; `clusters/local` and
 `clusters/dev` explicitly choose `gitops/clusters/<name>`. No tenant folder is
@@ -24,10 +24,11 @@ admission; it is deliberately absent from the ordinary cluster enrollment root.
 and separate approval. `foundation/routing.yaml` has its own later TLS readiness gate.
 No credentials, tenant memberships, OpenBao/ESO or new controllers are supplied.
 
-The app pin selects published v0.2.0, containing the portal v0.3.0 image digest
-and explicit local admin-only configuration. Source/reconciler/release suspension,
-app disabled defaults keep this proposal inactive. The operator image allowlist
-now matches the published source v0.3.0 digest selected by app v0.2.0. Private GHCR
+The app pin selects published v0.3.0, containing the portal v0.3.0 image digest
+and explicit local admin-only configuration. Only local source/child and the selected local app are declaratively active.
+Dev/shared defaults remain paused/disabled; the live platform still selects the
+identity-only stage, so publication alone cannot deploy. The operator image allowlist
+now matches the published source v0.3.0 digest selected by app v0.3.0. Private GHCR
 credential delivery and all live security steps still require approval. Offline checks are not live tests.
 
 Cluster/environment/profile annotations remain matching selection evidence, not

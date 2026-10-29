@@ -1,4 +1,4 @@
-# Local portal trial: disabled until release and live approval
+# Local portal trial: activation selection requires live approval
 
 The platform root knows only this enrollment repository. `clusters/local` selects
 portal; `dev` is unchanged. The app owns chart/values, this repo owns security.
@@ -14,7 +14,7 @@ Flux impersonates `portal-reconciler` for app ConfigMaps/HelmRelease and
 Helm storage. Neither can create RBAC/security or mount identities across namespaces.
 Native admission fixes source/identity/namespace references, approved image,
 admin-only environment and private Service. The operator image contract pins the published v0.3.0 image digest selected by
-app v0.2.0; missing or mismatched image contracts deny runtime creation. No new controller,
+app v0.3.0; missing or mismatched image contracts deny runtime creation. No new controller,
 OpenBao, ESO, database or PVC. PSA restricted and quotas remain platform-owned.
 This constrains tenant automation, not trusted cluster administrators.
 
@@ -25,9 +25,10 @@ This constrains tenant automation, not trusted cluster administrators.
 3. Enrollment: select the real app tag/evidence; pin the same image in the operator
    contract; release. Platform then selects that enrollment tag/evidence.
 
-No nonexistent tags are inserted. App v0.2.0 is now published and selected, with its exact image in the operator
-allowlist. This does not enable or authorize deployment. All sources/releases stay paused and app disabled until
-separate approval. Offline proposal checks do not validate a future published chain.
+No nonexistent tags are inserted. App v0.3.0 is now published and selected, with its exact image in the operator
+allowlist. This does not enable or authorize deployment. Only the published local app/source/child selection is active; dev/shared defaults
+remain paused/disabled. The existing live platform stage does not enroll this source.
+Advancing it requires separate live approval. Offline proposal checks do not validate a future published chain.
 
 ## Later bundled live approval
 
