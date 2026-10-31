@@ -2,10 +2,10 @@
   "dependencies": {
     "portal": {
       "repository": "perkforge/perkforge-tenant-portal",
-      "tag": "v0.3.0",
-      "resolvedCommit": "d9c872de87791e636e5a5de5024d9731304a672f",
-      "publishedAt": "2026-10-29T18:12:32Z",
-      "releaseUrl": "https://github.com/perkforge/perkforge-tenant-portal/releases/tag/v0.3.0"
+      "tag": "v1.0.0",
+      "resolvedCommit": "dcb6e3fc56961a977172bac3f2c493df2eb806e3",
+      "publishedAt": "2026-10-31T21:43:17Z",
+      "releaseUrl": "https://github.com/perkforge/perkforge-tenant-portal/releases/tag/v1.0.0"
     }
   }
 }

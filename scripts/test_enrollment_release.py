@@ -10,7 +10,7 @@ import unittest
 import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
-PREFIX = 'example.perkforge.io/'
+PREFIX = 'platform.perkforge.io/'
 
 
 def selected_release(source=None, evidence=None):
