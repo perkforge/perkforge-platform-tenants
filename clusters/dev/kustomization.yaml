@@ -12,6 +12,6 @@ patches:
       path: /spec/path
       value: ./gitops/clusters/dev
 commonAnnotations:
-  example.perkforge.io/cluster: dev
-  example.perkforge.io/environment: dev
-  example.perkforge.io/profile: il2
+  platform.perkforge.io/cluster: dev
+  platform.perkforge.io/environment: dev
+  platform.perkforge.io/profile: il2

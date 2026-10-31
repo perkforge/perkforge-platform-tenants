@@ -37,7 +37,7 @@ isolation. Start with the focused [local trial plan](tenants/portal/LOCAL-TRIAL.
 
 Only local is declaratively unsuspended; dev and shared defaults stay suspended.
 Publication does not activate the currently pinned identity-only platform stage.
-Portal config release `v0.3.0` is published and selected by `spec.ref.tag`.
+Portal config release `v1.0.0` is published and selected by `spec.ref.tag`.
 `release-evidence.json` records its resolved source commit separately; CI rejects
 missing/unpublished or moved tags and validates the actual checked-out app paths.
 After this enrollment proposal is reviewed, merged and released, platform can select
@@ -68,3 +68,5 @@ Never place those controls in the app repository.
 
 See [RELEASING.md](RELEASING.md) for reviewed release PRs, immutable-tag
 expectations, first-release ordering and the staged switch to tag-based refs.
+
+Selection annotations use `platform.perkforge.io/cluster`, `/environment` and `/profile`. This migration requires a compatible published portal configuration release, followed by an enrollment release and a separately reviewed platform pin advance. Never rewrite old tags or enable enrollment as part of metadata maintenance.
