@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.0.0](https://github.com/perkforge/perkforge-platform-tenants/compare/v0.4.4...v1.0.0) (2026-10-31)
+
+
+### ⚠ BREAKING CHANGES
+
+* **enrollment:** cluster selection annotations now use platform.perkforge.io. Consumers must advance to this compatible enrollment release after publication; old release tags remain unchanged.
+
+### Bug Fixes
+
+* **enrollment:** align selection metadata and pin portal v1.0.0 ([#20](https://github.com/perkforge/perkforge-platform-tenants/issues/20)) ([dc18a4b](https://github.com/perkforge/perkforge-platform-tenants/commit/dc18a4bbf5bd3b6e41aeacc7fa69f661c096233d))
+
 ## [0.4.4](https://github.com/perkforge/perkforge-platform-tenants/compare/v0.4.3...v0.4.4) (2026-10-29)
 
 
