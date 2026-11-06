@@ -1,0 +1,58 @@
+# No app-to-API or general internet access. API egress for CNPG is separately rendered.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: {name: default-deny, namespace: tenant-home-nextcloud}
+spec: {podSelector: {}, policyTypes: [Ingress, Egress]}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: {name: dns, namespace: tenant-home-nextcloud}
+spec:
+  podSelector: {}
+  policyTypes: [Egress]
+  egress:
+  - to:
+    - namespaceSelector: {matchLabels: {kubernetes.io/metadata.name: kube-system}}
+      podSelector: {matchLabels: {k8s-app: kube-dns}}
+    ports: [{protocol: UDP, port: 53}, {protocol: TCP, port: 53}]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: {name: nextcloud-web, namespace: tenant-home-nextcloud}
+spec:
+  podSelector: {matchLabels: {app.kubernetes.io/name: nextcloud}}
+  policyTypes: [Ingress, Egress]
+  ingress:
+  - from:
+    - namespaceSelector: {matchLabels: {kubernetes.io/metadata.name: kube-system}}
+      podSelector: {matchLabels: {app.kubernetes.io/name: rke2-traefik}}
+    ports: [{protocol: TCP, port: 80}]
+  egress:
+  - to:
+    - podSelector: {matchLabels: {cnpg.io/cluster: nextcloud-db}}
+    ports: [{protocol: TCP, port: 5432}]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: {name: nextcloud-database, namespace: tenant-home-nextcloud}
+spec:
+  podSelector: {matchLabels: {cnpg.io/cluster: nextcloud-db}}
+  policyTypes: [Ingress]
+  ingress:
+  - from:
+    - podSelector: {matchLabels: {app.kubernetes.io/name: nextcloud}}
+    ports: [{protocol: TCP, port: 5432}]
+  - from:
+    - namespaceSelector: {matchLabels: {kubernetes.io/metadata.name: cnpg-system}}
+      podSelector: {matchLabels: {app.kubernetes.io/instance: platform-cnpg, app.kubernetes.io/name: cloudnative-pg}}
+    ports: [{protocol: TCP, port: 8000}]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: {name: no-runtime, namespace: tenant-home-nextcloud-config}
+spec: {podSelector: {}, policyTypes: [Ingress, Egress]}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: {name: no-runtime, namespace: tenant-home-nextcloud-release}
+spec: {podSelector: {}, policyTypes: [Ingress, Egress]}

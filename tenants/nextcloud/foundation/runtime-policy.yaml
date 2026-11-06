@@ -1,0 +1,103 @@
+# These supplement restricted PSA and scoped RBAC; controller-generated objects
+# are not granted new authority. CNPG's existing platform controller owns its children.
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata: {name: nextcloud-rendered-resources}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    namespaceSelector: {matchLabels: {platform.perkforge.io/nextcloud-runtime: 'true'}}
+    resourceRules:
+    - apiGroups: [apps]
+      apiVersions: [v1]
+      operations: [CREATE, UPDATE]
+      resources: [deployments]
+    - apiGroups: [batch]
+      apiVersions: [v1]
+      operations: [CREATE, UPDATE]
+      resources: [cronjobs]
+    - apiGroups: ['']
+      apiVersions: [v1]
+      operations: [CREATE, UPDATE, DELETE]
+      resources: [configmaps, services, persistentvolumeclaims]
+    - apiGroups: [networking.k8s.io]
+      apiVersions: [v1]
+      operations: [CREATE, UPDATE]
+      resources: [ingresses]
+    - apiGroups: [postgresql.cnpg.io]
+      apiVersions: [v1]
+      operations: [CREATE, UPDATE, DELETE]
+      resources: [clusters]
+  matchConditions:
+  - name: scoped-deployer
+    expression: request.userInfo.username == 'system:serviceaccount:tenant-home-nextcloud-config:nextcloud-deployer'
+  variables:
+  - name: obj
+    expression: "request.operation == 'DELETE' ? oldObject : object"
+  validations:
+  - expression: >-
+      (request.resource.resource != 'configmaps' || variables.obj.metadata.name in
+        ['nextcloud-config', 'nextcloud-hooks', 'nextcloud-apache-budget', 'nextcloud-phpconfig']) &&
+      (request.resource.resource != 'services' || variables.obj.metadata.name == 'nextcloud') &&
+      (request.resource.resource != 'deployments' || variables.obj.metadata.name == 'nextcloud') &&
+      (request.resource.resource != 'cronjobs' || variables.obj.metadata.name == 'nextcloud-cron') &&
+      (request.resource.resource != 'ingresses' || variables.obj.metadata.name == 'nextcloud') &&
+      (request.resource.resource != 'persistentvolumeclaims' ||
+        (variables.obj.metadata.name == 'nextcloud-files' && request.operation != 'DELETE')) &&
+      (request.resource.resource != 'clusters' ||
+        (variables.obj.metadata.name == 'nextcloud-db' && request.operation != 'DELETE'))
+    message: The deployer cannot adopt unrelated resources, modify the delivered CA or delete retained data.
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata: {name: nextcloud-rendered-resources}
+spec: {policyName: nextcloud-rendered-resources, validationActions: [Deny]}
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata: {name: nextcloud-app-pod-templates}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    namespaceSelector: {matchLabels: {platform.perkforge.io/nextcloud-runtime: 'true'}}
+    resourceRules:
+    - apiGroups: [apps]
+      apiVersions: [v1]
+      operations: [CREATE, UPDATE]
+      resources: [deployments]
+    - apiGroups: [batch]
+      apiVersions: [v1]
+      operations: [CREATE, UPDATE]
+      resources: [cronjobs]
+  variables:
+  - name: pod
+    expression: "request.resource.resource == 'deployments' ? object.spec.template.spec : object.spec.jobTemplate.spec.template.spec"
+  - name: template
+    expression: "request.resource.resource == 'deployments' ? object.spec.template : object.spec.jobTemplate.spec.template"
+  - name: containers
+    expression: "variables.pod.containers + (has(variables.pod.initContainers) ? variables.pod.initContainers : [])"
+  validations:
+  - expression: >-
+      (!has(variables.pod.serviceAccountName) || variables.pod.serviceAccountName == 'default') &&
+      (!has(variables.pod.automountServiceAccountToken) || !variables.pod.automountServiceAccountToken) &&
+      variables.pod.nodeSelector['storage.perkforge.io/worker'] == 'true' &&
+      variables.template.metadata.labels['app.kubernetes.io/name'] == 'nextcloud' &&
+      !('cnpg.io/cluster' in variables.template.metadata.labels) &&
+      variables.pod.containers.size() == 1 &&
+      variables.containers.all(c, c.image == 'docker.io/library/nextcloud:35.0.2-apache@sha256:d88929dc8386420b8963f86cabb667fdaf733eef9dcf8fc98e226801a32c023c' &&
+        c.securityContext.runAsUser == 33 && c.securityContext.runAsNonRoot && !c.securityContext.allowPrivilegeEscalation)
+    message: App and cron cannot use CNPG/reconciler credentials or substitute images and workers.
+  - expression: >-
+      variables.pod.volumes.all(v,
+        (has(v.persistentVolumeClaim) && v.persistentVolumeClaim.claimName == 'nextcloud-files') ||
+        (has(v.configMap) && v.configMap.name in ['nextcloud-db-ca', 'nextcloud-config', 'nextcloud-hooks', 'nextcloud-apache-budget', 'nextcloud-phpconfig']) ||
+        has(v.emptyDir)) &&
+      variables.containers.all(c, !has(c.envFrom) && (!has(c.env) || c.env.all(e,
+        !has(e.valueFrom) || !has(e.valueFrom.secretKeyRef) ||
+        (e.valueFrom.secretKeyRef.name in ['nextcloud-admin', 'nextcloud-db-app'] && e.valueFrom.secretKeyRef.key in ['username', 'password']))))
+    message: Workloads can mount only their files and reviewed public configuration, without arbitrary Secret or token volumes.
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata: {name: nextcloud-app-pod-templates}
+spec: {policyName: nextcloud-app-pod-templates, validationActions: [Deny]}

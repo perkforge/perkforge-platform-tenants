@@ -1,0 +1,59 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata: {name: nextcloud-service}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    namespaceSelector: {matchLabels: {platform.perkforge.io/nextcloud-runtime: 'true'}}
+    resourceRules:
+    - apiGroups: ['']
+      apiVersions: [v1]
+      operations: [CREATE, UPDATE]
+      resources: [services]
+  matchConditions:
+  - name: app-service
+    expression: request.userInfo.username == 'system:serviceaccount:tenant-home-nextcloud-config:nextcloud-deployer'
+  validations:
+  - expression: >-
+      object.metadata.name == 'nextcloud' && object.spec.type == 'ClusterIP' &&
+      (!has(object.spec.externalIPs) || object.spec.externalIPs.size() == 0) &&
+      object.spec.ports.size() == 1 && object.spec.ports[0].port == 8080 && object.spec.ports[0].targetPort == 80 &&
+      object.spec.selector == {'app.kubernetes.io/name':'nextcloud','app.kubernetes.io/instance':'nextcloud','app.kubernetes.io/component':'app'}
+    message: Only the reviewed internal Nextcloud service is allowed.
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata: {name: nextcloud-service}
+spec: {policyName: nextcloud-service, validationActions: [Deny]}
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata: {name: nextcloud-ingress}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    namespaceSelector: {matchLabels: {platform.perkforge.io/nextcloud-runtime: 'true'}}
+    resourceRules:
+    - apiGroups: [networking.k8s.io]
+      apiVersions: [v1]
+      operations: [CREATE, UPDATE]
+      resources: [ingresses]
+  validations:
+  - expression: >-
+      object.metadata.name == 'nextcloud' && object.spec.ingressClassName == 'traefik' &&
+      object.metadata.annotations['traefik.ingress.kubernetes.io/router.entrypoints'] == 'websecure' &&
+      object.metadata.annotations['traefik.ingress.kubernetes.io/router.tls'] == 'true' &&
+      object.metadata.annotations.all(k, k in ['traefik.ingress.kubernetes.io/router.entrypoints',
+        'traefik.ingress.kubernetes.io/router.tls', 'meta.helm.sh/release-name', 'meta.helm.sh/release-namespace']) &&
+      object.spec.rules.size() == 1 && object.spec.rules[0].host == 'nextcloud.perkforge.home.arpa' &&
+      object.spec.rules[0].http.paths.size() == 1 &&
+      object.spec.rules[0].http.paths[0].backend.service.name == 'nextcloud' &&
+      object.spec.rules[0].http.paths[0].backend.service.port.number == 8080 &&
+      object.spec.tls.size() == 1 && object.spec.tls[0].secretName == 'nextcloud-tls' &&
+      object.spec.tls[0].hosts == ['nextcloud.perkforge.home.arpa']
+    message: Only the reviewed private TLS hostname and backend are allowed.
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata: {name: nextcloud-ingress}
+spec: {policyName: nextcloud-ingress, validationActions: [Deny]}

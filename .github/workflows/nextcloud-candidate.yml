@@ -1,0 +1,39 @@
+name: nextcloud-candidate
+on: [push, pull_request]
+permissions: {contents: read}
+jobs:
+  candidate:
+    runs-on: ubuntu-24.04
+    env:
+      KUBECONFIG: /dev/null
+      NEXTCLOUD_APP_CHECKOUT: ${{ github.workspace }}/.inputs/nextcloud
+    steps:
+    - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+    - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      with:
+        repository: perkforge/perkforge-tenant-nextcloud
+        # Review fixture only; NOT a selected or published deployment source.
+        ref: c9004fcbed264411509315188ee54fea5110224e
+        path: .inputs/nextcloud
+        persist-credentials: false
+    - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+      with:
+        go-version: '1.27.3'
+        cache-dependency-path: tests/nextcloud-cel/go.sum
+    - name: Fetch exact upstream schemas and chart fixtures
+      shell: bash
+      run: |
+        set -euo pipefail
+        python3 -m pip install PyYAML==6.0.3 ansible-core==2.19.3
+        mkdir -p "$RUNNER_TEMP/nextcloud-schemas"
+        bash tests/nextcloud-cel/fetch-schemas.sh "$RUNNER_TEMP/nextcloud-schemas"
+        curl --fail --location --retry 3 --connect-timeout 20 --max-time 120 -o "$RUNNER_TEMP/nextcloud-9.4.1.tgz" https://github.com/nextcloud/helm/releases/download/nextcloud-9.4.1/nextcloud-9.4.1.tgz
+        echo "e3d768864800bcc23eb66e6f65cbf5f0545b1506cf8c65f55a91d21af3bad4bf  $RUNNER_TEMP/nextcloud-9.4.1.tgz" | sha256sum -c -
+        echo "NEXTCLOUD_CHART=$RUNNER_TEMP/nextcloud-9.4.1.tgz" >> "$GITHUB_ENV"
+        echo "NEXTCLOUD_OPENAPI=$RUNNER_TEMP/nextcloud-schemas/openapi.json" >> "$GITHUB_ENV"
+        echo "NEXTCLOUD_CRD_DIR=$RUNNER_TEMP/nextcloud-schemas" >> "$GITHUB_ENV"
+    - name: Check candidate contracts and native CEL with no cluster access
+      run: |
+        python3 -m unittest discover -s tests -p 'test_*.py' -v
+        cd tests/nextcloud-cel
+        go test -v .

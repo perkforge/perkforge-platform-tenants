@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: tenant-home-nextcloud-config
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: v1.36
+    platform.perkforge.io/nextcloud-control: 'true'
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: tenant-home-nextcloud
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: v1.36
+    platform.perkforge.io/nextcloud-runtime: 'true'
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: tenant-home-nextcloud-release
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: v1.36

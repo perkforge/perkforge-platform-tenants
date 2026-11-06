@@ -1,0 +1,49 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata: {name: nextcloud-web-shape}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    namespaceSelector: {matchLabels: {platform.perkforge.io/nextcloud-runtime: 'true'}}
+    resourceRules:
+    - apiGroups: [apps]
+      apiVersions: [v1]
+      operations: [CREATE, UPDATE]
+      resources: [deployments]
+  validations:
+  - expression: object.metadata.name == 'nextcloud' && object.spec.replicas == 1 && object.spec.strategy.type == 'Recreate'
+    message: The RWO web workload remains a single non-overlapping instance.
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata: {name: nextcloud-web-shape}
+spec: {policyName: nextcloud-web-shape, validationActions: [Deny]}
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata: {name: nextcloud-cron-shape}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    namespaceSelector: {matchLabels: {platform.perkforge.io/nextcloud-runtime: 'true'}}
+    resourceRules:
+    - apiGroups: [batch]
+      apiVersions: [v1]
+      operations: [CREATE, UPDATE]
+      resources: [cronjobs]
+  variables:
+  - name: pod
+    expression: object.spec.jobTemplate.spec.template.spec
+  validations:
+  - expression: >-
+      object.metadata.name == 'nextcloud-cron' && object.spec.concurrencyPolicy == 'Forbid' &&
+      variables.pod.affinity.podAffinity.requiredDuringSchedulingIgnoredDuringExecution.size() == 1 &&
+      variables.pod.affinity.podAffinity.requiredDuringSchedulingIgnoredDuringExecution[0].topologyKey == 'kubernetes.io/hostname' &&
+      variables.pod.affinity.podAffinity.requiredDuringSchedulingIgnoredDuringExecution[0].labelSelector.matchLabels ==
+        {'app.kubernetes.io/name':'nextcloud','app.kubernetes.io/instance':'nextcloud','app.kubernetes.io/component':'app'}
+    message: Cron must remain serial and colocated with its web consumer.
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata: {name: nextcloud-cron-shape}
+spec: {policyName: nextcloud-cron-shape, validationActions: [Deny]}

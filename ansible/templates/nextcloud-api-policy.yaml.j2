@@ -1,0 +1,12 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: {name: nextcloud-database-api, namespace: tenant-home-nextcloud}
+spec:
+  podSelector: {matchLabels: {cnpg.io/cluster: nextcloud-db}}
+  policyTypes: [Egress]
+  egress:
+  - to:
+{% for cidr in nextcloud_api_cidrs %}
+    - ipBlock: {cidr: {{ cidr | to_json }}}
+{% endfor %}
+    ports: [{protocol: TCP, port: 443}, {protocol: TCP, port: 6443}]
