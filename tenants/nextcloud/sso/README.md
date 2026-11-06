@@ -57,3 +57,14 @@ The app adapter has a distinct private-HTTP approval gate. That setting allows
 private HTTP destinations at app level; approve/test this exact egress boundary
 first and reject a shared ingress endpoint if other virtual hosts are unacceptable.
 No app-store or general runtime internet access is needed.
+
+## Confirmed identity intent does not change the tenant boundary
+
+Corey's existing Keycloak identity is intended to retain platform-admin and gain
+native admin inside this dedicated Nextcloud instance, while the existing local
+Nextcloud admin remains recovery. The app/client adapters must verify that native
+mapping explicitly; no platform group is assumed to grant app admin. Jett's future
+ordinary household access is deferred: no account creation, enrollment or grants
+are part of these drafts. This intent adds no Kubernetes RBAC, credential delivery,
+policy selection or live permissions. Keep every boundary/delivery flag off until
+its own action-time approval and actual positive/negative acceptance.
