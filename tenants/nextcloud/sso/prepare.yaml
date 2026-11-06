@@ -1,0 +1,55 @@
+- name: Render unselected Nextcloud issuer egress and public trust for review
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    nextcloud_sso_render: false
+    nextcloud_sso_output: /UNCONFIGURED/nextcloud-sso-boundary
+    nextcloud_sso_issuer_ipv4: UNCONFIGURED
+    nextcloud_sso_ca_file: /UNCONFIGURED/public-ca.pem
+    nextcloud_sso_ca_sha256: UNCONFIGURED
+  tasks:
+  - ansible.builtin.debug:
+      msg: 'Offline output only. Nothing applies/selects this boundary; active policy remains unchanged.'
+  - when: nextcloud_sso_render | bool and not ansible_check_mode
+    block:
+    - ansible.builtin.assert:
+        that:
+        - nextcloud_sso_output is match('^/') and not nextcloud_sso_output.startswith('/UNCONFIGURED/')
+        - nextcloud_sso_ca_file is match('^/') and not nextcloud_sso_ca_file.startswith('/UNCONFIGURED/')
+        - nextcloud_sso_issuer_ipv4 is match('^([0-9]{1,3}\.){3}[0-9]{1,3}$')
+        - nextcloud_sso_issuer_ipv4.split('.') | map('int') | max <= 255
+        - nextcloud_sso_issuer_ipv4.split('.')[0] | int in [10, 172, 192]
+        - nextcloud_sso_issuer_ipv4.startswith('10.') or nextcloud_sso_issuer_ipv4.startswith('192.168.') or (nextcloud_sso_issuer_ipv4.startswith('172.') and nextcloud_sso_issuer_ipv4.split('.')[1] | int >= 16 and nextcloud_sso_issuer_ipv4.split('.')[1] | int <= 31)
+        - nextcloud_sso_ca_sha256 is match('^[a-f0-9]{64}$')
+    - ansible.builtin.stat:
+        path: '{{ nextcloud_sso_ca_file }}'
+        follow: false
+        checksum_algorithm: sha256
+      register: ca
+    - ansible.builtin.assert:
+        that:
+        - ca.stat.isreg | default(false)
+        - not (ca.stat.islnk | default(false))
+        - ca.stat.checksum == nextcloud_sso_ca_sha256
+        - "'PRIVATE KEY' not in lookup('file', nextcloud_sso_ca_file)"
+        - "'-----BEGIN CERTIFICATE-----' in lookup('file', nextcloud_sso_ca_file)"
+    - ansible.builtin.command:
+        argv: [openssl, x509, -in, '{{ nextcloud_sso_ca_file }}', -noout, -checkend, '0']
+      changed_when: false
+    - ansible.builtin.stat:
+        path: '{{ nextcloud_sso_output }}'
+        follow: false
+      register: destination
+    - ansible.builtin.assert:
+        that: not destination.stat.exists
+        fail_msg: Preserve previous/interrupted output and use a fresh directory.
+    - ansible.builtin.file:
+        path: '{{ nextcloud_sso_output }}'
+        state: directory
+        mode: '0700'
+    - ansible.builtin.template:
+        src: boundary.yaml.j2
+        dest: '{{ nextcloud_sso_output }}/boundary.yaml'
+        mode: '0600'
+        force: false

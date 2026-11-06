@@ -237,3 +237,8 @@ This activation candidate selects the guarded non-root runner in v1.0.4. Review 
 selecting the opt-in app. Runtime acceptance must show continuous web health and
 synthetic-file retention over multiple successful runs, matching container/volume
 MCS labels, and no audit denials. No household import or backup claim is included.
+
+## Unselected SSO boundary
+
+[The offline SSO renderer](sso/README.md) prepares exact issuer egress/public trust
+for review only. No cluster root or current foundation selects its output.
