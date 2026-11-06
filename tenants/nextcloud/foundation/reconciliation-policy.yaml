@@ -85,7 +85,7 @@ spec:
   - expression: >-
         object.metadata.name == 'tenant-nextcloud' &&
         object.spec.url == 'https://github.com/perkforge/perkforge-tenant-nextcloud.git' &&
-        object.spec.secretRef.name == 'nextcloud-source-read' &&
+        (!has(object.spec.secretRef) || object.spec.secretRef.name == 'nextcloud-source-read') &&
         !has(object.spec.ref.branch) && !has(object.spec.ref.semver) && !has(object.spec.ref.commit) &&
         (object.spec.ref.tag.matches('^v[0-9]+[.][0-9]+[.][0-9]+$') ||
           (object.spec.ref.tag == 'UNCONFIGURED' && object.spec.suspend))

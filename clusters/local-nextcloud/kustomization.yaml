@@ -1,0 +1,14 @@
+# Nextcloud-only review selection. Sources/child remain paused; no app tag is invented.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+- ../../tenants/nextcloud
+patches:
+- target: {kind: GitRepository, name: tenant-nextcloud}
+  patch: |-
+    - op: remove
+      path: /spec/secretRef
+commonAnnotations:
+  platform.perkforge.io/cluster: local
+  platform.perkforge.io/environment: local
+  platform.perkforge.io/profile: il2

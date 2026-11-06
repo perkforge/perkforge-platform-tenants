@@ -40,6 +40,20 @@ class NextcloudFoundation(unittest.TestCase):
         for x in self.objects:
             if x['kind']=='ServiceAccount':self.assertFalse(x['automountServiceAccountToken'])
 
+    def test_nextcloud_only_root_never_enables_portal_or_source(self):
+        built=subprocess.check_output(['kubectl','kustomize',str(ROOT/'clusters/local-nextcloud')],text=True)
+        selected=list(yaml.safe_load_all(built))
+        self.assertNotIn('portal',built)
+        self.assertEqual({x['kind'] for x in selected},{'GitRepository','HelmRepository','Kustomization'})
+        self.assertTrue(all(x['spec']['suspend'] for x in selected))
+        source=next(x for x in selected if x['kind']=='GitRepository')
+        self.assertEqual(source['spec']['ref'],{'tag':'UNCONFIGURED'})
+        self.assertNotIn('secretRef',source['spec'])
+        child=next(x for x in selected if x['kind']=='Kustomization')
+        self.assertEqual(child['spec']['path'],'./gitops/clusters/local')
+        self.assertEqual(child['spec']['targetNamespace'],'tenant-home-nextcloud-config')
+        self.assertFalse(child['spec']['prune'])
+
     def test_no_default_api_or_internet_egress(self):
         policies=[x for x in self.objects if x['kind']=='NetworkPolicy']
         self.assertTrue(any(x['metadata']['name']=='default-deny' and not x['spec'].get('ingress') and not x['spec'].get('egress') for x in policies))

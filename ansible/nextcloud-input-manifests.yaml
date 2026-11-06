@@ -1,0 +1,35 @@
+# Included exclusively inside the gated no_log block. No private file is emitted.
+- ansible.builtin.set_fact:
+    nextcloud_input_objects:
+    - apiVersion: v1
+      kind: Secret
+      metadata: {name: nextcloud-admin, namespace: tenant-home-nextcloud}
+      type: Opaque
+      data:
+        username: "{{ lookup('file', nextcloud_private_dir + '/admin-username') | b64encode }}"
+        password: "{{ lookup('file', nextcloud_private_dir + '/admin-password') | b64encode }}"
+    - apiVersion: v1
+      kind: Secret
+      metadata: {name: nextcloud-db-app, namespace: tenant-home-nextcloud}
+      type: kubernetes.io/basic-auth
+      data:
+        username: "{{ 'nextcloud' | b64encode }}"
+        password: "{{ lookup('file', nextcloud_private_dir + '/db-password') | b64encode }}"
+    - apiVersion: v1
+      kind: Secret
+      metadata: {name: nextcloud-tls, namespace: tenant-home-nextcloud}
+      type: kubernetes.io/tls
+      data:
+        tls.crt: "{{ lookup('file', nextcloud_private_dir + '/tls.crt') | b64encode }}"
+        tls.key: "{{ lookup('file', nextcloud_private_dir + '/tls.key') | b64encode }}"
+- name: Validate every new input before creating any
+  ansible.builtin.command:
+    argv: '{{ nextcloud_k + ["create", "--dry-run=server", "-f", "-"] }}'
+    stdin: '{{ item | to_nice_yaml }}'
+  loop: '{{ nextcloud_input_objects }}'
+  changed_when: false
+- name: Create only the three new inputs without overwriting
+  ansible.builtin.command:
+    argv: '{{ nextcloud_k + ["create", "-f", "-"] }}'
+    stdin: '{{ item | to_nice_yaml }}'
+  loop: '{{ nextcloud_input_objects }}'

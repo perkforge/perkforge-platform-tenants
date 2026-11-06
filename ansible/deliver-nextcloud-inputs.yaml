@@ -1,0 +1,100 @@
+- name: Create only new reviewed Nextcloud bootstrap credentials and ingress TLS
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    nextcloud_inputs_apply: false
+    enrollment_tag: UNCONFIGURED
+    nextcloud_private_dir: /UNCONFIGURED/nextcloud
+    nextcloud_ingress_ca_file: /UNCONFIGURED/ingress-ca.crt
+    target_kubeconfig: /UNCONFIGURED/kubeconfig
+    target_context: UNCONFIGURED
+    expected_cluster_uid: UNCONFIGURED
+  tasks:
+  - ansible.builtin.debug:
+      msg: 'Input delivery={{ nextcloud_inputs_apply | bool }}; default/check modes read no private inputs or APIs.'
+  - name: Deliver only after separate owner approval
+    when: nextcloud_inputs_apply | bool and not ansible_check_mode
+    no_log: true
+    block:
+    - ansible.builtin.include_tasks: verify-release.yaml
+    - ansible.builtin.assert:
+        that:
+        - target_kubeconfig != '/UNCONFIGURED/kubeconfig'
+        - target_context != 'UNCONFIGURED'
+        - expected_cluster_uid != 'UNCONFIGURED'
+        - nextcloud_private_dir != '/UNCONFIGURED/nextcloud'
+        - nextcloud_ingress_ca_file != '/UNCONFIGURED/ingress-ca.crt'
+    - ansible.builtin.set_fact:
+        nextcloud_k: [kubectl, --kubeconfig, '{{ target_kubeconfig }}', --context, '{{ target_context }}']
+    - ansible.builtin.command:
+        argv: '{{ nextcloud_k + ["get", "namespace", "kube-system", "-o", "jsonpath={.metadata.uid}"] }}'
+      register: input_uid
+      changed_when: false
+    - ansible.builtin.assert: {that: input_uid.stdout == expected_cluster_uid}
+    - ansible.builtin.command:
+        argv: '{{ nextcloud_k + ["get", "namespace", "tenant-home-nextcloud", "-o", "json"] }}'
+      register: input_namespace
+      changed_when: false
+    - ansible.builtin.assert:
+        that:
+        - (input_namespace.stdout | from_json).metadata.labels['platform.perkforge.io/nextcloud-runtime'] == 'true'
+        - (input_namespace.stdout | from_json).metadata.labels['pod-security.kubernetes.io/enforce'] == 'restricted'
+        - (input_namespace.stdout | from_json).metadata.labels['pod-security.kubernetes.io/enforce-version'] == 'v1.36'
+    - ansible.builtin.stat: {path: '{{ nextcloud_private_dir }}', follow: false}
+      register: input_directory
+    - ansible.builtin.assert:
+        that:
+        - input_directory.stat.isdir | default(false)
+        - not input_directory.stat.islnk | default(false)
+        - input_directory.stat.mode == '0700'
+        - input_directory.stat.uid == lookup('pipe', 'id -u') | int
+    - ansible.builtin.stat: {path: '{{ nextcloud_private_dir }}/{{ item }}', follow: false}
+      loop: [admin-username, admin-password, db-password, tls.crt, tls.key]
+      register: input_files
+    - ansible.builtin.assert:
+        that:
+        - item.stat.isreg | default(false)
+        - not item.stat.islnk | default(false)
+        - item.stat.mode == '0600'
+        - item.stat.uid == lookup('pipe', 'id -u') | int
+        - item.stat.size > 0
+      loop: '{{ input_files.results }}'
+    - ansible.builtin.assert:
+        that:
+        - lookup('file', nextcloud_private_dir + '/admin-username') is match('^[A-Za-z0-9._-]{1,64}$')
+        - lookup('file', nextcloud_private_dir + '/admin-password') | length >= 20
+        - lookup('file', nextcloud_private_dir + '/db-password') | length >= 20
+        - "'BEGIN CERTIFICATE' in lookup('file', nextcloud_ingress_ca_file)"
+        - "'PRIVATE KEY' not in lookup('file', nextcloud_ingress_ca_file)"
+    - name: Verify private HTTPS chain, server purpose, hostname and remaining validity
+      ansible.builtin.command:
+        argv: '{{ item }}'
+      loop:
+      - [openssl, verify, -CAfile, '{{ nextcloud_ingress_ca_file }}', -untrusted, '{{ nextcloud_private_dir }}/tls.crt', -purpose, sslserver, -verify_hostname, nextcloud.perkforge.home.arpa, '{{ nextcloud_private_dir }}/tls.crt']
+      - [openssl, x509, -in, '{{ nextcloud_private_dir }}/tls.crt', -noout, -checkend, '86400']
+      changed_when: false
+    - name: Require the DNS SAN rather than common-name fallback
+      ansible.builtin.command:
+        argv: [openssl, x509, -in, '{{ nextcloud_private_dir }}/tls.crt', -noout, -ext, subjectAltName]
+      register: input_san
+      changed_when: false
+    - ansible.builtin.assert:
+        that: "'DNS:nextcloud.perkforge.home.arpa' in input_san.stdout"
+    - ansible.builtin.command: {argv: [openssl, pkey, -in, '{{ nextcloud_private_dir }}/tls.key', -pubout]}
+      register: input_public_key
+      changed_when: false
+    - ansible.builtin.command: {argv: [openssl, x509, -in, '{{ nextcloud_private_dir }}/tls.crt', -pubkey, -noout]}
+      register: input_certificate_key
+      changed_when: false
+    - ansible.builtin.assert: {that: input_public_key.stdout == input_certificate_key.stdout}
+    - name: Refuse credential rotation or adoption
+      ansible.builtin.command:
+        argv: '{{ nextcloud_k + ["-n", "tenant-home-nextcloud", "get", "secret", "nextcloud-admin", "nextcloud-db-app", "nextcloud-tls", "--ignore-not-found", "-o", "name"] }}'
+      register: existing_inputs
+      changed_when: false
+    - ansible.builtin.assert:
+        that: existing_inputs.stdout | trim == ''
+        fail_msg: Existing inputs require a separate reviewed rotation/recovery operation; inspect partial completion before retrying.
+    # Defer file lookups until the approval, target, ownership and TLS checks pass.
+    - ansible.builtin.include_tasks: nextcloud-input-manifests.yaml
