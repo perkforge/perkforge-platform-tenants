@@ -1,0 +1,18 @@
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata: {name: tenant-nextcloud}
+spec:
+  suspend: true
+  interval: 10m
+  url: https://github.com/perkforge/perkforge-tenant-nextcloud.git
+  # Replace only after the app PR is merged and an immutable release verified.
+  ref: {tag: UNCONFIGURED}
+  secretRef: {name: nextcloud-source-read}
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata: {name: nextcloud-upstream}
+spec:
+  suspend: true
+  interval: 1h
+  url: https://nextcloud.github.io/helm/

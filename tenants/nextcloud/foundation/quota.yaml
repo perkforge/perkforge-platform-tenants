@@ -1,0 +1,33 @@
+apiVersion: v1
+kind: ResourceQuota
+metadata: {name: nextcloud-budget, namespace: tenant-home-nextcloud}
+spec:
+  hard:
+    requests.cpu: 750m
+    requests.memory: 1536Mi
+    limits.cpu: '3'
+    limits.memory: 2Gi
+    pods: '6'
+    services: '5'
+    persistentvolumeclaims: '2'
+    requests.storage: 48Gi
+    longhorn-dedicated.storageclass.storage.k8s.io/requests.storage: 48Gi
+---
+apiVersion: v1
+kind: LimitRange
+metadata: {name: nextcloud-container-defaults, namespace: tenant-home-nextcloud}
+spec:
+  limits:
+  - type: Container
+    defaultRequest: {cpu: 25m, memory: 64Mi}
+    default: {cpu: 250m, memory: 128Mi}
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata: {name: no-runtime-pods, namespace: tenant-home-nextcloud-config}
+spec: {hard: {pods: '0'}}
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata: {name: no-runtime-pods, namespace: tenant-home-nextcloud-release}
+spec: {hard: {pods: '0'}}

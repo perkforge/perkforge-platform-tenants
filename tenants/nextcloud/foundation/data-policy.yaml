@@ -1,0 +1,61 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata: {name: nextcloud-files}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    namespaceSelector: {matchLabels: {platform.perkforge.io/nextcloud-runtime: 'true'}}
+    resourceRules:
+    - apiGroups: ['']
+      apiVersions: [v1]
+      operations: [CREATE, UPDATE]
+      resources: [persistentvolumeclaims]
+  matchConditions:
+  - name: app-claim
+    expression: request.userInfo.username == 'system:serviceaccount:tenant-home-nextcloud-config:nextcloud-deployer'
+  validations:
+  - expression: >-
+      object.metadata.name == 'nextcloud-files' && object.spec.storageClassName == 'longhorn-dedicated' &&
+      object.spec.accessModes == ['ReadWriteOnce'] && quantity(object.spec.resources.requests.storage) == quantity('32Gi') &&
+      (!has(object.spec.volumeName) || (request.operation == 'UPDATE' && object.spec.volumeName == oldObject.spec.volumeName)) &&
+      !has(object.spec.dataSource) && !has(object.spec.dataSourceRef)
+    message: The 32Gi pilot files claim cannot select another tier or adopt existing data.
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata: {name: nextcloud-files}
+spec: {policyName: nextcloud-files, validationActions: [Deny]}
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata: {name: nextcloud-database}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    namespaceSelector: {matchLabels: {platform.perkforge.io/nextcloud-runtime: 'true'}}
+    resourceRules:
+    - apiGroups: [postgresql.cnpg.io]
+      apiVersions: [v1]
+      operations: [CREATE, UPDATE]
+      resources: [clusters]
+  matchConditions:
+  - name: app-database
+    expression: request.userInfo.username == 'system:serviceaccount:tenant-home-nextcloud-config:nextcloud-deployer'
+  validations:
+  - expression: >-
+      object.metadata.name == 'nextcloud-db' && object.spec.instances == 1 && !object.spec.enableSuperuserAccess &&
+      object.spec.imageName == 'ghcr.io/cloudnative-pg/postgresql:17.11@sha256:70664ebcfa1100361b5bdc28bbf06fdbe08db2dc4ad7bd14de33c5e05fe8ea8e' &&
+      object.spec.storage.storageClass == 'longhorn-dedicated' && object.spec.storage.size == '16Gi' &&
+      !has(object.spec.storage.pvcTemplate) && !has(object.spec.externalClusters) &&
+      !has(object.spec.plugins) && !has(object.spec.projectedVolumeTemplate) && !has(object.spec.certificates) &&
+      !has(object.spec.imageCatalogRef) && !has(object.spec.managed) &&
+      object.spec.bootstrap.initdb.database == 'nextcloud' && object.spec.bootstrap.initdb.owner == 'nextcloud' &&
+      object.spec.bootstrap.initdb.secret.name == 'nextcloud-db-app' &&
+      object.spec.postgresql.pg_hba[0] == 'hostnossl all all all reject' &&
+      object.spec.affinity.nodeSelector['storage.perkforge.io/worker'] == 'true'
+    message: Only the pinned single-instance TLS-only dedicated database is allowed.
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata: {name: nextcloud-database}
+spec: {policyName: nextcloud-database, validationActions: [Deny]}
