@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.3.2](https://github.com/perkforge/perkforge-platform-tenants/compare/v1.3.1...v1.3.2) (2026-11-06)
+
+
+### Bug Fixes
+
+* **nextcloud:** select guarded same-pod cron release ([d219c08](https://github.com/perkforge/perkforge-platform-tenants/commit/d219c0815edec3d56860255c032122f7f101ac12))
+* **nextcloud:** select guarded same-pod cron release ([0431259](https://github.com/perkforge/perkforge-platform-tenants/commit/043125944e60f774edfd0e72801b1959c768de83))
+
 ## [1.3.1](https://github.com/perkforge/perkforge-platform-tenants/compare/v1.3.0...v1.3.1) (2026-11-06)
 
 
