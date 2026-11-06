@@ -1,9 +1,11 @@
 # Nextcloud pilot enrollment candidate
 
-The separate `clusters/local-nextcloud` data-stage selector pins published app
-v1.0.1 at 661ad3dae9abda65cbad759ad48581e292bd7b97; release evidence is recorded
-in release-evidence.json and checked before CI checkout. It enables only the
-database release; web and cron stay paused. Existing local/dev roots and the live
+The separate `clusters/local-nextcloud` web-stage selector pins published app
+v1.0.2 at 349dfa98dc41551ce35ca23ca0854bc4bd723781; release evidence is recorded
+in release-evidence.json and checked before CI checkout. It enables database and web
+releases; cron stays paused. The preceding data-only acceptance uses published
+enrollment v1.2.1 and app v1.0.1. Complete that gate and public CA delivery before
+selecting this web stage. Existing local/dev roots and the live
 platform do not select it. Shared defaults remain paused/UNCONFIGURED. No branch
 or fabricated release is a deployment input. Foundation is
 operator-owned and separately applied from a clean published enrollment checkout;
@@ -22,7 +24,7 @@ Preserve the current GitLab/runner stage. The platform's existing enrollment
 prerequisite gate is tied to the old default local root and needs a reviewed
 selected-root update before use; do not bypass it or apply Portal's path instead.
 
-The app baseline is merged PR #1 plus database-only PR #2, published as v1.0.1. Its pilot uses
+The web initialization source is merged app PR #3, published as v1.0.2. Its pilot uses
 32Gi files plus 16Gi PostgreSQL on the accepted two-replica longhorn-dedicated
 tier (platform v0.19.0). Storage expansion requires coordinated app values,
 admission and quota review before household import. No single-excess claim is
@@ -101,9 +103,11 @@ CNPG setup. App labels cannot select this API policy.
 
 1. Review app and enrollment together. Verify chart 9.4.1 archive
    hash and both image digests, version/security compatibility and the accepted
-   dedicated disks. App v1.0.1 is published and pinned with exact evidence. Keep the
+   dedicated disks. App v1.0.2 is published and pinned with exact evidence. Keep the
    platform parent unselected through prerequisites and credential preparation.
-   Promotion selects only the data stage; do not unpause web or cron against Git.
+   First accept the published data-only stage and deliver its public database CA.
+   Then promote this released web stage; keep cron paused until initialization passes.
+   Do not manually change HelmRelease suspension against selected Git values.
 2. Choose encrypted independent backup destination, retention and key custody;
    confirm nextcloud.perkforge.home.arpa DNS and private trusted TLS. Deliver
    nextcloud-admin, nextcloud-db-app and nextcloud-tls only in runtime using the

@@ -1,4 +1,4 @@
-# Nextcloud-only data stage. Effective only after reviewed platform promotion.
+# Nextcloud-only web initialization stage. Effective only after reviewed platform promotion.
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
@@ -10,7 +10,7 @@ patches:
       path: /spec/secretRef
     - op: replace
       path: /spec/ref/tag
-      value: v1.0.1
+      value: v1.0.2
     - op: replace
       path: /spec/suspend
       value: false

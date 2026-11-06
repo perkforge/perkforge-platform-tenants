@@ -55,7 +55,7 @@ class NextcloudFoundation(unittest.TestCase):
         self.assertEqual(binding['roleRef'],{'apiGroup':'rbac.authorization.k8s.io','kind':'Role','name':'platform-cnpg-databases'})
         self.assertFalse(any(x['kind']=='RoleBinding' and any(v.get('name') in ['nextcloud-deployer','nextcloud-reconciler'] for v in x.get('subjects',[])) and x['roleRef']['name']=='platform-cnpg-databases' for x in self.objects))
 
-    def test_nextcloud_only_root_selects_published_data_stage_without_portal(self):
+    def test_nextcloud_only_root_selects_published_web_stage_without_portal(self):
         built=subprocess.check_output(['kubectl','kustomize',str(ROOT/'clusters/local-nextcloud')],text=True)
         selected=list(yaml.safe_load_all(built))
         self.assertNotIn('portal',built)
@@ -70,7 +70,9 @@ class NextcloudFoundation(unittest.TestCase):
             head=subprocess.check_output(['git','-C',app,'rev-parse','HEAD'],text=True).strip()
             self.assertEqual(head,evidence['resolvedCommit'])
             releases=list(yaml.safe_load_all((Path(app)/'gitops/base/releases.yaml').read_text()))
-            self.assertEqual({r['metadata']['name']:r['spec']['suspend'] for r in releases},{'nextcloud-data':False,'nextcloud':True})
+            self.assertEqual({r['metadata']['name']:r['spec']['suspend'] for r in releases},{'nextcloud-data':False,'nextcloud':False})
+            values=yaml.safe_load((Path(app)/'gitops/base/app-values.yaml').read_text())
+            self.assertTrue(values['cronjob']['cronjob']['suspend'])
         self.assertNotIn('secretRef',source['spec'])
         child=next(x for x in selected if x['kind']=='Kustomization')
         self.assertEqual(child['spec']['path'],'./gitops/clusters/local')
