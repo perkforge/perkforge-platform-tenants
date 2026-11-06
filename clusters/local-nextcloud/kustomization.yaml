@@ -10,7 +10,7 @@ patches:
       path: /spec/secretRef
     - op: replace
       path: /spec/ref/tag
-      value: v1.0.3
+      value: v1.0.4
     - op: replace
       path: /spec/suspend
       value: false

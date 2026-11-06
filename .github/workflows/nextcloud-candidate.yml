@@ -12,11 +12,11 @@ jobs:
     - name: Verify the published Nextcloud web-stage tag before checkout
       env:
         GH_TOKEN: ${{ github.token }}
-      run: scripts/verify-release-ref.sh perkforge/perkforge-tenant-nextcloud v1.0.3 d8e5523ffacf1472b6d47ff9aa21ac9a0c6429c3
+      run: scripts/verify-release-ref.sh perkforge/perkforge-tenant-nextcloud v1.0.4 9c48e8d97c596533a806dcb78e33b1932d5ef04a
     - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
       with:
         repository: perkforge/perkforge-tenant-nextcloud
-        ref: v1.0.3
+        ref: v1.0.4
         path: .inputs/nextcloud
         fetch-depth: 0
         persist-credentials: false

@@ -1,9 +1,11 @@
 # Nextcloud pilot enrollment candidate
 
 The separate `clusters/local-nextcloud` web-stage selector pins published app
-v1.0.3 at d8e5523ffacf1472b6d47ff9aa21ac9a0c6429c3; release evidence is recorded
+v1.0.4 at 9c48e8d97c596533a806dcb78e33b1932d5ef04a; release evidence is recorded
 in release-evidence.json and checked before CI checkout. It enables database and web
-releases; cron remains disabled. The preceding data-only acceptance uses published
+releases and the guarded non-root same-Pod cron runner. This activation candidate
+requires the accepted disabled rollout, scoped sidecar policy and bounded same-Pod
+pre-activation checks before promotion. The preceding data-only acceptance uses published
 enrollment v1.2.1 and app v1.0.1. Complete that gate and public CA delivery before
 selecting this web stage. Existing local/dev roots and the live
 platform do not select it. Shared defaults remain paused/UNCONFIGURED. No branch
@@ -24,13 +26,13 @@ Preserve the current GitLab/runner stage. The platform's existing enrollment
 prerequisite gate is tied to the old default local root and needs a reviewed
 selected-root update before use; do not bypass it or apply Portal's path instead.
 
-The disabled same-Pod cron correction is merged app PR #4, published as v1.0.3. Its pilot uses
+The guarded same-Pod activation is merged app PR #5, published as v1.0.4. Its pilot uses
 32Gi files plus 16Gi PostgreSQL on the accepted two-replica longhorn-dedicated
 tier (platform v0.19.0). Storage expansion requires coordinated app values,
 admission and quota review before household import. No single-excess claim is
 allowed here. One web process, one database instance and serial cron are an empty
 pilot, not application HA or accepted household load. Both prefer worker-2; worker-1
-remains eligible. Keep cron disabled until the same-Pod correction passes initialization, continuous web health and background-run acceptance.
+remains eligible. Before selecting this candidate, accept initialization, trusted HTTPS, synthetic retention and bounded same-Pod execution with the released policy. Verify matching container/volume SELinux labels and two successful background runs after the controlled rollout.
 
 ## What the foundation owns
 
@@ -103,10 +105,10 @@ CNPG setup. App labels cannot select this API policy.
 
 1. Review app and enrollment together. Verify chart 9.4.1 archive
    hash and both image digests, version/security compatibility and the accepted
-   dedicated disks. App v1.0.3 is published and pinned with exact evidence. Keep the
+   dedicated disks. App v1.0.4 is published and pinned with exact evidence. Keep the
    platform parent unselected through prerequisites and credential preparation.
    First accept the published data-only stage and deliver its public database CA.
-   Then promote this released web stage; keep cron disabled until same-Pod runtime acceptance passes.
+   Then promote this released web stage; accept the disabled correction and bounded same-Pod checks before this controlled activation, then verify real sidecar progress and sustained web health.
    Do not manually change HelmRelease suspension against selected Git values.
 2. Choose encrypted independent backup destination, retention and key custody;
    confirm nextcloud.perkforge.home.arpa DNS and private trusted TLS. Deliver
@@ -230,8 +232,8 @@ no RBAC, Secret access, host mounts or fixed SELinux labels. Extra or substitute
 sidecars remain denied. CronJob containers still have the existing single-container
 limit; this policy does not enable or resume them.
 
-The paired application candidate switches to the chart's same-Pod sidecar with a
-non-root bounded runner, disabled by default. Review and release the policy before
+The preceding app v1.0.3 deployed the same-Pod correction with its runner disabled.
+This activation candidate selects the guarded non-root runner in v1.0.4. Review and release the policy before
 selecting the opt-in app. Runtime acceptance must show continuous web health and
 synthetic-file retention over multiple successful runs, matching container/volume
 MCS labels, and no audit denials. No household import or backup claim is included.
