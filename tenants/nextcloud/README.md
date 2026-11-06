@@ -69,6 +69,19 @@ and the observed platform-cnpg controller-to-instance-manager TCP8000. App Pods
 have no API or general internet egress. No public routing, SSO, Redis or household
 import is supplied. DNS/TLS and network enforcement on RKE2 must be tested live.
 
+The shared `cnpg-system/platform-cnpg` operator initially watches only `gitlab`.
+This foundation adds its pinned 1.30.1 namespaced Role and RoleBinding only in
+`tenant-home-nextcloud`. The subject is the platform operator, never a tenant
+identity. It can reconcile database resources and read Secrets in this namespace;
+it gains no other namespace or cluster-wide Secret permission. Apply the reviewed
+foundation before selecting a published platform stage that sets both the actual
+operator Deployment and config to `gitlab,tenant-home-nextcloud`. Do not create a
+second operator or use an empty/all-namespace watch. Verify operator readiness,
+watch list, positive Nextcloud and GitLab access, and denial in an unrelated
+namespace before creating the Nextcloud database. Keep the existing GitLab Role
+and database unchanged. The controller rollout briefly pauses reconciliation;
+this is not an instruction to restart database Pods.
+
 CNPG alone needs API egress. Before activation, privately inventory the Kubernetes
 Service IP and actual API endpoints, then render an additional policy with:
 
