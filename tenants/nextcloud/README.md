@@ -1,12 +1,28 @@
 # Nextcloud pilot enrollment candidate
 
-Unselected and paused. This folder is not included by any cluster root. Its app
-tag is intentionally UNCONFIGURED until the app PR is merged, published and
-verified. No branch or fabricated release is a deployment input. Foundation is
+The separate `clusters/local-nextcloud` data-stage selector pins published app
+v1.0.1 at 661ad3dae9abda65cbad759ad48581e292bd7b97; release evidence is recorded
+in release-evidence.json and checked before CI checkout. It enables only the
+database release; web and cron stay paused. Existing local/dev roots and the live
+platform do not select it. Shared defaults remain paused/UNCONFIGURED. No branch
+or fabricated release is a deployment input. Foundation is
 operator-owned and separately applied from a clean published enrollment checkout;
 the tenant child cannot reconcile its own authority.
 
-The app candidate is perkforge/perkforge-tenant-nextcloud PR #1. Its pilot uses
+The Nextcloud-only selector contains no Portal resources. Its sources and child
+are enabled only after separately reviewed platform promotion; no live change is
+made by editing this folder. It removes the source Secret reference because the app repository
+is public. The shared base retains an optional scoped read reference for a future
+private repository; the current public path requires no Git token. Do not select
+the existing `clusters/local` root to activate Nextcloud: that root enables Portal.
+Before deployment, reverify the recorded app release, publish the reviewed
+enrollment selection, and add a matching published
+platform stage pointing its enrollment parent at `./clusters/local-nextcloud`.
+Preserve the current GitLab/runner stage. The platform's existing enrollment
+prerequisite gate is tied to the old default local root and needs a reviewed
+selected-root update before use; do not bypass it or apply Portal's path instead.
+
+The app baseline is merged PR #1 plus database-only PR #2, published as v1.0.1. Its pilot uses
 32Gi files plus 16Gi PostgreSQL on the accepted two-replica longhorn-dedicated
 tier (platform v0.19.0). Storage expansion requires coordinated app values,
 admission and quota review before household import. No single-excess claim is
@@ -70,16 +86,15 @@ CNPG setup. App labels cannot select this API policy.
 
 ## Ordered review and activation gates
 
-1. Review the app and enrollment candidates together. Verify chart 9.4.1 archive
+1. Review app and enrollment together. Verify chart 9.4.1 archive
    hash and both image digests, version/security compatibility and the accepted
-   dedicated disks. Merge/publish app first; replace UNCONFIGURED with its exact
-   verified release tag and record resolved source evidence through the repository's
-   release procedure before selecting this folder in a local root. Keep sources,
-   child and both app HelmReleases suspended through preparation.
+   dedicated disks. App v1.0.1 is published and pinned with exact evidence. Keep the
+   platform parent unselected through prerequisites and credential preparation.
+   Promotion selects only the data stage; do not unpause web or cron against Git.
 2. Choose encrypted independent backup destination, retention and key custody;
    confirm nextcloud.perkforge.home.arpa DNS and private trusted TLS. Deliver
-   nextcloud-source-read only in config, and nextcloud-admin, nextcloud-db-app and
-   nextcloud-tls only in runtime using the approved protected-input workflow. No
+   nextcloud-admin, nextcloud-db-app and nextcloud-tls only in runtime using the
+   gated input workflow below. The public local source needs no source-read Secret. No
    Secret values belong in Git, logs or this document.
 3. Under separate live approval, verify exact published source/cluster UID, apply
    foundation plus reviewed endpoint policy, and server-validate all native CEL
@@ -108,6 +123,58 @@ Build foundation and paused enrollment independently with kubectl kustomize.
 Tests use actual pinned-chart renders and native CEL expression evaluation;
 live schema/type-check, authorization, CNPG defaults, network/DNAT, TLS and restore
 remain acceptance gates. Foundation is a draft boundary, not a claim of isolation.
+
+## DNS, HTTPS and credential delivery
+
+Observed preparation: the proposed `nextcloud.perkforge.home.arpa` name does not
+resolve on the workstation. `/etc/hosts` still has a separate historical VM name;
+do not repoint it or reuse its TLS material. Physical Traefik Pods expose node
+host ports 80/443, without hostNetwork; their Service is ClusterIP with no external
+address. Configure private LAN DNS to reviewed reachable node ingress addresses,
+not a Service/Pod IP. Keep physical addresses in protected local inputs. Verify
+resolution, routing and certificate-trusted HTTPS from the workstation and another
+household client. A workstation-only hosts entry is not household DNS coverage.
+
+No cert-manager APIs are installed. Use an explicitly approved private-CA issuance
+path for a server certificate with DNS SAN `nextcloud.perkforge.home.arpa`, matching
+leaf key and full intermediate chain. Trust the public root on each browser/sync
+client. Keep the signing key in operator custody; only the leaf key enters the TLS
+Secret. This ingress/client trust is separate from CNPG's database CA. Issuance,
+DNS changes, credentials and delivery remain separate live approvals, not side
+effects of this source change.
+
+After the namespace foundation exists, supply an external 0700 directory containing
+0600 regular owner files `admin-username`, `admin-password`, `db-password`, `tls.crt`
+and `tls.key`. Choose the owner-controlled bootstrap admin name explicitly; do not
+reuse old VM passwords. Password inputs are one-line strings of at least 20
+characters; lookup removes trailing whitespace. Store/recover these inputs through
+the approved encrypted backup workflow, never Git or chat. Supply the public
+ingress CA trust bundle separately. From a clean, published enrollment checkout:
+
+```sh
+ansible-playbook -i localhost, ansible/deliver-nextcloud-inputs.yaml \
+  -e @/ABS/PRIVATE/nextcloud-inputs.yml -e nextcloud_inputs_apply=true
+```
+
+Private YAML supplies `enrollment_tag`, `target_kubeconfig`, `target_context`,
+`expected_cluster_uid`, `nextcloud_private_dir` and `nextcloud_ingress_ca_file`.
+Default/check modes touch no API or private file. Apply verifies the exact clean
+published checkout, cluster UID and namespace label, file ownership/modes, HTTPS
+chain/purpose/hostname/expiry and leaf key match. It sends only the three intended
+Secrets through hidden stdin, server-validates all before creation and refuses
+existing objects. It never rotates credentials, overwrites or emits private files.
+Certificate bundles must contain no private key; the leaf key file must contain
+one matching, unencrypted private key. Bundled signing keys are rejected.
+Partial creation must be inspected; do not retry blindly or delete retained inputs.
+No local sudo is required when using the existing authorized admin kubeconfig.
+
+After separately approved data activation, verify CNPG Ready and its server
+certificate Service SAN/fingerprint, then project **only** public `ca.crt` to the
+runtime `nextcloud-db-ca` ConfigMap. Do not copy `ca.key`, a signing key or the
+server private key. This public-CA delivery is not performed by the bootstrap
+Secret playbook and must precede web activation. Then run the existing read-only
+app TLS probe and require wrong-CA, wrong-hostname and plaintext failures. Neither
+that runtime probe nor household client TLS/backup restore is accepted by a build.
 
 Repeat the offline checks with Python/PyYAML/Ansible, kubectl, Helm and Go 1.27.3:
 

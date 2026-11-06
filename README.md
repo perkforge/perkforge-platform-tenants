@@ -11,8 +11,9 @@ quota and enrollment) belong here as they are reviewed, not in app repositories.
 - [local](clusters/local/kustomization.yaml) and [dev](clusters/dev/kustomization.yaml) explicitly select
   [portal enrollment](tenants/portal/README.md).
 - Omit a tenant resource from a cluster root to omit enrollment on that cluster.
-- [Nextcloud pilot candidate](tenants/nextcloud/README.md) is paused and deliberately
-  unselected while its app release pin and live prerequisites are reviewed.
+- [Nextcloud data stage](tenants/nextcloud/README.md) has a separate
+  `clusters/local-nextcloud` selector pinned to published app v1.0.1. It enables
+  no Portal resources and remains outside live platform selection until promotion.
   There is no automatic repository or directory discovery.
 - The platform bootstrap owns cluster/provider prerequisites and references this repository with
   a pinned GitRepository/Flux Kustomization. Tenant repositories own app manifests

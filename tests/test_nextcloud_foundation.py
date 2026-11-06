@@ -1,5 +1,6 @@
 """Offline boundary and renderer tests; synthetic addresses, no Kubernetes API."""
 import os
+import json
 from pathlib import Path
 import subprocess
 import tempfile
@@ -39,6 +40,28 @@ class NextcloudFoundation(unittest.TestCase):
         self.assertEqual(budget['spec']['hard']['persistentvolumeclaims'],'2')
         for x in self.objects:
             if x['kind']=='ServiceAccount':self.assertFalse(x['automountServiceAccountToken'])
+
+    def test_nextcloud_only_root_selects_published_data_stage_without_portal(self):
+        built=subprocess.check_output(['kubectl','kustomize',str(ROOT/'clusters/local-nextcloud')],text=True)
+        selected=list(yaml.safe_load_all(built))
+        self.assertNotIn('portal',built)
+        self.assertEqual({x['kind'] for x in selected},{'GitRepository','HelmRepository','Kustomization'})
+        self.assertTrue(all(not x['spec']['suspend'] for x in selected))
+        source=next(x for x in selected if x['kind']=='GitRepository')
+        evidence=json.loads((ROOT/'release-evidence.json').read_text())['dependencies']['nextcloud']
+        self.assertEqual(source['spec']['ref'],{'tag':evidence['tag']})
+        self.assertEqual(source['spec']['url'],'https://github.com/'+evidence['repository']+'.git')
+        app=os.environ.get('NEXTCLOUD_APP_CHECKOUT')
+        if app:
+            head=subprocess.check_output(['git','-C',app,'rev-parse','HEAD'],text=True).strip()
+            self.assertEqual(head,evidence['resolvedCommit'])
+            releases=list(yaml.safe_load_all((Path(app)/'gitops/base/releases.yaml').read_text()))
+            self.assertEqual({r['metadata']['name']:r['spec']['suspend'] for r in releases},{'nextcloud-data':False,'nextcloud':True})
+        self.assertNotIn('secretRef',source['spec'])
+        child=next(x for x in selected if x['kind']=='Kustomization')
+        self.assertEqual(child['spec']['path'],'./gitops/clusters/local')
+        self.assertEqual(child['spec']['targetNamespace'],'tenant-home-nextcloud-config')
+        self.assertFalse(child['spec']['prune'])
 
     def test_no_default_api_or_internet_egress(self):
         policies=[x for x in self.objects if x['kind']=='NetworkPolicy']
