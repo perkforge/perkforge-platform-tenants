@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.3.1](https://github.com/perkforge/perkforge-platform-tenants/compare/v1.3.0...v1.3.1) (2026-11-06)
+
+
+### Bug Fixes
+
+* **nextcloud:** admit only the named non-root cron sidecar ([701730f](https://github.com/perkforge/perkforge-platform-tenants/commit/701730f69fa908a1bfd234a36d5655389a13d726))
+* **nextcloud:** admit only the named non-root cron sidecar ([58fabd5](https://github.com/perkforge/perkforge-platform-tenants/commit/58fabd5eb005fb563f2d282ad4bb6133354ab7cd))
+* **nextcloud:** pin published disabled cron correction ([182efc2](https://github.com/perkforge/perkforge-platform-tenants/commit/182efc228f416480bd46aae6cb26c11febad5f14))
+* **nextcloud:** pin published disabled cron correction ([0ed049f](https://github.com/perkforge/perkforge-platform-tenants/commit/0ed049f8d46aacc26bbf64dbbb098a0609c1d3ee))
+
 ## [1.3.0](https://github.com/perkforge/perkforge-platform-tenants/compare/v1.2.1...v1.3.0) (2026-11-06)
 
 
