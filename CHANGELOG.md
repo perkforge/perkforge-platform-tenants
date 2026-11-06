@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.2.0](https://github.com/perkforge/perkforge-platform-tenants/compare/v1.1.0...v1.2.0) (2026-11-06)
+
+
+### Features
+
+* **nextcloud:** add isolated enrollment path and gated inputs ([fd2fc4a](https://github.com/perkforge/perkforge-platform-tenants/commit/fd2fc4a84a9b98e818d08249026a580761dc6244))
+* **nextcloud:** isolate enrollment selection and gate bootstrap inputs ([edab5a6](https://github.com/perkforge/perkforge-platform-tenants/commit/edab5a610e46b0300b5c3ada19b30aabab5498f5))
+* **nextcloud:** pin the published database-only deployment stage ([dbb9c55](https://github.com/perkforge/perkforge-platform-tenants/commit/dbb9c55734c7d9514473e5f2b20e7db0000326f8))
+
+
+### Bug Fixes
+
+* **nextcloud:** reject signing-key bundles during TLS delivery ([b8e1bd3](https://github.com/perkforge/perkforge-platform-tenants/commit/b8e1bd3d1cc1e568598d996ca78fe9dac1558cf6))
+
 ## [1.1.0](https://github.com/perkforge/perkforge-platform-tenants/compare/v1.0.0...v1.1.0) (2026-11-06)
 
 
