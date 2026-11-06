@@ -38,7 +38,7 @@ class InputDelivery(unittest.TestCase):
             self.assertIn('changed=0',result.stdout)
 
     def test_real_delivery_and_denials_never_print_or_overwrite_credentials(self):
-        for scenario in ['valid','wrong-host','missing-san','wrong-key','public-password','existing','wrong-cluster','server-reject']:
+        for scenario in ['valid','wrong-host','missing-san','wrong-key','bundled-signing-key','key-in-certificate','public-password','existing','wrong-cluster','server-reject']:
             with self.subTest(scenario=scenario), tempfile.TemporaryDirectory() as d:
                 p=Path(d);private=p/'inputs';private.mkdir(mode=0o700)
                 for name,value in {'admin-username':b'owner-admin','admin-password':b'synthetic-admin-password-123456','db-password':b'synthetic-db-password-123456',
@@ -46,6 +46,10 @@ class InputDelivery(unittest.TestCase):
                                    'tls.key':(self.cert/('ca.key' if scenario=='wrong-key' else 'tls.key')).read_bytes()}.items():
                     f=private/name;f.write_bytes(value);f.chmod(0o600)
                 if scenario=='public-password':(private/'admin-password').chmod(0o644)
+                if scenario=='bundled-signing-key':
+                    (private/'tls.key').write_bytes((private/'tls.key').read_bytes()+(self.cert/'ca.key').read_bytes())
+                if scenario=='key-in-certificate':
+                    (private/'tls.crt').write_bytes((private/'tls.crt').read_bytes()+(self.cert/'ca.key').read_bytes())
                 tools=p/'bin';tools.mkdir()
                 fake=r'''#!/usr/bin/env python3
 import base64,json,os,sys,yaml

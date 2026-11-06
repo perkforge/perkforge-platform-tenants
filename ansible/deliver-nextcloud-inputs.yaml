@@ -67,6 +67,8 @@
         - lookup('file', nextcloud_private_dir + '/db-password') | length >= 20
         - "'BEGIN CERTIFICATE' in lookup('file', nextcloud_ingress_ca_file)"
         - "'PRIVATE KEY' not in lookup('file', nextcloud_ingress_ca_file)"
+        - "'PRIVATE KEY' not in lookup('file', nextcloud_private_dir + '/tls.crt')"
+        - lookup('file', nextcloud_private_dir + '/tls.key') | regex_findall('-----BEGIN (?:[A-Z]+ )?PRIVATE KEY-----') | length == 1
     - name: Verify private HTTPS chain, server purpose, hostname and remaining validity
       ansible.builtin.command:
         argv: '{{ item }}'
@@ -81,7 +83,7 @@
       changed_when: false
     - ansible.builtin.assert:
         that: "'DNS:nextcloud.perkforge.home.arpa' in input_san.stdout"
-    - ansible.builtin.command: {argv: [openssl, pkey, -in, '{{ nextcloud_private_dir }}/tls.key', -pubout]}
+    - ansible.builtin.command: {argv: [openssl, pkey, -in, '{{ nextcloud_private_dir }}/tls.key', -passin, 'pass:', -pubout]}
       register: input_public_key
       changed_when: false
     - ansible.builtin.command: {argv: [openssl, x509, -in, '{{ nextcloud_private_dir }}/tls.crt', -pubkey, -noout]}

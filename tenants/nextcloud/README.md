@@ -161,6 +161,8 @@ published checkout, cluster UID and namespace label, file ownership/modes, HTTPS
 chain/purpose/hostname/expiry and leaf key match. It sends only the three intended
 Secrets through hidden stdin, server-validates all before creation and refuses
 existing objects. It never rotates credentials, overwrites or emits private files.
+Certificate bundles must contain no private key; the leaf key file must contain
+one matching, unencrypted private key. Bundled signing keys are rejected.
 Partial creation must be inspected; do not retry blindly or delete retained inputs.
 No local sudo is required when using the existing authorized admin kubeconfig.
 
