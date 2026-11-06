@@ -1,4 +1,4 @@
-# Nextcloud-only review selection. Sources/child remain paused; no app tag is invented.
+# Nextcloud-only data stage. Effective only after reviewed platform promotion.
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
@@ -8,6 +8,22 @@ patches:
   patch: |-
     - op: remove
       path: /spec/secretRef
+    - op: replace
+      path: /spec/ref/tag
+      value: v1.0.1
+    - op: replace
+      path: /spec/suspend
+      value: false
+- target: {kind: HelmRepository, name: nextcloud-upstream}
+  patch: |-
+    - op: replace
+      path: /spec/suspend
+      value: false
+- target: {kind: Kustomization, name: tenant-nextcloud}
+  patch: |-
+    - op: replace
+      path: /spec/suspend
+      value: false
 commonAnnotations:
   platform.perkforge.io/cluster: local
   platform.perkforge.io/environment: local

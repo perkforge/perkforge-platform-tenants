@@ -1,5 +1,12 @@
 {
   "dependencies": {
+    "nextcloud": {
+      "repository": "perkforge/perkforge-tenant-nextcloud",
+      "tag": "v1.0.1",
+      "resolvedCommit": "661ad3dae9abda65cbad759ad48581e292bd7b97",
+      "publishedAt": "2026-11-06T00:54:45Z",
+      "releaseUrl": "https://github.com/perkforge/perkforge-tenant-nextcloud/releases/tag/v1.0.1"
+    },
     "portal": {
       "repository": "perkforge/perkforge-tenant-portal",
       "tag": "v1.0.0",

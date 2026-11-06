@@ -1,25 +1,28 @@
 # Nextcloud pilot enrollment candidate
 
-Paused. Only the dormant `clusters/local-nextcloud` selector includes this folder;
-the existing local/dev roots and live platform do not. Its app
-tag is intentionally UNCONFIGURED until the app PR is merged, published and
-verified. No branch or fabricated release is a deployment input. Foundation is
+The separate `clusters/local-nextcloud` data-stage selector pins published app
+v1.0.1 at 661ad3dae9abda65cbad759ad48581e292bd7b97; release evidence is recorded
+in release-evidence.json and checked before CI checkout. It enables only the
+database release; web and cron stay paused. Existing local/dev roots and the live
+platform do not select it. Shared defaults remain paused/UNCONFIGURED. No branch
+or fabricated release is a deployment input. Foundation is
 operator-owned and separately applied from a clean published enrollment checkout;
 the tenant child cannot reconcile its own authority.
 
-The Nextcloud-only selector contains no Portal resources and does not change any
-suspension flag. It removes the source Secret reference because the app repository
+The Nextcloud-only selector contains no Portal resources. Its sources and child
+are enabled only after separately reviewed platform promotion; no live change is
+made by editing this folder. It removes the source Secret reference because the app repository
 is public. The shared base retains an optional scoped read reference for a future
 private repository; the current public path requires no Git token. Do not select
 the existing `clusters/local` root to activate Nextcloud: that root enables Portal.
-Before deployment, publish/verify the app release, pin it with resolved source
-evidence, publish the reviewed enrollment selection, and add a matching published
+Before deployment, reverify the recorded app release, publish the reviewed
+enrollment selection, and add a matching published
 platform stage pointing its enrollment parent at `./clusters/local-nextcloud`.
 Preserve the current GitLab/runner stage. The platform's existing enrollment
 prerequisite gate is tied to the old default local root and needs a reviewed
 selected-root update before use; do not bypass it or apply Portal's path instead.
 
-The app candidate is perkforge/perkforge-tenant-nextcloud PR #1. Its pilot uses
+The app baseline is merged PR #1 plus database-only PR #2, published as v1.0.1. Its pilot uses
 32Gi files plus 16Gi PostgreSQL on the accepted two-replica longhorn-dedicated
 tier (platform v0.19.0). Storage expansion requires coordinated app values,
 admission and quota review before household import. No single-excess claim is
@@ -83,12 +86,11 @@ CNPG setup. App labels cannot select this API policy.
 
 ## Ordered review and activation gates
 
-1. Review the app and enrollment candidates together. Verify chart 9.4.1 archive
+1. Review app and enrollment together. Verify chart 9.4.1 archive
    hash and both image digests, version/security compatibility and the accepted
-   dedicated disks. Merge/publish app first; replace UNCONFIGURED with its exact
-   verified release tag and record resolved source evidence through the repository's
-   release procedure before selecting this folder in a local root. Keep sources,
-   child and both app HelmReleases suspended through preparation.
+   dedicated disks. App v1.0.1 is published and pinned with exact evidence. Keep the
+   platform parent unselected through prerequisites and credential preparation.
+   Promotion selects only the data stage; do not unpause web or cron against Git.
 2. Choose encrypted independent backup destination, retention and key custody;
    confirm nextcloud.perkforge.home.arpa DNS and private trusted TLS. Deliver
    nextcloud-admin, nextcloud-db-app and nextcloud-tls only in runtime using the

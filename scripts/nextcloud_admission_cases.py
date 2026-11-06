@@ -87,7 +87,7 @@ for obj in yaml.safe_load_all(subprocess.check_output(['kubectl','kustomize',str
     policy={'Kustomization':'nextcloud-child','GitRepository':'nextcloud-sources','HelmRepository':'nextcloud-chart-source'}[obj['kind']]
     case('nextcloud-only-'+obj['kind'],policy,obj)
     if obj['kind']=='GitRepository':
-        case('deny-public-source-unconfigured-resume',policy,obj,False,['spec','suspend'],False)
+        case('deny-public-source-unconfigured-resume',policy,obj,False,['spec','ref'],{'tag':'UNCONFIGURED'})
 db = data[0]
 for name,path,value in [('generic-storage',['spec','storage','storageClass'],'longhorn'),('db-image',['spec','imageName'],'postgres:latest'),('db-plaintext',['spec','postgresql','pg_hba'],['host all all all trust']),('db-credential',['spec','bootstrap','initdb','secret','name'],'nextcloud-admin')]:
     case('deny-'+name,'nextcloud-database',db,False,path,value)
