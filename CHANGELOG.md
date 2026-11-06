@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.2.1](https://github.com/perkforge/perkforge-platform-tenants/compare/v1.2.0...v1.2.1) (2026-11-06)
+
+
+### Bug Fixes
+
+* **nextcloud:** enroll shared CNPG namespace authority ([eb73fd9](https://github.com/perkforge/perkforge-platform-tenants/commit/eb73fd9994019809095ceb76d35765e4dc5e314e))
+* **nextcloud:** enroll shared CNPG namespace authority ([dbda902](https://github.com/perkforge/perkforge-platform-tenants/commit/dbda9024ccb3f6e8d159af2bef2156f20b7ad468))
+
 ## [1.2.0](https://github.com/perkforge/perkforge-platform-tenants/compare/v1.1.0...v1.2.0) (2026-11-06)
 
 
