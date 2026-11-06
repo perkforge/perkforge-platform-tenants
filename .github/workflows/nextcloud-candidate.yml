@@ -13,7 +13,7 @@ jobs:
       with:
         repository: perkforge/perkforge-tenant-nextcloud
         # Review fixture only; NOT a selected or published deployment source.
-        ref: c9004fcbed264411509315188ee54fea5110224e
+        ref: 430a29bcb32b12653740021162080e88ea1985c8
         path: .inputs/nextcloud
         persist-credentials: false
     - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0

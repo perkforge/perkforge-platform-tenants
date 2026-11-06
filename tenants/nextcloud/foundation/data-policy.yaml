@@ -44,7 +44,7 @@ spec:
   validations:
   - expression: >-
       object.metadata.name == 'nextcloud-db' && object.spec.instances == 1 && !object.spec.enableSuperuserAccess &&
-      object.spec.imageName == 'ghcr.io/cloudnative-pg/postgresql:17.6@sha256:30b304a2e300ed80b6d1b740e4369e9b0f25599fb518de78c01fd9f25531791b' &&
+      object.spec.imageName == 'ghcr.io/cloudnative-pg/postgresql:17.11@sha256:70664ebcfa1100361b5bdc28bbf06fdbe08db2dc4ad7bd14de33c5e05fe8ea8e' &&
       object.spec.storage.storageClass == 'longhorn-dedicated' && object.spec.storage.size == '16Gi' &&
       !has(object.spec.storage.pvcTemplate) && !has(object.spec.externalClusters) &&
       !has(object.spec.plugins) && !has(object.spec.projectedVolumeTemplate) && !has(object.spec.certificates) &&
