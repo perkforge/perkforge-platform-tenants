@@ -218,3 +218,20 @@ network isolation.
 
 `-count=1` is required: Go's test cache cannot reliably track YAML and external app
 files read by the Python render subprocess. Build/dependency caching remains safe.
+
+## Same-Pod cron correction candidate
+
+The bounded separate-Pod cron test completed, but web shared-volume access failed
+until an automatic restart. Suspected SELinux MCS relabeling requires host audit
+confirmation. Keep the live CronJob suspended. This policy candidate permits only
+the web Deployment's existing `nextcloud` and optional `nextcloud-cron` containers,
+with the same pinned image, UID33 and existing token/volume restrictions. It adds
+no RBAC, Secret access, host mounts or fixed SELinux labels. Extra or substituted
+sidecars remain denied. CronJob containers still have the existing single-container
+limit; this policy does not enable or resume them.
+
+The paired application candidate switches to the chart's same-Pod sidecar with a
+non-root bounded runner, disabled by default. Review and release the policy before
+selecting the opt-in app. Runtime acceptance must show continuous web health and
+synthetic-file retention over multiple successful runs, matching container/volume
+MCS labels, and no audit denials. No household import or backup claim is included.

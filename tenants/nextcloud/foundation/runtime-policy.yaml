@@ -83,7 +83,11 @@ spec:
       variables.pod.nodeSelector['storage.perkforge.io/worker'] == 'true' &&
       variables.template.metadata.labels['app.kubernetes.io/name'] == 'nextcloud' &&
       !('cnpg.io/cluster' in variables.template.metadata.labels) &&
-      variables.pod.containers.size() == 1 &&
+      ((request.resource.resource == 'deployments' &&
+        variables.pod.containers.size() in [1, 2] &&
+        variables.pod.containers.exists(c, c.name == 'nextcloud') &&
+        variables.pod.containers.all(c, c.name in ['nextcloud', 'nextcloud-cron'])) ||
+       (request.resource.resource != 'deployments' && variables.pod.containers.size() == 1)) &&
       variables.containers.all(c, c.image == 'docker.io/library/nextcloud:35.0.2-apache@sha256:d88929dc8386420b8963f86cabb667fdaf733eef9dcf8fc98e226801a32c023c' &&
         c.securityContext.runAsUser == 33 && c.securityContext.runAsNonRoot && !c.securityContext.allowPrivilegeEscalation)
     message: App and cron cannot use CNPG/reconciler credentials or substitute images and workers.
