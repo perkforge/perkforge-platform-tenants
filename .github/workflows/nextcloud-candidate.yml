@@ -9,14 +9,14 @@ jobs:
       NEXTCLOUD_APP_CHECKOUT: ${{ github.workspace }}/.inputs/nextcloud
     steps:
     - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
-    - name: Verify the published Nextcloud data-stage tag before checkout
+    - name: Verify the published Nextcloud web-stage tag before checkout
       env:
         GH_TOKEN: ${{ github.token }}
-      run: scripts/verify-release-ref.sh perkforge/perkforge-tenant-nextcloud v1.0.1 661ad3dae9abda65cbad759ad48581e292bd7b97
+      run: scripts/verify-release-ref.sh perkforge/perkforge-tenant-nextcloud v1.0.2 349dfa98dc41551ce35ca23ca0854bc4bd723781
     - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
       with:
         repository: perkforge/perkforge-tenant-nextcloud
-        ref: v1.0.1
+        ref: v1.0.2
         path: .inputs/nextcloud
         fetch-depth: 0
         persist-credentials: false
