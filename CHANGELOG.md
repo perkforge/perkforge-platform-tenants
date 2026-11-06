@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.0](https://github.com/perkforge/perkforge-platform-tenants/compare/v1.0.0...v1.1.0) (2026-11-06)
+
+
+### Features
+
+* **nextcloud:** prepare paused pilot enrollment and boundaries ([#22](https://github.com/perkforge/perkforge-platform-tenants/issues/22)) ([057109b](https://github.com/perkforge/perkforge-platform-tenants/commit/057109b9ffd9717b5ee6c6b73f562e9cd4d56ff1))
+
 ## [1.0.0](https://github.com/perkforge/perkforge-platform-tenants/compare/v0.4.4...v1.0.0) (2026-10-31)
 
 
