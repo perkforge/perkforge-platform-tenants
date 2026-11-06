@@ -119,7 +119,7 @@ export NEXTCLOUD_APP_CHECKOUT=/ABS/REVIEWED/nextcloud-checkout
 export NEXTCLOUD_CHART=/ABS/VERIFIED/nextcloud-9.4.1.tgz
 export NEXTCLOUD_OPENAPI=/ABS/FRESH/schema-fixtures/openapi.json
 export NEXTCLOUD_CRD_DIR=/ABS/FRESH/schema-fixtures
-cd tests/nextcloud-cel && go test -v .
+cd tests/nextcloud-cel && go test -count=1 -v .
 ```
 
 The schema fetcher pins source commits for Kubernetes 1.36.5, Flux helm-controller
@@ -131,3 +131,6 @@ before positive real renders and negative mutations are evaluated. Repeat agains
 the eventual released app/source and actual controller schema/defaults before live
 acceptance. Never treat a successful offline case as proof of authorization or
 network isolation.
+
+`-count=1` is required: Go's test cache cannot reliably track YAML and external app
+files read by the Python render subprocess. Build/dependency caching remains safe.
