@@ -12,13 +12,17 @@ HELM = os.environ.get('HELM', 'helm')
 CHART = os.environ['NEXTCLOUD_CHART']
 
 
-def render(chart, base, local):
+def render(chart, base, local, extra=()):
     return [x for x in yaml.safe_load_all(subprocess.check_output([
         HELM, 'template', 'nextcloud', str(chart), '-n', 'tenant-home-nextcloud',
-        '-f', str(APP / base), '-f', str(APP / local)], text=True)) if x]
+        '-f', str(APP / base), '-f', str(APP / local), *extra], text=True)) if x]
 
 
 app = render(CHART, 'gitops/base/app-values.yaml', 'gitops/clusters/local/app-values.yaml')
+# Exercise the opt-in same-pod candidate as well as the disabled default.
+sidecar_app = render(CHART, 'gitops/base/app-values.yaml', 'gitops/clusters/local/app-values.yaml', ['--set', 'cronjob.enabled=true'])
+sidecar_deploy = next(x for x in sidecar_app if x['kind'] == 'Deployment')
+
 data = render(APP / 'charts/data', 'gitops/base/data-values.yaml', 'gitops/clusters/local/data-values.yaml')
 selection = list(yaml.safe_load_all(subprocess.check_output(['kubectl', 'kustomize', str(APP / 'gitops/clusters/local')], text=True)))
 enrollment = list(yaml.safe_load_all(subprocess.check_output(['kubectl', 'kustomize', str(ROOT / 'tenants/nextcloud')], text=True)))
@@ -36,6 +40,21 @@ def case(name, policy, obj, allowed=True, path=None, value=None):
         target[path[-1]] = value
     cases.append(dict(Name=name, Policy=policy, Resource=resources[obj['kind']], Object=obj, Allowed=allowed))
 
+
+# Older pinned apps have no opt-in sidecar yet. Derive that allowed mutation
+# from their real rendered web container so policy CI never skips this coverage.
+containers = sidecar_deploy['spec']['template']['spec']['containers']
+if len(containers) == 1:
+    containers.append(dict(copy.deepcopy(containers[0]), name='nextcloud-cron'))
+case('allow-same-pod-cron', 'nextcloud-app-pod-templates', sidecar_deploy)
+prefix = ['spec','template','spec','containers']
+for name,path,value in [
+    ('unreviewed-sidecar',[1,'name'],'other'),
+    ('root-sidecar',[1,'securityContext','runAsUser'],0),
+    ('sidecar-escalation',[1,'securityContext','allowPrivilegeEscalation'],True),
+    ('sidecar-image',[1,'image'],'attacker.invalid/image:latest')]:
+    case('deny-'+name,'nextcloud-app-pod-templates',sidecar_deploy,False,prefix+path,value)
+case('deny-third-container','nextcloud-app-pod-templates',sidecar_deploy,False,prefix,containers+[dict(containers[1],name='other')])
 
 for obj in app + data:
     case('rendered-' + obj['kind'] + '-' + obj['metadata']['name'], 'nextcloud-rendered-resources', obj)
