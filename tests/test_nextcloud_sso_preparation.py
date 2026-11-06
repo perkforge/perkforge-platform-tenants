@@ -38,12 +38,18 @@ class SsoPreparation(unittest.TestCase):
         output = self.directory / 'boundary'
         inputs = {FLAG: True, OUTPUT: str(output), 'nextcloud_sso_issuer_ipv4': '192.168.100.10',
                   'nextcloud_sso_ca_file': str(cert),
-                  'nextcloud_sso_ca_sha256': hashlib.sha256(cert.read_bytes()).hexdigest()}
+                  'nextcloud_sso_ca_sha256': hashlib.sha256(cert.read_bytes()).hexdigest(),
+                  'nextcloud_sso_delivery_contract': True,
+                  'nextcloud_sso_image': 'ghcr.io/perkforge/nextcloud-sso:35.0.2-oidc8.13.0@sha256:'+'a'*64}
         self.run_play(inputs)
         policy, ca = list(yaml.safe_load_all((output / 'boundary.yaml').read_text()))
         self.assertEqual(policy['spec']['egress'], [{'to': [{'ipBlock': {'cidr': '192.168.100.10/32'}}],
                                                    'ports': [{'protocol': 'TCP', 'port': 443}]}])
         self.assertEqual(ca['data']['ca.crt'].strip(), cert.read_text().strip())
+        policy_contract = yaml.safe_load((output / 'runtime-policy.yaml').read_text())
+        self.assertEqual(len(policy_contract['spec']['validations']),3)
+        self.assertIn('sha256:'+'a'*64,policy_contract['spec']['validations'][0]['expression'])
+        self.assertIn('m.readOnly',policy_contract['spec']['validations'][2]['expression'])
         self.run_play(inputs, success=False)
         self.run_play(dict(inputs, nextcloud_sso_issuer_ipv4='0.0.0.0'), success=False)
         self.run_play(dict(inputs, nextcloud_sso_issuer_ipv4='192.168.999.1'), success=False)

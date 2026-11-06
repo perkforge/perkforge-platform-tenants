@@ -19,8 +19,8 @@ kind: ConfigMap
 metadata:
   name: nextcloud-oidc-ca
   namespace: tenant-home-nextcloud
+  labels: {platform.perkforge.io/managed-input: nextcloud-sso-v1}
   annotations:
     platform.perkforge.io/public-ca-sha256: '{{ nextcloud_sso_ca_sha256 }}'
-data:
-  ca.crt: |
-{{ lookup('file', nextcloud_sso_ca_file) | indent(4, true) }}
+immutable: true
+data: {ca.crt: {{ lookup('file', nextcloud_sso_ca_file) | trim | to_json }}}

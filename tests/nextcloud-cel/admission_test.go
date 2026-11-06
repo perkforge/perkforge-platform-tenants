@@ -48,7 +48,7 @@ func TestNextcloudAdmission(t *testing.T) {
 	if err = json.Unmarshal(data, &f); err != nil {
 		t.Fatal(err)
 	}
-	if len(f.Policies) != 12 || len(f.Cases) < 50 {
+	if len(f.Policies) != 13 || len(f.Cases) < 50 {
 		t.Fatal("missing policy/mutation coverage")
 	}
 	if path := os.Getenv("NEXTCLOUD_OPENAPI"); path == "" {

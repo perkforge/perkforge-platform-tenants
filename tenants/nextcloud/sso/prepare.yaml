@@ -4,6 +4,8 @@
   gather_facts: false
   vars:
     nextcloud_sso_render: false
+    nextcloud_sso_image: UNCONFIGURED
+    nextcloud_sso_delivery_contract: false
     nextcloud_sso_output: /UNCONFIGURED/nextcloud-sso-boundary
     nextcloud_sso_issuer_ipv4: UNCONFIGURED
     nextcloud_sso_ca_file: /UNCONFIGURED/public-ca.pem
@@ -53,3 +55,19 @@
         dest: '{{ nextcloud_sso_output }}/boundary.yaml'
         mode: '0600'
         force: false
+    - when: nextcloud_sso_delivery_contract | bool
+      block:
+      - ansible.builtin.assert:
+          that: nextcloud_sso_image is match('^ghcr.io/perkforge/nextcloud-sso:35.0.2-oidc8.13.0@sha256:[a-f0-9]{64}$')
+      - ansible.builtin.set_fact:
+          nc_policies: '{{ lookup("file","../foundation/runtime-policy.yaml") | from_yaml_all | list }}'
+      - ansible.builtin.set_fact:
+          nc_pod_policy: '{{ nc_policies | selectattr("metadata.name","equalto","nextcloud-app-pod-templates") | selectattr("kind","equalto","ValidatingAdmissionPolicy") | first }}'
+      - ansible.builtin.set_fact:
+          nc_image_expression: '{{ nc_pod_policy.spec.validations[0].expression | replace("docker.io/library/nextcloud:35.0.2-apache@sha256:d88929dc8386420b8963f86cabb667fdaf733eef9dcf8fc98e226801a32c023c",nextcloud_sso_image) }}'
+          nc_volume_expression: '{{ nc_pod_policy.spec.validations[1].expression | replace("has(v.emptyDir)", lookup("file","volume-extension.txt")) }}'
+      - ansible.builtin.copy:
+          content: '{{ nc_pod_policy | combine({"spec": nc_pod_policy.spec | combine({"validations": [{"expression":nc_image_expression,"message":"Only the exact reviewed SSO image under existing UID33 boundaries."},{"expression":nc_volume_expression,"message":"Only existing data/config and exact OIDC public CA/client secret."},{"expression":lookup("file","mount-expression.txt"),"message":"OIDC mounts are read-only at exact paths; no remapping of credentials."}]})}) | to_nice_yaml }}'
+          dest: '{{ nextcloud_sso_output }}/runtime-policy.yaml'
+          mode: '0600'
+          force: false

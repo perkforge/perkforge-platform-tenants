@@ -1,0 +1,78 @@
+- name: Deliver only an existing approved Nextcloud client secret and public CA
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    nextcloud_sso_deliver: false
+    nextcloud_sso_delivery_approval: UNAPPROVED
+    nextcloud_sso_secret_file: /UNCONFIGURED/client-secret
+    nextcloud_sso_ca_file: /UNCONFIGURED/public-ca.pem
+    nextcloud_sso_ca_sha256: UNCONFIGURED
+    target_kubeconfig: /UNCONFIGURED/kubeconfig
+    target_context: UNCONFIGURED
+    expected_cluster_uid: UNCONFIGURED
+  tasks:
+  - ansible.builtin.debug:
+      msg: 'Default/check reads no files and contacts no APIs. No credential generation, rotation or activation.'
+  - when: nextcloud_sso_deliver | bool and not ansible_check_mode
+    no_log: true
+    block:
+    - ansible.builtin.assert:
+        that:
+        - nextcloud_sso_delivery_approval == 'nextcloud-sso-delivery-v1'
+        - target_kubeconfig is match('^/') and not target_kubeconfig.startswith('/UNCONFIGURED/')
+        - target_context != 'UNCONFIGURED' and expected_cluster_uid != 'UNCONFIGURED'
+    - ansible.builtin.stat:
+        path: '{{ item }}'
+        follow: false
+        checksum_algorithm: sha256
+      loop: '{{ [nextcloud_sso_secret_file,nextcloud_sso_ca_file] }}'
+      register: nc_delivery_files
+    - ansible.builtin.assert:
+        that:
+        - item.item is match('^/') and item.item | realpath == item.item
+        - item.stat.isreg | default(false)
+        - not (item.stat.islnk | default(false))
+        - item.stat.size > 0
+        - item.item == nextcloud_sso_ca_file or (item.stat.mode == '0600' and item.stat.pw_name == lookup('env','USER'))
+      loop: '{{ nc_delivery_files.results }}'
+    - ansible.builtin.assert:
+        that:
+        - nc_delivery_files.results[1].stat.checksum == nextcloud_sso_ca_sha256
+        - lookup('file',nextcloud_sso_secret_file) | trim | length >= 24
+        - "'PRIVATE KEY' not in lookup('file',nextcloud_sso_ca_file)"
+    - ansible.builtin.command:
+        argv: [openssl, x509, -in, '{{ nextcloud_sso_ca_file }}', -noout, -checkend, '0']
+      changed_when: false
+    - ansible.builtin.set_fact:
+        nc_delivery_k: [kubectl, --kubeconfig, '{{ target_kubeconfig }}', --context, '{{ target_context }}']
+    - ansible.builtin.command:
+        argv: '{{ nc_delivery_k + ["get","namespace","kube-system","-o","jsonpath={.metadata.uid}"] }}'
+      changed_when: false
+      register: nc_delivery_uid
+    - ansible.builtin.assert:
+        that: nc_delivery_uid.stdout == expected_cluster_uid
+    - ansible.builtin.command:
+        argv: '{{ nc_delivery_k + ["get","namespace","tenant-home-nextcloud","-o","json"] }}'
+      changed_when: false
+      register: nc_delivery_namespace
+    - ansible.builtin.assert:
+        that:
+        - (nc_delivery_namespace.stdout | from_json).metadata.labels['platform.perkforge.io/nextcloud-runtime'] == 'true'
+        - (nc_delivery_namespace.stdout | from_json).metadata.labels['pod-security.kubernetes.io/enforce'] == 'restricted'
+    - ansible.builtin.set_fact:
+        nc_delivery_objects:
+        - apiVersion: v1
+          kind: Secret
+          metadata: {name: nextcloud-oidc, namespace: tenant-home-nextcloud, labels: {platform.perkforge.io/managed-input: nextcloud-sso-v1}}
+          immutable: true
+          type: Opaque
+          data: {client-secret: '{{ lookup("file",nextcloud_sso_secret_file) | trim | b64encode }}'}
+        - apiVersion: v1
+          kind: ConfigMap
+          metadata: {name: nextcloud-oidc-ca, namespace: tenant-home-nextcloud, labels: {platform.perkforge.io/managed-input: nextcloud-sso-v1}}
+          immutable: true
+          data: {ca.crt: '{{ lookup("file",nextcloud_sso_ca_file) | trim }}'}
+    - ansible.builtin.include_tasks: deliver-object.yaml
+      loop: '{{ nc_delivery_objects }}'
+      loop_control: {loop_var: nc_input}

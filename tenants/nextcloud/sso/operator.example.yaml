@@ -1,0 +1,14 @@
+# Copy externally. Renderer, input delivery and boundary application are independent.
+nextcloud_sso_render: false
+nextcloud_sso_delivery_contract: false
+nextcloud_sso_image: UNCONFIGURED
+nextcloud_sso_output: /UNCONFIGURED/fresh-sso-boundary
+nextcloud_sso_issuer_ipv4: UNCONFIGURED
+nextcloud_sso_ca_file: /UNCONFIGURED/public-ca.pem
+nextcloud_sso_ca_sha256: UNCONFIGURED
+nextcloud_sso_deliver: false
+nextcloud_sso_delivery_approval: UNAPPROVED
+nextcloud_sso_secret_file: /UNCONFIGURED/client-secret
+expected_cluster_uid: UNCONFIGURED
+target_kubeconfig: /UNCONFIGURED/kubeconfig
+target_context: UNCONFIGURED

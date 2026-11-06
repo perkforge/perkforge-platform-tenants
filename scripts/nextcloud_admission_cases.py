@@ -4,6 +4,8 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import tempfile
+import hashlib
 import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -118,6 +120,42 @@ service = next(x for x in app if x['kind']=='Service')
 case('deny-nodeport','nextcloud-service',service,False,['spec','type'],'NodePort')
 cm = next(x for x in app if x['kind']=='ConfigMap')
 case('deny-delivered-ca-write','nextcloud-rendered-resources',cm,False,['metadata','name'],'nextcloud-db-ca')
+# Compile the actual unselected SSO renderer output, preserving the active policy.
+with tempfile.TemporaryDirectory(prefix='nextcloud-sso-cel-') as temporary:
+    work = Path(temporary)
+    subprocess.run(['openssl','req','-x509','-newkey','rsa:2048','-nodes','-days','1',
+                    '-subj','/CN=Offline SSO CEL fixture','-keyout',str(work/'key'),'-out',str(work/'ca')],
+                   check=True,capture_output=True)
+    image='ghcr.io/perkforge/nextcloud-sso:35.0.2-oidc8.13.0@sha256:'+'a'*64
+    values={'nextcloud_sso_render':True,'nextcloud_sso_delivery_contract':True,
+            'nextcloud_sso_image':image,'nextcloud_sso_issuer_ipv4':'192.168.100.10',
+            'nextcloud_sso_ca_file':str(work/'ca'),'nextcloud_sso_ca_sha256':hashlib.sha256((work/'ca').read_bytes()).hexdigest(),
+            'nextcloud_sso_output':str(work/'output')}
+    result=subprocess.run(['ansible-playbook',str(ROOT/'tenants/nextcloud/sso/prepare.yaml'),'-e',json.dumps(values)],
+                          env=dict(os.environ,ANSIBLE_LOCAL_TEMP=str(work/'local'),ANSIBLE_REMOTE_TEMP=str(work/'remote')),
+                          capture_output=True,text=True)
+    if result.returncode:raise RuntimeError(result.stdout+result.stderr)
+    policy=yaml.safe_load((work/'output/runtime-policy.yaml').read_text())
+    policy['metadata']['name']='nextcloud-sso-app-pod-templates'
+    policies.append(policy)
+    candidate=copy.deepcopy(sidecar_deploy)
+    pod=candidate['spec']['template']['spec']
+    for container in pod['containers']+pod.get('initContainers',[]):container['image']=image
+    pod['volumes'] += [{'name':'oidc-ca','configMap':{'name':'nextcloud-oidc-ca'}},
+                       {'name':'oidc-secret','secret':{'secretName':'nextcloud-oidc','defaultMode':288,'items':[{'key':'client-secret','path':'client-secret'}]}}]
+    for container in pod['containers']:
+        container.setdefault('volumeMounts',[]).extend([{'name':'oidc-ca','mountPath':'/etc/nextcloud-oidc','readOnly':True},
+                                                       {'name':'oidc-secret','mountPath':'/run/nextcloud-oidc','readOnly':True}])
+    case('allow-exact-unselected-sso-contract','nextcloud-sso-app-pod-templates',candidate)
+    case('active-policy-denies-unselected-sso','nextcloud-app-pod-templates',candidate,False)
+    prefix=['spec','template','spec']
+    for name,path,value in [('image',['containers',0,'image'],'ghcr.io/perkforge/nextcloud-sso:latest'),
+                            ('secret',['volumes',len(pod['volumes'])-1,'secret','secretName'],'other-app'),
+                            ('secret-key',['volumes',len(pod['volumes'])-1,'secret','items',0,'key'],'other-key'),
+                            ('mount-write',['containers',0,'volumeMounts',len(pod['containers'][0]['volumeMounts'])-1,'readOnly'],False),
+                            ('mount-path',['containers',0,'volumeMounts',len(pod['containers'][0]['volumeMounts'])-1,'mountPath'],'/var/www/html'),
+                            ('token',['automountServiceAccountToken'],True)]:
+        case('sso-deny-'+name,'nextcloud-sso-app-pod-templates',candidate,False,prefix+path,value)
 schemas = {}
 crds = []
 if os.environ.get('NEXTCLOUD_CRDS'):
