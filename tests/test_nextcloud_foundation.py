@@ -1,6 +1,7 @@
 """Offline boundary and renderer tests; synthetic addresses, no Kubernetes API."""
 import os
 import json
+import hashlib
 from pathlib import Path
 import subprocess
 import tempfile
@@ -28,6 +29,10 @@ class NextcloudFoundation(unittest.TestCase):
         self.assertFalse(any(x['kind'] in {'ClusterRole','ClusterRoleBinding','AuthenticationConfiguration'} for x in self.objects))
         for x in self.objects:
             if x['kind']=='Role':
+                if x['metadata']['name']=='platform-cnpg-databases':
+                    self.assertEqual(x['metadata']['namespace'],'tenant-home-nextcloud')
+                    self.assertEqual(hashlib.sha256(json.dumps(x['rules'],sort_keys=True).encode()).hexdigest(),'2d012e57b53caf7e0fbc55b66bd5cb3c1e65a2992cb3ae14076b8152c0d33499')
+                    continue
                 for rule in x['rules']:
                     self.assertNotIn('*',str(rule))
                     self.assertFalse(set(rule['resources']) & {'namespaces','roles','rolebindings','networkpolicies','serviceaccounts'})
@@ -40,6 +45,15 @@ class NextcloudFoundation(unittest.TestCase):
         self.assertEqual(budget['spec']['hard']['persistentvolumeclaims'],'2')
         for x in self.objects:
             if x['kind']=='ServiceAccount':self.assertFalse(x['automountServiceAccountToken'])
+
+    def test_operator_authority_is_only_the_existing_platform_identity(self):
+        owned=[x for x in self.objects if x['metadata']['name']=='platform-cnpg-databases']
+        self.assertEqual({x['kind'] for x in owned},{'Role','RoleBinding'})
+        self.assertTrue(all(x['metadata']['namespace']=='tenant-home-nextcloud' for x in owned))
+        binding=next(x for x in owned if x['kind']=='RoleBinding')
+        self.assertEqual(binding['subjects'],[{'kind':'ServiceAccount','name':'platform-cnpg','namespace':'cnpg-system'}])
+        self.assertEqual(binding['roleRef'],{'apiGroup':'rbac.authorization.k8s.io','kind':'Role','name':'platform-cnpg-databases'})
+        self.assertFalse(any(x['kind']=='RoleBinding' and any(v.get('name') in ['nextcloud-deployer','nextcloud-reconciler'] for v in x.get('subjects',[])) and x['roleRef']['name']=='platform-cnpg-databases' for x in self.objects))
 
     def test_nextcloud_only_root_selects_published_data_stage_without_portal(self):
         built=subprocess.check_output(['kubectl','kustomize',str(ROOT/'clusters/local-nextcloud')],text=True)
@@ -74,7 +88,6 @@ class NextcloudFoundation(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             dest=Path(directory)/'api.yaml'
             def run(cidrs,check=False):
-                import json
                 args=['ansible-playbook','-i','localhost,',str(ROOT/'ansible/render-nextcloud-api-policy.yaml'),'-e',json.dumps({'nextcloud_api_reviewed':True,'nextcloud_api_cidrs':cidrs,'nextcloud_api_output':str(dest)})]
                 if check:args+=['--check']
                 return subprocess.run(args,env={**os.environ,'KUBECONFIG':'/dev/null'},capture_output=True,text=True)

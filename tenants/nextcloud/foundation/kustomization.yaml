@@ -4,6 +4,7 @@ resources:
 - namespaces.yaml
 - identities.yaml
 - rbac.yaml
+- cnpg-operator.yaml
 - network.yaml
 - quota.yaml
 - reconciliation-policy.yaml
