@@ -1,9 +1,9 @@
 # Nextcloud pilot enrollment candidate
 
 The separate `clusters/local-nextcloud` web-stage selector pins published app
-v1.0.2 at 349dfa98dc41551ce35ca23ca0854bc4bd723781; release evidence is recorded
+v1.0.3 at d8e5523ffacf1472b6d47ff9aa21ac9a0c6429c3; release evidence is recorded
 in release-evidence.json and checked before CI checkout. It enables database and web
-releases; cron stays paused. The preceding data-only acceptance uses published
+releases; cron remains disabled. The preceding data-only acceptance uses published
 enrollment v1.2.1 and app v1.0.1. Complete that gate and public CA delivery before
 selecting this web stage. Existing local/dev roots and the live
 platform do not select it. Shared defaults remain paused/UNCONFIGURED. No branch
@@ -24,13 +24,13 @@ Preserve the current GitLab/runner stage. The platform's existing enrollment
 prerequisite gate is tied to the old default local root and needs a reviewed
 selected-root update before use; do not bypass it or apply Portal's path instead.
 
-The web initialization source is merged app PR #3, published as v1.0.2. Its pilot uses
+The disabled same-Pod cron correction is merged app PR #4, published as v1.0.3. Its pilot uses
 32Gi files plus 16Gi PostgreSQL on the accepted two-replica longhorn-dedicated
 tier (platform v0.19.0). Storage expansion requires coordinated app values,
 admission and quota review before household import. No single-excess claim is
 allowed here. One web process, one database instance and serial cron are an empty
 pilot, not application HA or accepted household load. Both prefer worker-2; worker-1
-remains eligible. Leave cron suspended until web initialization is accepted.
+remains eligible. Keep cron disabled until the same-Pod correction passes initialization, continuous web health and background-run acceptance.
 
 ## What the foundation owns
 
@@ -103,10 +103,10 @@ CNPG setup. App labels cannot select this API policy.
 
 1. Review app and enrollment together. Verify chart 9.4.1 archive
    hash and both image digests, version/security compatibility and the accepted
-   dedicated disks. App v1.0.2 is published and pinned with exact evidence. Keep the
+   dedicated disks. App v1.0.3 is published and pinned with exact evidence. Keep the
    platform parent unselected through prerequisites and credential preparation.
    First accept the published data-only stage and deliver its public database CA.
-   Then promote this released web stage; keep cron paused until initialization passes.
+   Then promote this released web stage; keep cron disabled until same-Pod runtime acceptance passes.
    Do not manually change HelmRelease suspension against selected Git values.
 2. Choose encrypted independent backup destination, retention and key custody;
    confirm nextcloud.perkforge.home.arpa DNS and private trusted TLS. Deliver
