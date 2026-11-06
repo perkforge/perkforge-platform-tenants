@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.0](https://github.com/perkforge/perkforge-platform-tenants/compare/v1.2.1...v1.3.0) (2026-11-06)
+
+
+### Features
+
+* **nextcloud:** select published web initialization stage ([#28](https://github.com/perkforge/perkforge-platform-tenants/issues/28)) ([52c13c1](https://github.com/perkforge/perkforge-platform-tenants/commit/52c13c15205f526d3af99bbe558832fdf7c93fbb))
+
 ## [1.2.1](https://github.com/perkforge/perkforge-platform-tenants/compare/v1.2.0...v1.2.1) (2026-11-06)
 
 
