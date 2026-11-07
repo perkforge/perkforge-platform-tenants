@@ -122,3 +122,12 @@ pull success for the exact digest before selection. That external prerequisite,
 OIDC input delivery, issuer egress and native provider activation remain distinct
 gates. Selecting the published app in enrollment source does not apply a live
 boundary, deliver these inputs, advance the platform pin or activate native SSO.
+
+### Dedicated registry delivery entrypoint
+
+The default-off [Nextcloud registry input playbook](../../../ansible/nextcloud-registry.md)
+captures this exact approved delivery route without using Portal's workflow. It
+requires protected existing dockerconfigjson, explicit release/cluster/namespace
+checks and action-specific approval. It creates only a missing named immutable
+input or reuses an exact owned match; foreign/mutable/mismatched inputs stop without
+rotation or adoption. Publication does not run it or verify the live Secret.
