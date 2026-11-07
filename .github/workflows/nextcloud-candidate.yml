@@ -7,6 +7,7 @@ jobs:
     env:
       KUBECONFIG: /dev/null
       NEXTCLOUD_APP_CHECKOUT: ${{ github.workspace }}/.inputs/nextcloud
+      NEXTCLOUD_SSO_APP_CHECKOUT: ${{ github.workspace }}/.inputs/nextcloud-sso
     steps:
     - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
     - name: Verify the published Nextcloud web-stage tag before checkout
@@ -19,6 +20,13 @@ jobs:
         ref: v1.0.4
         path: .inputs/nextcloud
         fetch-depth: 0
+        persist-credentials: false
+    # Cross-repository review fixture only. Deployment remains pinned to v1.0.4.
+    - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      with:
+        repository: perkforge/perkforge-tenant-nextcloud
+        ref: ab0f563f71c9980ae678ca5c5ad73da1903abe55 # app draft PR #8
+        path: .inputs/nextcloud-sso
         persist-credentials: false
     - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
       with:

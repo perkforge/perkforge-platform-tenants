@@ -74,6 +74,11 @@ spec:
     expression: "request.resource.resource == 'deployments' ? object.spec.template.spec : object.spec.jobTemplate.spec.template.spec"
   - name: template
     expression: "request.resource.resource == 'deployments' ? object.spec.template : object.spec.jobTemplate.spec.template"
+  # The public image remains admitted for staged rollout and rollback only.
+  - name: images
+    expression: >-
+      ['docker.io/library/nextcloud:35.0.2-apache@sha256:d88929dc8386420b8963f86cabb667fdaf733eef9dcf8fc98e226801a32c023c',
+       'ghcr.io/perkforge/nextcloud-sso:35.0.2-oidc8.13.0@sha256:57c90b70d3c7261debbd5f2f2d760222fd6db65b8235a5c75f4ae7cb59df1d03']
   - name: containers
     expression: "variables.pod.containers + (has(variables.pod.initContainers) ? variables.pod.initContainers : [])"
   validations:
@@ -88,18 +93,32 @@ spec:
         variables.pod.containers.exists(c, c.name == 'nextcloud') &&
         variables.pod.containers.all(c, c.name in ['nextcloud', 'nextcloud-cron'])) ||
        (request.resource.resource != 'deployments' && variables.pod.containers.size() == 1)) &&
-      variables.containers.all(c, c.image == 'docker.io/library/nextcloud:35.0.2-apache@sha256:d88929dc8386420b8963f86cabb667fdaf733eef9dcf8fc98e226801a32c023c' &&
+      (!has(variables.pod.imagePullSecrets) || variables.pod.imagePullSecrets.size() == 0 ||
+        (variables.pod.imagePullSecrets.size() == 1 && variables.pod.imagePullSecrets[0].name == 'nextcloud-registry-existing')) &&
+      (variables.pod.containers[0].image == 'docker.io/library/nextcloud:35.0.2-apache@sha256:d88929dc8386420b8963f86cabb667fdaf733eef9dcf8fc98e226801a32c023c' ||
+        (has(variables.pod.imagePullSecrets) && variables.pod.imagePullSecrets.size() == 1 &&
+         variables.pod.imagePullSecrets[0].name == 'nextcloud-registry-existing')) &&
+      variables.containers.all(c, c.image in variables.images && c.image == variables.pod.containers[0].image &&
         c.securityContext.runAsUser == 33 && c.securityContext.runAsNonRoot && !c.securityContext.allowPrivilegeEscalation)
     message: App and cron cannot use CNPG/reconciler credentials or substitute images and workers.
   - expression: >-
       variables.pod.volumes.all(v,
         (has(v.persistentVolumeClaim) && v.persistentVolumeClaim.claimName == 'nextcloud-files') ||
         (has(v.configMap) && v.configMap.name in ['nextcloud-db-ca', 'nextcloud-config', 'nextcloud-hooks', 'nextcloud-apache-budget', 'nextcloud-phpconfig']) ||
-        has(v.emptyDir)) &&
+        (has(v.configMap) && v.name == 'oidc-ca' && v.configMap.name == 'nextcloud-oidc-ca') ||
+        (has(v.secret) && v.name == 'oidc-secret' && v.secret.secretName == 'nextcloud-oidc' &&
+         v.secret.defaultMode == 288 && v.secret.items.size() == 1 &&
+         (!has(v.secret.items[0].mode) || v.secret.items[0].mode == 288) &&
+         v.secret.items[0].key == 'client-secret' && v.secret.items[0].path == 'client-secret') || has(v.emptyDir)) &&
       variables.containers.all(c, !has(c.envFrom) && (!has(c.env) || c.env.all(e,
         !has(e.valueFrom) || !has(e.valueFrom.secretKeyRef) ||
         (e.valueFrom.secretKeyRef.name in ['nextcloud-admin', 'nextcloud-db-app'] && e.valueFrom.secretKeyRef.key in ['username', 'password']))))
-    message: Workloads can mount only their files and reviewed public configuration, without arbitrary Secret or token volumes.
+    message: Workloads can mount only their files, reviewed public configuration and the exact one-key OIDC Secret.
+  - expression: >-
+      variables.containers.all(c, !has(c.volumeMounts) || c.volumeMounts.all(m,
+        (m.name != 'oidc-ca' || (m.mountPath == '/etc/nextcloud-oidc' && m.readOnly && !has(m.subPath) && !has(m.subPathExpr))) &&
+        (m.name != 'oidc-secret' || (m.mountPath == '/run/nextcloud-oidc' && m.readOnly && !has(m.subPath) && !has(m.subPathExpr)))))
+    message: OIDC mounts are read-only at exact paths without subPath or subPathExpr remapping.
 ---
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingAdmissionPolicyBinding

@@ -1,4 +1,5 @@
 (has(v.configMap) && v.name == 'oidc-ca' && v.configMap.name == 'nextcloud-oidc-ca') ||
 (has(v.secret) && v.name == 'oidc-secret' && v.secret.secretName == 'nextcloud-oidc' &&
  v.secret.defaultMode == 288 && v.secret.items.size() == 1 &&
+ (!has(v.secret.items[0].mode) || v.secret.items[0].mode == 288) &&
  v.secret.items[0].key == 'client-secret' && v.secret.items[0].path == 'client-secret') || has(v.emptyDir)

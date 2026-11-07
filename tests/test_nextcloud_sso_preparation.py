@@ -48,7 +48,10 @@ class SsoPreparation(unittest.TestCase):
         self.assertEqual(ca['data']['ca.crt'].strip(), cert.read_text().strip())
         policy_contract = yaml.safe_load((output / 'runtime-policy.yaml').read_text())
         self.assertEqual(len(policy_contract['spec']['validations']),3)
-        self.assertIn('sha256:'+'a'*64,policy_contract['spec']['validations'][0]['expression'])
+        images = next(v['expression'] for v in policy_contract['spec']['variables'] if v['name'] == 'images')
+        self.assertEqual(json.loads(images), [inputs['nextcloud_sso_image']])
+        active = next(p for p in yaml.safe_load_all((ROOT/'tenants/nextcloud/foundation/runtime-policy.yaml').read_text()) if p['kind']=='ValidatingAdmissionPolicy' and p['metadata']['name']=='nextcloud-app-pod-templates')
+        self.assertEqual(policy_contract['spec']['validations'], active['spec']['validations'])
         self.assertIn('m.readOnly',policy_contract['spec']['validations'][2]['expression'])
         self.run_play(inputs, success=False)
         self.run_play(dict(inputs, nextcloud_sso_issuer_ipv4='0.0.0.0'), success=False)
@@ -56,11 +59,20 @@ class SsoPreparation(unittest.TestCase):
         self.run_play(dict(inputs, nextcloud_sso_ca_sha256='0'*64), success=False)
         self.run_play(dict(inputs, nextcloud_sso_ca_file=str(key)), success=False)
 
+    def test_source_policy_keeps_shared_volume_and_mount_contract(self):
+        policy = next(p for p in yaml.safe_load_all((ROOT/'tenants/nextcloud/foundation/runtime-policy.yaml').read_text())
+                      if p['kind']=='ValidatingAdmissionPolicy' and p['metadata']['name']=='nextcloud-app-pod-templates')
+        def normalized(value):
+            return ' '.join(value.split())
+        volume = (ROOT/'tenants/nextcloud/sso/volume-extension.txt').read_text()
+        mounts = (ROOT/'tenants/nextcloud/sso/mount-expression.txt').read_text()
+        self.assertIn(normalized(volume), normalized(policy['spec']['validations'][1]['expression']))
+        self.assertEqual(normalized(mounts), normalized(policy['spec']['validations'][2]['expression']))
+
     def test_unselected(self):
         resources = yaml.safe_load((ROOT / 'tenants/nextcloud/foundation/kustomization.yaml').read_text())['resources']
         self.assertFalse(any('sso' in x for x in resources))
-        policy = (ROOT / 'tenants/nextcloud/foundation/runtime-policy.yaml').read_text()
-        self.assertNotIn('nextcloud-oidc-ca', policy)
+        self.assertNotIn('nextcloud-oidc-issuer', str(resources))
 
 PLAY = 'tenants/nextcloud/sso/prepare.yaml'
 FLAG = 'nextcloud_sso_render'

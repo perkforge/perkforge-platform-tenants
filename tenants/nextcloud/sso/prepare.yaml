@@ -63,11 +63,12 @@
           nc_policies: '{{ lookup("file","../foundation/runtime-policy.yaml") | from_yaml_all | list }}'
       - ansible.builtin.set_fact:
           nc_pod_policy: '{{ nc_policies | selectattr("metadata.name","equalto","nextcloud-app-pod-templates") | selectattr("kind","equalto","ValidatingAdmissionPolicy") | first }}'
+      # Override only the reviewed image list. Preserve every live-candidate
+      # validation, including pull authentication and uniform app/init/cron images.
       - ansible.builtin.set_fact:
-          nc_image_expression: '{{ nc_pod_policy.spec.validations[0].expression | replace("docker.io/library/nextcloud:35.0.2-apache@sha256:d88929dc8386420b8963f86cabb667fdaf733eef9dcf8fc98e226801a32c023c",nextcloud_sso_image) }}'
-          nc_volume_expression: '{{ nc_pod_policy.spec.validations[1].expression | replace("has(v.emptyDir)", lookup("file","volume-extension.txt")) }}'
+          nc_variables: '{{ (nc_pod_policy.spec.variables | rejectattr("name","equalto","images") | list) + [{"name":"images","expression":([nextcloud_sso_image] | to_json)}] }}'
       - ansible.builtin.copy:
-          content: '{{ nc_pod_policy | combine({"spec": nc_pod_policy.spec | combine({"validations": [{"expression":nc_image_expression,"message":"Only the exact reviewed SSO image under existing UID33 boundaries."},{"expression":nc_volume_expression,"message":"Only existing data/config and exact OIDC public CA/client secret."},{"expression":lookup("file","mount-expression.txt"),"message":"OIDC mounts are read-only at exact paths; no remapping of credentials."}]})}) | to_nice_yaml }}'
+          content: '{{ nc_pod_policy | combine({"spec": nc_pod_policy.spec | combine({"variables":nc_variables})}) | to_nice_yaml }}'
           dest: '{{ nextcloud_sso_output }}/runtime-policy.yaml'
           mode: '0600'
           force: false
