@@ -244,8 +244,8 @@ MCS labels, and no audit denials. No household import or backup claim is include
 [The offline SSO renderer](sso/README.md) prepares exact issuer egress/public trust
 for review only. No cluster root or current foundation selects its output.
 
-The source runtime policy also admits the [exact published SSO image and narrow
-private-pull reference](sso/README.md#published-image-and-private-pull-review-prerequisite)
+The source runtime policy also admits [immutable PerkForge GHCR images with a narrow
+private-pull reference](sso/README.md#registry-trust-and-private-pull-review-prerequisite)
 for coordinated review with the app candidate. Public-image rollback remains
 admitted; app/init/cron cannot mix images. This does not advance the v1.0.4 release
 pin, select issuer egress, deliver credentials or change any live workload.

@@ -16,8 +16,9 @@ semantics and negative probes; prefer a dedicated verified issuer endpoint when
 shared ingress does not meet the required boundary. No guessed live IP is tracked.
 
 Neither this renderer nor publication applies policy/trust. The source admission
-candidate now permits the exact published derived image and fixed read-only OIDC
-mounts, while preserving the released public image for rollback. Applying that
+candidate now permits immutable images from the exact `ghcr.io/perkforge/`
+namespace and fixed read-only OIDC mounts, while preserving only the released
+public image for rollback. Applying that
 operator-owned policy and configuring actual HTTPS client trust remain separate
 approval gates. Never disable verification or replace PostgreSQL trust. Account
 for same-Pod cron sharing web egress. The
@@ -35,13 +36,15 @@ writer quiescence; revoke application sessions separately. No live tests ran her
 With `nextcloud_sso_delivery_contract=true` and an actual reviewed
 `nextcloud_sso_image=ghcr.io/perkforge/nextcloud-sso:35.0.2-oidc8.13.0@sha256:<digest>`,
 preparation also renders a full replacement runtime Pod policy outside all roots.
-It retains all source policy validations and replaces only the admitted image
-list with that one exact review image. The public-CA and one-key 0440 client-secret
+It retains all source policy validations and replaces only the image predicate
+with that one exact review image, deliberately narrower than the org-wide source
+policy. The public-CA and one-key 0440 client-secret
 volumes use fixed read-only paths without subPath/subPathExpr. App, init and cron
 must use the same image; only `nextcloud-registry-existing` may be a pull Secret,
-and the private image requires it. Other Secrets/mounts/digests remain denied.
+and the private image requires it. Other Secrets/mounts remain denied; this rendered policy denies every other image.
 The native Kubernetes CEL compiler exercises both the source policy and generated
-unselected policy, including a fake-digest fixture denied by the source policy.
+unselected policy. A synthetic PerkForge digest passes the source org rule but
+only the renderer's exact supplied image passes its narrower review predicate.
 Do not apply it or select generated app values merely because rendering succeeds.
 
 `deliver.yaml` is a separate default-off/check-noncontacting operator stage. Future
@@ -72,15 +75,26 @@ are part of these drafts. This intent adds no Kubernetes RBAC, credential delive
 policy selection or live permissions. Keep every boundary/delivery flag off until
 its own action-time approval and actual positive/negative acceptance.
 
-## Published image and private-pull review prerequisite
+## Registry trust and private-pull review prerequisite
 
-The source policy candidate admits exactly these images, with uniform app/init/cron
-selection in each Pod template:
+The source policy trusts the exact `ghcr.io/perkforge/` organization namespace,
+not all GHCR publishers. It accepts valid lowercase package paths with an optional
+tag and requires an immutable `@sha256:<64 lowercase hex>` reference. App, init
+and cron must use the same exact image in each Pod template. Another PerkForge
+package or digest does not require a tenant policy release; app Git still pins
+and reviews the exact artifact. This trusts PerkForge package publishers. It does
+not verify signatures, attestations, vulnerability scans or image contents.
 
-- Public rollback: `docker.io/library/nextcloud:35.0.2-apache@sha256:d88929dc8386420b8963f86cabb667fdaf733eef9dcf8fc98e226801a32c023c`.
-- Private SSO: `ghcr.io/perkforge/nextcloud-sso:35.0.2-oidc8.13.0@sha256:57c90b70d3c7261debbd5f2f2d760222fd6db65b8235a5c75f4ae7cb59df1d03`.
+The paired app candidate pins
+`ghcr.io/perkforge/nextcloud-sso:35.0.2-oidc8.13.0@sha256:57c90b70d3c7261debbd5f2f2d760222fd6db65b8235a5c75f4ae7cb59df1d03`.
+Only the currently deployed public image
+`docker.io/library/nextcloud:35.0.2-apache@sha256:d88929dc8386420b8963f86cabb667fdaf733eef9dcf8fc98e226801a32c023c`
+is also admitted for policy-first rollout and rollback. There is no general Docker
+Hub allowance; retire that exception only after accepted migration and a reviewed
+rollback plan. Other GHCR organizations, lookalike hosts/namespaces, malformed
+paths/digests and tag-only images are rejected.
 
-The private image requires the singleton Pod `imagePullSecrets` reference
+Every PerkForge GHCR image requires the singleton Pod `imagePullSecrets` reference
 `nextcloud-registry-existing`. The old image may omit it or retain that exact
 reference during rollback. No other pull Secret or mixed-image Pod is admitted.
 The upstream chart's input is `image.pullSecrets: [nextcloud-registry-existing]`.

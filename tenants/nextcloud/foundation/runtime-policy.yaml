@@ -74,11 +74,12 @@ spec:
     expression: "request.resource.resource == 'deployments' ? object.spec.template.spec : object.spec.jobTemplate.spec.template.spec"
   - name: template
     expression: "request.resource.resource == 'deployments' ? object.spec.template : object.spec.jobTemplate.spec.template"
-  # The public image remains admitted for staged rollout and rollback only.
-  - name: images
+  # Trust PerkForge package publishers, with immutable references. Retain only
+  # the current public image for policy-first rollout and rollback.
+  - name: imageAllowed
     expression: >-
-      ['docker.io/library/nextcloud:35.0.2-apache@sha256:d88929dc8386420b8963f86cabb667fdaf733eef9dcf8fc98e226801a32c023c',
-       'ghcr.io/perkforge/nextcloud-sso:35.0.2-oidc8.13.0@sha256:57c90b70d3c7261debbd5f2f2d760222fd6db65b8235a5c75f4ae7cb59df1d03']
+      variables.pod.containers[0].image == 'docker.io/library/nextcloud:35.0.2-apache@sha256:d88929dc8386420b8963f86cabb667fdaf733eef9dcf8fc98e226801a32c023c' ||
+      variables.pod.containers[0].image.matches('^ghcr[.]io/perkforge/[a-z0-9]+(([._]|__|-+)[a-z0-9]+)*(/[a-z0-9]+(([._]|__|-+)[a-z0-9]+)*)*(:[a-zA-Z0-9_][a-zA-Z0-9_.-]{0,127})?@sha256:[a-f0-9]{64}$')
   - name: containers
     expression: "variables.pod.containers + (has(variables.pod.initContainers) ? variables.pod.initContainers : [])"
   validations:
@@ -98,7 +99,8 @@ spec:
       (variables.pod.containers[0].image == 'docker.io/library/nextcloud:35.0.2-apache@sha256:d88929dc8386420b8963f86cabb667fdaf733eef9dcf8fc98e226801a32c023c' ||
         (has(variables.pod.imagePullSecrets) && variables.pod.imagePullSecrets.size() == 1 &&
          variables.pod.imagePullSecrets[0].name == 'nextcloud-registry-existing')) &&
-      variables.containers.all(c, c.image in variables.images && c.image == variables.pod.containers[0].image &&
+      variables.imageAllowed &&
+      variables.containers.all(c, c.image == variables.pod.containers[0].image &&
         c.securityContext.runAsUser == 33 && c.securityContext.runAsNonRoot && !c.securityContext.allowPrivilegeEscalation)
     message: App and cron cannot use CNPG/reconciler credentials or substitute images and workers.
   - expression: >-

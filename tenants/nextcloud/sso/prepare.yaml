@@ -63,10 +63,10 @@
           nc_policies: '{{ lookup("file","../foundation/runtime-policy.yaml") | from_yaml_all | list }}'
       - ansible.builtin.set_fact:
           nc_pod_policy: '{{ nc_policies | selectattr("metadata.name","equalto","nextcloud-app-pod-templates") | selectattr("kind","equalto","ValidatingAdmissionPolicy") | first }}'
-      # Override only the reviewed image list. Preserve every live-candidate
+      # Override only the reviewed image predicate. Preserve every live-candidate
       # validation, including pull authentication and uniform app/init/cron images.
       - ansible.builtin.set_fact:
-          nc_variables: '{{ (nc_pod_policy.spec.variables | rejectattr("name","equalto","images") | list) + [{"name":"images","expression":([nextcloud_sso_image] | to_json)}] }}'
+          nc_variables: '{{ (nc_pod_policy.spec.variables | rejectattr("name","equalto","imageAllowed") | list) + [{"name":"imageAllowed","expression":"variables.pod.containers[0].image == " + (nextcloud_sso_image | to_json)}] }}'
       - ansible.builtin.copy:
           content: '{{ nc_pod_policy | combine({"spec": nc_pod_policy.spec | combine({"variables":nc_variables})}) | to_nice_yaml }}'
           dest: '{{ nextcloud_sso_output }}/runtime-policy.yaml'
