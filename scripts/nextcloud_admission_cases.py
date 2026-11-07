@@ -10,14 +10,17 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 APP = Path(os.environ['NEXTCLOUD_APP_CHECKOUT']).resolve()
+SSO_APP = Path(os.environ['NEXTCLOUD_SSO_APP_CHECKOUT']).resolve()
+OLD_IMAGE = 'docker.io/library/nextcloud:35.0.2-apache@sha256:d88929dc8386420b8963f86cabb667fdaf733eef9dcf8fc98e226801a32c023c'
+SSO_IMAGE = 'ghcr.io/perkforge/nextcloud-sso:35.0.2-oidc8.13.0@sha256:57c90b70d3c7261debbd5f2f2d760222fd6db65b8235a5c75f4ae7cb59df1d03'
 HELM = os.environ.get('HELM', 'helm')
 CHART = os.environ['NEXTCLOUD_CHART']
 
 
-def render(chart, base, local, extra=()):
+def render(chart, base, local, extra=(), checkout=APP):
     return [x for x in yaml.safe_load_all(subprocess.check_output([
         HELM, 'template', 'nextcloud', str(chart), '-n', 'tenant-home-nextcloud',
-        '-f', str(APP / base), '-f', str(APP / local), *extra], text=True)) if x]
+        '-f', str(checkout / base), '-f', str(checkout / local), *extra], text=True)) if x]
 
 
 app = render(CHART, 'gitops/base/app-values.yaml', 'gitops/clusters/local/app-values.yaml')
@@ -120,6 +123,106 @@ service = next(x for x in app if x['kind']=='Service')
 case('deny-nodeport','nextcloud-service',service,False,['spec','type'],'NodePort')
 cm = next(x for x in app if x['kind']=='ConfigMap')
 case('deny-delivered-ca-write','nextcloud-rendered-resources',cm,False,['metadata','name'],'nextcloud-db-ca')
+# The published app remains the release/rollback fixture. Independently render
+# the exact cross-repository SSO candidate without advancing any deployment pin.
+sso_app = render(CHART, 'gitops/base/app-values.yaml', 'gitops/clusters/local/app-values.yaml', checkout=SSO_APP)
+sso_deploy = next(x for x in sso_app if x['kind'] == 'Deployment')
+pod = sso_deploy['spec']['template']['spec']
+assert {c['image'] for c in pod['containers'] + pod.get('initContainers', [])} == {SSO_IMAGE}
+assert pod['imagePullSecrets'] == [{'name': 'nextcloud-registry-existing'}]
+assert {v['name'] for v in pod['volumes']} >= {'oidc-ca', 'oidc-secret'}
+assert {c['name'] for c in pod['containers']} == {'nextcloud', 'nextcloud-cron'}
+policy = 'nextcloud-app-pod-templates'
+case('allow-published-sso-app-render', policy, sso_deploy)
+case('sso-render-shape', 'nextcloud-web-shape', sso_deploy)
+case('sso-render-resource', 'nextcloud-rendered-resources', sso_deploy)
+prefix = ['spec', 'template', 'spec']
+for name, path, value in [
+    ('wrong-pull-secret', ['imagePullSecrets'], [{'name': 'other-app'}]),
+    ('extra-pull-secret', ['imagePullSecrets'], pod['imagePullSecrets'] + [{'name': 'other-app'}]),
+    ('missing-pull-secret', ['imagePullSecrets'], []),
+    ('root', ['containers', 0, 'securityContext', 'runAsUser'], 0),
+    ('escalation', ['containers', 0, 'securityContext', 'allowPrivilegeEscalation'], True),
+    ('token', ['automountServiceAccountToken'], True),
+    ('service-account', ['serviceAccountName'], 'nextcloud-db'),
+]:
+    case('published-sso-deny-' + name, policy, sso_deploy, False, prefix + path, value)
+missing_pull = copy.deepcopy(sso_deploy)
+del missing_pull['spec']['template']['spec']['imagePullSecrets']
+case('published-sso-deny-absent-pull-secret', policy, missing_pull, False)
+for group in ['containers', 'initContainers']:
+    for index, container in enumerate(pod.get(group, [])):
+        case('published-sso-deny-mixed-' + container['name'], policy, sso_deploy, False,
+             prefix + [group, index, 'image'], OLD_IMAGE)
+        for mount_index, mount in enumerate(container.get('volumeMounts', [])):
+            if mount['name'] not in ['oidc-ca', 'oidc-secret']:
+                continue
+            mount_prefix = prefix + [group, index, 'volumeMounts', mount_index]
+            for field, value in [('readOnly', False), ('mountPath', '/var/www/html'),
+                                 ('subPath', 'client-secret'), ('subPathExpr', '$(FILE)')]:
+                case('published-sso-deny-' + container['name'] + '-' + mount['name'] + '-' + field,
+                     policy, sso_deploy, False, mount_prefix + [field], value)
+for index, volume in enumerate(pod['volumes']):
+    if volume['name'] == 'oidc-secret':
+        for name, path, value in [
+            ('secret', ['secret', 'secretName'], 'other-app'),
+            ('secret-key', ['secret', 'items', 0, 'key'], 'other-key'),
+            ('secret-path', ['secret', 'items', 0, 'path'], 'other-path'),
+            ('secret-mode', ['secret', 'defaultMode'], 420),
+            ('secret-item-mode', ['secret', 'items', 0, 'mode'], 511),
+            ('secret-alias', ['name'], 'other-name'),
+        ]:
+            case('published-sso-deny-' + name, policy, sso_deploy, False, prefix + ['volumes', index] + path, value)
+    if volume['name'] == 'oidc-ca':
+        case('published-sso-deny-ca-alias', policy, sso_deploy, False, prefix + ['volumes', index, 'name'], 'other-name')
+def image_case(name, image, allowed, policy=policy, obj=sso_deploy):
+    candidate = copy.deepcopy(obj)
+    candidate_pod = candidate['spec']['template']['spec']
+    for container in candidate_pod['containers'] + candidate_pod.get('initContainers', []):
+        container['image'] = image
+    case(name, policy, candidate, allowed)
+
+
+digest = '@sha256:' + 'b'*64
+for name, reference in [
+    ('new-sso-digest', 'ghcr.io/perkforge/nextcloud-sso:35.0.2-oidc8.13.0'),
+    ('another-org-package', 'ghcr.io/perkforge/another-package'),
+    ('nested-org-package', 'ghcr.io/perkforge/team/another_package:reviewed-1.2'),
+]:
+    image_case('allow-' + name, reference + digest, True)
+for name, image in [
+    ('other-org', 'ghcr.io/other/nextcloud-sso' + digest),
+    ('lookalike-org', 'ghcr.io/perkforge-other/nextcloud-sso' + digest),
+    ('lookalike-org-suffix', 'ghcr.io/notperkforge/nextcloud-sso' + digest),
+    ('host-suffix', 'ghcr.io.attacker.invalid/perkforge/nextcloud-sso' + digest),
+    ('host-prefix', 'attacker.ghcr.io/perkforge/nextcloud-sso' + digest),
+    ('other-registry', 'registry.invalid/perkforge/nextcloud-sso' + digest),
+    ('unqualified-image', 'perkforge/nextcloud-sso' + digest),
+    ('tag-only', SSO_IMAGE.split('@')[0]),
+    ('uppercase-digest', 'ghcr.io/perkforge/nextcloud-sso@sha256:' + 'B'*64),
+    ('short-digest', 'ghcr.io/perkforge/nextcloud-sso@sha256:' + 'b'*63),
+    ('long-digest', 'ghcr.io/perkforge/nextcloud-sso@sha256:' + 'b'*65),
+    ('nonhex-digest', 'ghcr.io/perkforge/nextcloud-sso@sha256:' + 'g'*64),
+    ('different-digest-algorithm', 'ghcr.io/perkforge/nextcloud-sso@sha512:' + 'b'*64),
+    ('empty-package', 'ghcr.io/perkforge/' + digest),
+    ('empty-path-component', 'ghcr.io/perkforge//nextcloud-sso' + digest),
+    ('parent-path', 'ghcr.io/perkforge/../other' + digest),
+    ('uppercase-path', 'ghcr.io/perkforge/Nextcloud' + digest),
+    ('invalid-separator', 'ghcr.io/perkforge/nextcloud...sso' + digest),
+    ('leading-separator', 'ghcr.io/perkforge/-nextcloud' + digest),
+    ('trailing-path-separator', 'ghcr.io/perkforge/nextcloud-sso/' + digest),
+    ('digest-suffix', SSO_IMAGE + '/other'),
+    ('dockerhub-other-digest', OLD_IMAGE.split('@')[0] + digest),
+    ('dockerhub-tag-only', OLD_IMAGE.split('@')[0]),
+    ('dockerhub-other-package', 'docker.io/library/other' + digest),
+    ('dockerhub-host-alias', OLD_IMAGE.replace('docker.io/', 'index.docker.io/')),
+]:
+    image_case('registry-deny-' + name, image, False)
+rollback = copy.deepcopy(sidecar_deploy)
+rollback['spec']['template']['spec']['imagePullSecrets'] = [{'name': 'nextcloud-registry-existing'}]
+case('allow-public-image-retained-pull-secret', policy, rollback)
+case('public-image-deny-wrong-pull-secret', policy, rollback, False, prefix + ['imagePullSecrets'], [{'name': 'other-app'}])
+
 # Compile the actual unselected SSO renderer output, preserving the active policy.
 with tempfile.TemporaryDirectory(prefix='nextcloud-sso-cel-') as temporary:
     work = Path(temporary)
@@ -140,6 +243,7 @@ with tempfile.TemporaryDirectory(prefix='nextcloud-sso-cel-') as temporary:
     policies.append(policy)
     candidate=copy.deepcopy(sidecar_deploy)
     pod=candidate['spec']['template']['spec']
+    pod['imagePullSecrets']=[{'name':'nextcloud-registry-existing'}]
     for container in pod['containers']+pod.get('initContainers',[]):container['image']=image
     pod['volumes'] += [{'name':'oidc-ca','configMap':{'name':'nextcloud-oidc-ca'}},
                        {'name':'oidc-secret','secret':{'secretName':'nextcloud-oidc','defaultMode':288,'items':[{'key':'client-secret','path':'client-secret'}]}}]
@@ -147,7 +251,9 @@ with tempfile.TemporaryDirectory(prefix='nextcloud-sso-cel-') as temporary:
         container.setdefault('volumeMounts',[]).extend([{'name':'oidc-ca','mountPath':'/etc/nextcloud-oidc','readOnly':True},
                                                        {'name':'oidc-secret','mountPath':'/run/nextcloud-oidc','readOnly':True}])
     case('allow-exact-unselected-sso-contract','nextcloud-sso-app-pod-templates',candidate)
-    case('active-policy-denies-unselected-sso','nextcloud-app-pod-templates',candidate,False)
+    case('source-policy-allows-org-sso-digest','nextcloud-app-pod-templates',candidate)
+    image_case('unselected-policy-denies-other-reviewed-digest', SSO_IMAGE, False, 'nextcloud-sso-app-pod-templates', candidate)
+    image_case('unselected-policy-denies-other-org-package', 'ghcr.io/perkforge/other' + digest, False, 'nextcloud-sso-app-pod-templates', candidate)
     prefix=['spec','template','spec']
     for name,path,value in [('image',['containers',0,'image'],'ghcr.io/perkforge/nextcloud-sso:latest'),
                             ('secret',['volumes',len(pod['volumes'])-1,'secret','secretName'],'other-app'),

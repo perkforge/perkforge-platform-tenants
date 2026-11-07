@@ -201,7 +201,8 @@ Repeat the offline checks with Python/PyYAML/Ansible, kubectl, Helm and Go 1.27.
 python3 -m unittest discover -s tests -p 'test_*.py' -v
 mkdir -m 700 /ABS/FRESH/schema-fixtures
 bash tests/nextcloud-cel/fetch-schemas.sh /ABS/FRESH/schema-fixtures
-export NEXTCLOUD_APP_CHECKOUT=/ABS/REVIEWED/nextcloud-checkout
+export NEXTCLOUD_APP_CHECKOUT=/ABS/PUBLISHED/v1.0.4-nextcloud-checkout
+export NEXTCLOUD_SSO_APP_CHECKOUT=/ABS/REVIEWED/sso-candidate-nextcloud-checkout
 export NEXTCLOUD_CHART=/ABS/VERIFIED/nextcloud-9.4.1.tgz
 export NEXTCLOUD_OPENAPI=/ABS/FRESH/schema-fixtures/openapi.json
 export NEXTCLOUD_CRD_DIR=/ABS/FRESH/schema-fixtures
@@ -242,3 +243,9 @@ MCS labels, and no audit denials. No household import or backup claim is include
 
 [The offline SSO renderer](sso/README.md) prepares exact issuer egress/public trust
 for review only. No cluster root or current foundation selects its output.
+
+The source runtime policy also admits [immutable PerkForge GHCR images with a narrow
+private-pull reference](sso/README.md#registry-trust-and-private-pull-review-prerequisite)
+for coordinated review with the app candidate. Public-image rollback remains
+admitted; app/init/cron cannot mix images. This does not advance the v1.0.4 release
+pin, select issuer egress, deliver credentials or change any live workload.

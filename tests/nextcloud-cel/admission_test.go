@@ -24,7 +24,8 @@ type expression struct {
 func (e expression) GetExpression() string { return e.source }
 func (e expression) ReturnTypes() []*cel.Type {
 	if e.variable {
-		return []*cel.Type{cel.DynType}
+		// Match the API server: variable expressions may have concrete types.
+		return (&validating.Variable{}).ReturnTypes()
 	}
 	return []*cel.Type{cel.BoolType}
 }
