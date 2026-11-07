@@ -1,6 +1,6 @@
 # perkforge-platform-tenants
 
-Platform-owned, explicit **paused tenant enrollment**. Cluster roots select small
+Platform-owned, explicit **tenant enrollment with paused shared defaults**. Cluster roots select small
 tenant folders; those folders point to external tenant app repositories under
 scoped identities. This repository has no Big Bang app configuration or charts.
 Local portal boundaries are operator-applied separately; enrollment cannot grant
@@ -11,9 +11,10 @@ quota and enrollment) belong here as they are reviewed, not in app repositories.
 - [local](clusters/local/kustomization.yaml) and [dev](clusters/dev/kustomization.yaml) explicitly select
   [portal enrollment](tenants/portal/README.md).
 - Omit a tenant resource from a cluster root to omit enrollment on that cluster.
-- [Nextcloud private-image candidate](tenants/nextcloud/README.md) has a separate
+- [Nextcloud pilot enrollment](tenants/nextcloud/README.md) has a separate
   `clusters/local-nextcloud` selector pinned to published app v1.1.0. It enables
-  no Portal resources and requires separate live platform promotion and runtime inputs.
+  no Portal resources. Platform v0.26.0 selects enrollment v1.5.0 for this pilot;
+  future changes still require separate promotion and runtime-input checks.
   There is no automatic repository or directory discovery.
 - The platform bootstrap owns cluster/provider prerequisites and references this repository with
   a pinned GitRepository/Flux Kustomization. Tenant repositories own app manifests
@@ -38,14 +39,18 @@ Local portal namespace/RBAC, PSA, quota, network and native admission definition
 are proposed under `tenants/portal/foundation`; they are not live-verified tenant
 isolation. Start with the focused [local trial plan](tenants/portal/LOCAL-TRIAL.md).
 
-Only local is declaratively unsuspended; dev and shared defaults stay suspended.
-Publication does not activate the currently pinned identity-only platform stage.
+## Portal staging context
+
+The following describes the earlier Portal staging sequence, not the current
+Nextcloud selection linked above. Only Portal local is declaratively unsuspended;
+dev and shared defaults stay suspended.
+Publication alone does not activate a Portal platform selection.
 Portal config release `v1.0.0` is published and selected by `spec.ref.tag`.
 `release-evidence.json` records its resolved source commit separately; CI rejects
 missing/unpublished or moved tags and validates the actual checked-out app paths.
-After this enrollment proposal is reviewed, merged and released, platform can select
-that new enrollment tag. Current platform pins do not yet contain these changes.
-The current live platform still selects the identity-only stage. Advancing it to
+After a reviewed Portal enrollment release, platform can separately select its
+verified tag. The Nextcloud-only platform path does not select Portal.
+That staging record used an identity-only platform stage. Advancing Portal to
 this activation release and live security tests require separate approval.
 
 Offline build checks (no API access):
