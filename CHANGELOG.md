@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.1](https://github.com/perkforge/perkforge-platform-tenants/compare/v1.5.0...v1.5.1) (2026-11-07)
+
+
+### Bug Fixes
+
+* **nextcloud:** capture guarded registry input delivery ([#41](https://github.com/perkforge/perkforge-platform-tenants/issues/41)) ([5d1104b](https://github.com/perkforge/perkforge-platform-tenants/commit/5d1104b5e6c06a46c2e0d909ddc0e87e0fe093b3))
+
 ## [1.5.0](https://github.com/perkforge/perkforge-platform-tenants/compare/v1.4.0...v1.5.0) (2026-11-07)
 
 
