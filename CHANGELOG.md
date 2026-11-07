@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.0](https://github.com/perkforge/perkforge-platform-tenants/compare/v1.3.2...v1.4.0) (2026-11-07)
+
+
+### Features
+
+* **nextcloud:** add unselected SSO delivery and admission contracts ([#35](https://github.com/perkforge/perkforge-platform-tenants/issues/35)) ([056dbef](https://github.com/perkforge/perkforge-platform-tenants/commit/056dbefcc4d5d421d484cfae9d7981b297b45140))
+
 ## [1.3.2](https://github.com/perkforge/perkforge-platform-tenants/compare/v1.3.1...v1.3.2) (2026-11-06)
 
 
