@@ -9,8 +9,15 @@ import hashlib
 import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
-APP = Path(os.environ['NEXTCLOUD_APP_CHECKOUT']).resolve()
-SSO_APP = Path(os.environ['NEXTCLOUD_SSO_APP_CHECKOUT']).resolve()
+# Keep the legacy full-render suite independent of the selected private-image app.
+APP = Path(os.environ['NEXTCLOUD_ROLLBACK_APP_CHECKOUT']).resolve()
+SSO_APP = Path(os.environ['NEXTCLOUD_APP_CHECKOUT']).resolve()
+selected = json.loads((ROOT / 'release-evidence.json').read_text())['dependencies']['nextcloud']
+for checkout, expected in [(APP, '9c48e8d97c596533a806dcb78e33b1932d5ef04a'),
+                           (SSO_APP, selected['resolvedCommit'])]:
+    actual = subprocess.check_output(['git', '-C', str(checkout), 'rev-parse', 'HEAD'], text=True).strip()
+    if actual != expected:
+        raise ValueError(f'Wrong release fixture at {checkout}: expected {expected}, got {actual}')
 OLD_IMAGE = 'docker.io/library/nextcloud:35.0.2-apache@sha256:d88929dc8386420b8963f86cabb667fdaf733eef9dcf8fc98e226801a32c023c'
 SSO_IMAGE = 'ghcr.io/perkforge/nextcloud-sso:35.0.2-oidc8.13.0@sha256:57c90b70d3c7261debbd5f2f2d760222fd6db65b8235a5c75f4ae7cb59df1d03'
 HELM = os.environ.get('HELM', 'helm')
@@ -27,6 +34,8 @@ app = render(CHART, 'gitops/base/app-values.yaml', 'gitops/clusters/local/app-va
 # Exercise the opt-in same-pod candidate as well as the disabled default.
 sidecar_app = render(CHART, 'gitops/base/app-values.yaml', 'gitops/clusters/local/app-values.yaml', ['--set', 'cronjob.enabled=true'])
 sidecar_deploy = next(x for x in sidecar_app if x['kind'] == 'Deployment')
+assert {c['image'] for c in sidecar_deploy['spec']['template']['spec']['containers'] +
+        sidecar_deploy['spec']['template']['spec'].get('initContainers', [])} == {OLD_IMAGE}
 
 data = render(APP / 'charts/data', 'gitops/base/data-values.yaml', 'gitops/clusters/local/data-values.yaml')
 selection = list(yaml.safe_load_all(subprocess.check_output(['kubectl', 'kustomize', str(APP / 'gitops/clusters/local')], text=True)))
@@ -51,7 +60,7 @@ def case(name, policy, obj, allowed=True, path=None, value=None):
 containers = sidecar_deploy['spec']['template']['spec']['containers']
 if len(containers) == 1:
     containers.append(dict(copy.deepcopy(containers[0]), name='nextcloud-cron'))
-case('allow-same-pod-cron', 'nextcloud-app-pod-templates', sidecar_deploy)
+case('allow-legacy-v1.0.4-same-pod-cron', 'nextcloud-app-pod-templates', sidecar_deploy)
 prefix = ['spec','template','spec','containers']
 for name,path,value in [
     ('unreviewed-sidecar',[1,'name'],'other'),
@@ -123,8 +132,8 @@ service = next(x for x in app if x['kind']=='Service')
 case('deny-nodeport','nextcloud-service',service,False,['spec','type'],'NodePort')
 cm = next(x for x in app if x['kind']=='ConfigMap')
 case('deny-delivered-ca-write','nextcloud-rendered-resources',cm,False,['metadata','name'],'nextcloud-db-ca')
-# The published app remains the release/rollback fixture. Independently render
-# the exact cross-repository SSO candidate without advancing any deployment pin.
+# The legacy published app remains an explicit rollback fixture. Independently
+# render the actual selected v1.1.0 release, not the former app PR head.
 sso_app = render(CHART, 'gitops/base/app-values.yaml', 'gitops/clusters/local/app-values.yaml', checkout=SSO_APP)
 sso_deploy = next(x for x in sso_app if x['kind'] == 'Deployment')
 pod = sso_deploy['spec']['template']['spec']
@@ -220,7 +229,7 @@ for name, image in [
     image_case('registry-deny-' + name, image, False)
 rollback = copy.deepcopy(sidecar_deploy)
 rollback['spec']['template']['spec']['imagePullSecrets'] = [{'name': 'nextcloud-registry-existing'}]
-case('allow-public-image-retained-pull-secret', policy, rollback)
+case('allow-legacy-v1.0.4-public-image-retained-pull-secret', policy, rollback)
 case('public-image-deny-wrong-pull-secret', policy, rollback, False, prefix + ['imagePullSecrets'], [{'name': 'other-app'}])
 
 # Compile the actual unselected SSO renderer output, preserving the active policy.
