@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.5.0](https://github.com/perkforge/perkforge-platform-tenants/compare/v1.4.0...v1.5.0) (2026-11-07)
+
+
+### Features
+
+* **nextcloud:** admit digest-pinned PerkForge GHCR images ([#37](https://github.com/perkforge/perkforge-platform-tenants/issues/37)) ([3962820](https://github.com/perkforge/perkforge-platform-tenants/commit/39628204fbfb8bdd0df92e4c76b7c134fe5aefc7))
+
+
+### Bug Fixes
+
+* **nextcloud:** select published app configuration v1.1.0 ([#39](https://github.com/perkforge/perkforge-platform-tenants/issues/39)) ([d61c33e](https://github.com/perkforge/perkforge-platform-tenants/commit/d61c33e0937f9e5f22d18bbba129f378846c2a3d))
+
 ## [1.4.0](https://github.com/perkforge/perkforge-platform-tenants/compare/v1.3.2...v1.4.0) (2026-11-07)
 
 
