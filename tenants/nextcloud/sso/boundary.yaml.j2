@@ -1,0 +1,26 @@
+# UNSELECTED REVIEW OUTPUT. Exact endpoint must pass actual CNI/NAT tests.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: {name: nextcloud-oidc-issuer, namespace: tenant-home-nextcloud}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: nextcloud
+      app.kubernetes.io/instance: nextcloud
+      app.kubernetes.io/component: app
+  policyTypes: [Egress]
+  egress:
+  - to:
+    - ipBlock: {cidr: '{{ nextcloud_sso_issuer_ipv4 }}/32'}
+    ports: [{protocol: TCP, port: 443}]
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nextcloud-oidc-ca
+  namespace: tenant-home-nextcloud
+  labels: {platform.perkforge.io/managed-input: nextcloud-sso-v1}
+  annotations:
+    platform.perkforge.io/public-ca-sha256: '{{ nextcloud_sso_ca_sha256 }}'
+immutable: true
+data: {ca.crt: {{ lookup('file', nextcloud_sso_ca_file) | trim | to_json }}}

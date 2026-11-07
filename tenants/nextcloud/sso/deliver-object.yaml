@@ -1,0 +1,23 @@
+- ansible.builtin.command:
+    argv: '{{ nc_delivery_k + ["-n","tenant-home-nextcloud","get",nc_input.kind,nc_input.metadata.name,"--ignore-not-found","-o","json"] }}'
+  changed_when: false
+  register: nc_existing_input
+- ansible.builtin.assert:
+    that:
+    - (nc_existing_input.stdout | from_json).metadata.labels['platform.perkforge.io/managed-input'] == 'nextcloud-sso-v1'
+    - (nc_existing_input.stdout | from_json).immutable
+    - (nc_existing_input.stdout | from_json).data == nc_input.data
+  when: nc_existing_input.stdout != ''
+- ansible.builtin.command:
+    argv: '{{ nc_delivery_k + ["create","-f","-"] }}'
+    stdin: '{{ nc_input | to_json }}'
+  when: nc_existing_input.stdout == ''
+  changed_when: true
+- ansible.builtin.command:
+    argv: '{{ nc_delivery_k + ["-n","tenant-home-nextcloud","get",nc_input.kind,nc_input.metadata.name,"-o","json"] }}'
+  changed_when: false
+  register: nc_input_after
+- ansible.builtin.assert:
+    that:
+    - (nc_input_after.stdout | from_json).data == nc_input.data
+    - (nc_input_after.stdout | from_json).immutable
