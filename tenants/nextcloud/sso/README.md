@@ -1,6 +1,14 @@
-# Unselected Nextcloud OIDC boundary preparation
+# Nextcloud OIDC delivery and boundary review
 
-This directory is deliberately absent from every Kustomization. Run `ansible-playbook
+The [current selection and acceptance](../README.md#selected-source-contract)
+uses native SSO with retained local recovery. This directory is deliberately absent
+from every Kustomization. Its delivery playbook is an operator workflow; its
+boundary/runtime-policy renderer is offline review tooling, not the owner of the
+adopted live issuer policy. Platform Git owns that policy. Do not apply generated
+network or narrower runtime-policy output over accepted objects as routine upkeep.
+The enrollment foundation remains the runtime-policy source of truth.
+
+Run `ansible-playbook
 tenants/nextcloud/sso/prepare.yaml` for a noncontacting plan; `--check` also skips
 all inputs/contact even with `nextcloud_sso_render=true`. With explicit render,
 supply an external absolute fresh output directory, reviewed private-LAN issuer
@@ -29,9 +37,9 @@ Live acceptance must show correct issuer discovery/token/JWKS HTTPS, wrong CA/
 hostname denial, unrelated destination/port and other tenant denial, no API token,
 unchanged resource identity and recovery login. Rollback disables the dedicated
 client and native provider before withdrawing only this policy/config after safe
-writer quiescence; revoke application sessions separately. No live tests ran here.
+writer quiescence; revoke application sessions separately. Offline rendering does not establish any of those live outcomes.
 
-## Exact admission and delivery candidate
+## Offline exact-policy review and immutable input delivery
 
 With `nextcloud_sso_delivery_contract=true` and an actual reviewed
 `nextcloud_sso_image=ghcr.io/perkforge/nextcloud-sso:35.0.2-oidc8.13.0@sha256:<digest>`,
@@ -47,8 +55,8 @@ unselected policy. A synthetic PerkForge digest passes the source org rule but
 only the renderer's exact supplied image passes its narrower review predicate.
 Do not apply it or select generated app values merely because rendering succeeds.
 
-`deliver.yaml` is a separate default-off/check-noncontacting operator stage. Future
-use requires `nextcloud_sso_deliver=true`, exact
+`deliver.yaml` is a separate default-off/check-noncontacting operator stage. Any
+new delivery requires `nextcloud_sso_deliver=true`, exact
 `nextcloud_sso_delivery_approval=nextcloud-sso-delivery-v1`, explicit kubeconfig/
 context/cluster UID and the expected restricted runtime namespace. It consumes an
 EXISTING external 0600 client secret and checksummed public CA; no key is generated.
@@ -66,12 +74,12 @@ No app-store or general runtime internet access is needed.
 
 ## Confirmed identity intent does not change the tenant boundary
 
-Corey's existing Keycloak identity is intended to retain platform-admin and gain
-native admin inside this dedicated Nextcloud instance, while the existing local
-Nextcloud admin remains recovery. The app/client adapters must verify that native
+Corey's existing Keycloak identity retains platform administration; native admin
+inside this dedicated Nextcloud instance was explicitly configured and owner-
+confirmed. The separate local Nextcloud admin remains recovery. The app/client adapters must verify that native
 mapping explicitly; no platform group is assumed to grant app admin. Jett's future
 ordinary household access is deferred: no account creation, enrollment or grants
-are part of these drafts. This intent adds no Kubernetes RBAC, credential delivery,
+are authorized by these procedures. This intent adds no Kubernetes RBAC, credential delivery,
 policy selection or live permissions. Keep every boundary/delivery flag off until
 its own action-time approval and actual positive/negative acceptance.
 
@@ -87,7 +95,7 @@ not verify signatures, attestations, vulnerability scans or image contents.
 
 The selected published app v1.1.0 pins
 `ghcr.io/perkforge/nextcloud-sso:35.0.2-oidc8.13.0@sha256:57c90b70d3c7261debbd5f2f2d760222fd6db65b8235a5c75f4ae7cb59df1d03`.
-Only the currently deployed public image
+Only the previous public rollback image
 `docker.io/library/nextcloud:35.0.2-apache@sha256:d88929dc8386420b8963f86cabb667fdaf733eef9dcf8fc98e226801a32c023c`
 is also admitted for policy-first rollout and rollback. There is no general Docker
 Hub allowance; retire that exception only after accepted migration and a reviewed
