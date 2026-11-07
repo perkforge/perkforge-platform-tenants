@@ -1,0 +1,138 @@
+# Operator-only; never selected by Flux. Existing read-only credential, no issuance or rotation.
+- name: Deliver only the approved Nextcloud GHCR pull input
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    nextcloud_registry_apply: false
+    nextcloud_registry_approval: UNAPPROVED
+    nextcloud_registry_read_only_confirmed: false
+    nextcloud_registry_config_file: /UNCONFIGURED/dockerconfigjson
+    enrollment_tag: UNCONFIGURED
+    target_kubeconfig: /UNCONFIGURED/kubeconfig
+    target_context: UNCONFIGURED
+    expected_cluster_uid: UNCONFIGURED
+  tasks:
+  - ansible.builtin.debug:
+      msg: 'Default/check modes read no private files and contact no APIs. No credential issuance, rotation or activation.'
+  - name: Deliver only after explicit approval
+    when: nextcloud_registry_apply | bool and not ansible_check_mode
+    no_log: true
+    block:
+    - ansible.builtin.assert:
+        that:
+        - nextcloud_registry_approval == 'nextcloud-registry-delivery-v1'
+        - nextcloud_registry_read_only_confirmed | bool
+        - target_kubeconfig is match('^/') and not target_kubeconfig.startswith('/UNCONFIGURED/')
+        - target_context | length > 0 and target_context != 'UNCONFIGURED'
+        - expected_cluster_uid | length > 0 and expected_cluster_uid != 'UNCONFIGURED'
+        - nextcloud_registry_config_file is match('^/') and not nextcloud_registry_config_file.startswith('/UNCONFIGURED/')
+        - nextcloud_registry_config_file | realpath == nextcloud_registry_config_file
+    - ansible.builtin.include_tasks: verify-release.yaml
+    - ansible.builtin.stat:
+        path: '{{ nextcloud_registry_config_file | dirname }}'
+        follow: false
+      register: registry_directory
+    - ansible.builtin.assert:
+        that:
+        - registry_directory.stat.isdir | default(false)
+        - not registry_directory.stat.islnk | default(false)
+        - registry_directory.stat.mode == '0700'
+        - registry_directory.stat.uid == lookup('pipe', 'id -u') | int
+    - ansible.builtin.stat:
+        path: '{{ nextcloud_registry_config_file }}'
+        follow: false
+      register: registry_file
+    - ansible.builtin.assert:
+        that:
+        - registry_file.stat.isreg | default(false)
+        - not registry_file.stat.islnk | default(false)
+        - registry_file.stat.mode == '0600'
+        - registry_file.stat.uid == lookup('pipe', 'id -u') | int
+        - registry_file.stat.size > 0 and registry_file.stat.size <= 65536
+    - ansible.builtin.set_fact:
+        registry_bytes: '{{ lookup("file", nextcloud_registry_config_file, rstrip=false) }}'
+    - ansible.builtin.set_fact:
+        registry_config: '{{ registry_bytes | from_json }}'
+    - ansible.builtin.assert:
+        that:
+        - registry_config is mapping
+        - registry_config.keys() | list | sort == ['auths']
+        - registry_config.auths is mapping
+        - registry_config.auths.keys() | list == ['ghcr.io']
+        - registry_config.auths['ghcr.io'] is mapping
+        - registry_config.auths['ghcr.io'].keys() | list == ['auth']
+        - registry_config.auths['ghcr.io'].auth is string
+        - registry_config.auths['ghcr.io'].auth is match('^[A-Za-z0-9+/]+={0,2}$')
+        - registry_config.auths['ghcr.io'].auth | b64decode | b64encode == registry_config.auths['ghcr.io'].auth
+        - (registry_config.auths['ghcr.io'].auth | b64decode) is match('^[A-Za-z0-9-]+:[^\s:]+\Z')
+    - ansible.builtin.set_fact:
+        registry_k: [kubectl, --kubeconfig, '{{ target_kubeconfig }}', --context, '{{ target_context }}']
+    - ansible.builtin.command:
+        argv: '{{ registry_k + ["get", "namespace", "kube-system", "-o", "jsonpath={.metadata.uid}"] }}'
+      changed_when: false
+      register: registry_uid
+    - ansible.builtin.assert:
+        that: registry_uid.stdout == expected_cluster_uid
+    - ansible.builtin.command:
+        argv: '{{ registry_k + ["get", "namespace", "tenant-home-nextcloud", "-o", "json"] }}'
+      changed_when: false
+      register: registry_namespace
+    - ansible.builtin.assert:
+        that:
+        - (registry_namespace.stdout | from_json).metadata.labels['platform.perkforge.io/nextcloud-runtime'] == 'true'
+        - (registry_namespace.stdout | from_json).metadata.labels['pod-security.kubernetes.io/enforce'] == 'restricted'
+        - (registry_namespace.stdout | from_json).metadata.labels['pod-security.kubernetes.io/enforce-version'] == 'v1.36'
+    - ansible.builtin.set_fact:
+        registry_object:
+          apiVersion: v1
+          kind: Secret
+          metadata:
+            name: nextcloud-registry-existing
+            namespace: tenant-home-nextcloud
+            labels: {platform.perkforge.io/managed-input: nextcloud-registry-v1}
+          immutable: true
+          type: kubernetes.io/dockerconfigjson
+          data: {'.dockerconfigjson': '{{ registry_bytes | b64encode }}'}
+    - ansible.builtin.command:
+        argv: '{{ registry_k + ["-n", "tenant-home-nextcloud", "get", "secret", "nextcloud-registry-existing", "--ignore-not-found", "-o", "json"] }}'
+      changed_when: false
+      register: registry_existing
+    - name: Refuse foreign ownership, mutation, or rotation
+      ansible.builtin.assert:
+        that:
+        - (registry_existing.stdout | from_json).metadata.name == registry_object.metadata.name
+        - (registry_existing.stdout | from_json).metadata.namespace == registry_object.metadata.namespace
+        - (registry_existing.stdout | from_json).metadata.ownerReferences | default([]) | length == 0
+        - (registry_existing.stdout | from_json).metadata.deletionTimestamp | default('') | length == 0
+        - (registry_existing.stdout | from_json).metadata.labels['platform.perkforge.io/managed-input'] == registry_object.metadata.labels['platform.perkforge.io/managed-input']
+        - (registry_existing.stdout | from_json).immutable | default(false)
+        - (registry_existing.stdout | from_json).type == registry_object.type
+        - (registry_existing.stdout | from_json).data == registry_object.data
+      when: registry_existing.stdout != ''
+    - name: Validate only the absent named object before creation
+      ansible.builtin.command:
+        argv: '{{ registry_k + ["create", "--dry-run=server", "-f", "-"] }}'
+        stdin: '{{ registry_object | to_json }}'
+      changed_when: false
+      when: registry_existing.stdout == ''
+    - name: Create only the absent named object without replacement
+      ansible.builtin.command:
+        argv: '{{ registry_k + ["create", "-f", "-"] }}'
+        stdin: '{{ registry_object | to_json }}'
+      changed_when: true
+      when: registry_existing.stdout == ''
+    - ansible.builtin.command:
+        argv: '{{ registry_k + ["-n", "tenant-home-nextcloud", "get", "secret", "nextcloud-registry-existing", "-o", "json"] }}'
+      changed_when: false
+      register: registry_after
+    - ansible.builtin.assert:
+        that:
+        - (registry_after.stdout | from_json).metadata.name == registry_object.metadata.name
+        - (registry_after.stdout | from_json).metadata.namespace == registry_object.metadata.namespace
+        - (registry_after.stdout | from_json).metadata.ownerReferences | default([]) | length == 0
+        - (registry_after.stdout | from_json).metadata.deletionTimestamp | default('') | length == 0
+        - (registry_after.stdout | from_json).metadata.labels['platform.perkforge.io/managed-input'] == registry_object.metadata.labels['platform.perkforge.io/managed-input']
+        - (registry_after.stdout | from_json).immutable | default(false)
+        - (registry_after.stdout | from_json).type == registry_object.type
+        - (registry_after.stdout | from_json).data == registry_object.data
