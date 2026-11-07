@@ -7,10 +7,22 @@ jobs:
     env:
       KUBECONFIG: /dev/null
       NEXTCLOUD_APP_CHECKOUT: ${{ github.workspace }}/.inputs/nextcloud
-      NEXTCLOUD_SSO_APP_CHECKOUT: ${{ github.workspace }}/.inputs/nextcloud-sso
+      NEXTCLOUD_ROLLBACK_APP_CHECKOUT: ${{ github.workspace }}/.inputs/nextcloud-rollback
     steps:
     - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
-    - name: Verify the published Nextcloud web-stage tag before checkout
+    - name: Verify the published Nextcloud candidate tag before checkout
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: scripts/verify-release-ref.sh perkforge/perkforge-tenant-nextcloud v1.1.0 8c8ed5e140049b41e676dffd1c45a953ff1ef23b
+    - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      with:
+        repository: perkforge/perkforge-tenant-nextcloud
+        ref: v1.1.0
+        path: .inputs/nextcloud
+        fetch-depth: 0
+        persist-credentials: false
+    # Explicit legacy public-image rollback fixture; never the selected candidate.
+    - name: Verify the published legacy rollback tag before checkout
       env:
         GH_TOKEN: ${{ github.token }}
       run: scripts/verify-release-ref.sh perkforge/perkforge-tenant-nextcloud v1.0.4 9c48e8d97c596533a806dcb78e33b1932d5ef04a
@@ -18,15 +30,7 @@ jobs:
       with:
         repository: perkforge/perkforge-tenant-nextcloud
         ref: v1.0.4
-        path: .inputs/nextcloud
-        fetch-depth: 0
-        persist-credentials: false
-    # Cross-repository review fixture only. Deployment remains pinned to v1.0.4.
-    - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
-      with:
-        repository: perkforge/perkforge-tenant-nextcloud
-        ref: ab0f563f71c9980ae678ca5c5ad73da1903abe55 # app draft PR #8
-        path: .inputs/nextcloud-sso
+        path: .inputs/nextcloud-rollback
         persist-credentials: false
     - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
       with:

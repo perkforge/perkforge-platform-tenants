@@ -1,10 +1,11 @@
 # Nextcloud pilot enrollment candidate
 
-The separate `clusters/local-nextcloud` web-stage selector pins published app
-v1.0.4 at 9c48e8d97c596533a806dcb78e33b1932d5ef04a; release evidence is recorded
-in release-evidence.json and checked before CI checkout. It enables database and web
-releases and the guarded non-root same-Pod cron runner. This activation candidate
-requires the accepted disabled rollout, scoped sidecar policy and bounded same-Pod
+The separate `clusters/local-nextcloud` private-image candidate pins published app
+v1.1.0 at 8c8ed5e140049b41e676dffd1c45a953ff1ef23b; release evidence is recorded
+in release-evidence.json and checked before CI checkout. It preserves the enabled
+database/web releases and guarded non-root same-Pod cron runner, selects the
+digest-pinned private SSO image, and adds its fixed read-only OIDC input mounts.
+This activation candidate requires the accepted disabled rollout, scoped sidecar policy and bounded same-Pod
 pre-activation checks before promotion. The preceding data-only acceptance uses published
 enrollment v1.2.1 and app v1.0.1. Complete that gate and public CA delivery before
 selecting this web stage. Existing local/dev roots and the live
@@ -12,6 +13,21 @@ platform do not select it. Shared defaults remain paused/UNCONFIGURED. No branch
 or fabricated release is a deployment input. Foundation is
 operator-owned and separately applied from a clean published enrollment checkout;
 the tenant child cannot reconcile its own authority.
+
+**Do not promote this candidate before all three runtime inputs exist:** the
+read-only GHCR pull Secret `nextcloud-registry-existing`, OIDC client Secret
+`nextcloud-oidc`, and public CA ConfigMap `nextcloud-oidc-ca`, all in
+`tenant-home-nextcloud`. None is created by this pin change; the published app
+requires these references and cannot start correctly without them. Credential
+creation/delivery and live policy application require separate approval. Follow
+[the delivery and registry prerequisites](sso/README.md) and verify node-side pull
+of the exact digest before eventual live selection.
+
+Merge and publish the reviewed enrollment change first, then verify its actual
+published tag before preparing a separate platform pin change. Never fabricate a
+future enrollment tag. This PR changes no platform selection and does not deploy
+or activate native SSO. Issuer egress application and Nextcloud's private-HTTP
+setting remain separate approval and positive/negative acceptance gates.
 
 The Nextcloud-only selector contains no Portal resources. Its sources and child
 are enabled only after separately reviewed platform promotion; no live change is
@@ -26,7 +42,8 @@ Preserve the current GitLab/runner stage. The platform's existing enrollment
 prerequisite gate is tied to the old default local root and needs a reviewed
 selected-root update before use; do not bypass it or apply Portal's path instead.
 
-The guarded same-Pod activation is merged app PR #5, published as v1.0.4. Its pilot uses
+The guarded same-Pod activation originated in app v1.0.4 and is preserved in
+v1.1.0. The pilot uses
 32Gi files plus 16Gi PostgreSQL on the accepted two-replica longhorn-dedicated
 tier (platform v0.19.0). Storage expansion requires coordinated app values,
 admission and quota review before household import. No single-excess claim is
@@ -43,7 +60,9 @@ those policies and can perform reviewed recovery. The reconciler/deployer identi
 are limited automation accounts, not Corey's personal administrator identity.
 Nextcloud's initial application administrator is separately bootstrapped from its
 operator-delivered admin Secret and must be verified in the app. No Keycloak
-platform-admin-to-Nextcloud-admin mapping or SSO plugin is assumed or enabled.
+platform-admin-to-Nextcloud-admin mapping or native SSO activation is assumed.
+The released private image includes the plugin, but provider activation is a
+separate gated operation.
 Use the app runbook's local-admin-first, explicit-SSO-mapping-later procedure;
 preserve local recovery and existing platform administration.
 
@@ -70,7 +89,7 @@ objects before acceptance; this foundation adds no operator cluster permissions.
 
 Default deny permits only DNS, Traefik-to-web TCP80, app/cron-to-own-database TCP5432
 and the observed platform-cnpg controller-to-instance-manager TCP8000. App Pods
-have no API or general internet egress. No public routing, SSO, Redis or household
+have no API or general internet egress. No public routing, native SSO activation, Redis or household
 import is supplied. DNS/TLS and network enforcement on RKE2 must be tested live.
 
 The shared `cnpg-system/platform-cnpg` operator initially watches only `gitlab`.
@@ -105,7 +124,7 @@ CNPG setup. App labels cannot select this API policy.
 
 1. Review app and enrollment together. Verify chart 9.4.1 archive
    hash and both image digests, version/security compatibility and the accepted
-   dedicated disks. App v1.0.4 is published and pinned with exact evidence. Keep the
+   dedicated disks. App v1.1.0 is published and pinned with exact evidence. Keep the
    platform parent unselected through prerequisites and credential preparation.
    First accept the published data-only stage and deliver its public database CA.
    Then promote this released web stage; accept the disabled correction and bounded same-Pod checks before this controlled activation, then verify real sidecar progress and sustained web health.
@@ -198,25 +217,25 @@ that runtime probe nor household client TLS/backup restore is accepted by a buil
 Repeat the offline checks with Python/PyYAML/Ansible, kubectl, Helm and Go 1.27.3:
 
 ```sh
-python3 -m unittest discover -s tests -p 'test_*.py' -v
 mkdir -m 700 /ABS/FRESH/schema-fixtures
 bash tests/nextcloud-cel/fetch-schemas.sh /ABS/FRESH/schema-fixtures
-export NEXTCLOUD_APP_CHECKOUT=/ABS/PUBLISHED/v1.0.4-nextcloud-checkout
-export NEXTCLOUD_SSO_APP_CHECKOUT=/ABS/REVIEWED/sso-candidate-nextcloud-checkout
+export NEXTCLOUD_APP_CHECKOUT=/ABS/PUBLISHED/v1.1.0-nextcloud-checkout
+export NEXTCLOUD_ROLLBACK_APP_CHECKOUT=/ABS/PUBLISHED/v1.0.4-nextcloud-checkout
 export NEXTCLOUD_CHART=/ABS/VERIFIED/nextcloud-9.4.1.tgz
 export NEXTCLOUD_OPENAPI=/ABS/FRESH/schema-fixtures/openapi.json
 export NEXTCLOUD_CRD_DIR=/ABS/FRESH/schema-fixtures
+python3 -m unittest discover -s tests -p 'test_*.py' -v
 cd tests/nextcloud-cel && go test -count=1 -v .
 ```
 
 The schema fetcher pins source commits for Kubernetes 1.36.5, Flux helm-controller
 1.6.4/source-controller 1.9.5/kustomize-controller 1.9.5 and CNPG 1.30.1, matching
-the reviewed target. No cluster API is called. CI pins the proposed app commit as
-a **test fixture only**; it does not replace UNCONFIGURED or select deployment.
+the reviewed target. No cluster API is called. CI verifies and checks out the selected v1.1.0 release
+and the explicit v1.0.4 rollback fixture at their recorded commits. Both real
+chart renders remain covered; the former app PR head is no longer a fixture.
 Every policy is type-checked, including an intentionally invalid-field control,
 before positive real renders and negative mutations are evaluated. Repeat against
-the eventual released app/source and actual controller schema/defaults before live
-acceptance. Never treat a successful offline case as proof of authorization or
+the actual controller schema/defaults before live acceptance. Never treat a successful offline case as proof of authorization or
 network isolation.
 
 `-count=1` is required: Go's test cache cannot reliably track YAML and external app
@@ -234,7 +253,7 @@ sidecars remain denied. CronJob containers still have the existing single-contai
 limit; this policy does not enable or resume them.
 
 The preceding app v1.0.3 deployed the same-Pod correction with its runner disabled.
-This activation candidate selects the guarded non-root runner in v1.0.4. Review and release the policy before
+This private-image candidate preserves the guarded non-root runner from v1.0.4. Review and release the policy before
 selecting the opt-in app. Runtime acceptance must show continuous web health and
 synthetic-file retention over multiple successful runs, matching container/volume
 MCS labels, and no audit denials. No household import or backup claim is included.
@@ -247,5 +266,7 @@ for review only. No cluster root or current foundation selects its output.
 The source runtime policy also admits [immutable PerkForge GHCR images with a narrow
 private-pull reference](sso/README.md#registry-trust-and-private-pull-review-prerequisite)
 for coordinated review with the app candidate. Public-image rollback remains
-admitted; app/init/cron cannot mix images. This does not advance the v1.0.4 release
-pin, select issuer egress, deliver credentials or change any live workload.
+admitted; app/init/cron cannot mix images. This candidate advances only the app
+source pin to v1.1.0. It does not select issuer egress, deliver credentials or
+change any live workload. The legacy v1.0.4 render remains an explicit rollback
+fixture and its exact public image remains admitted.
