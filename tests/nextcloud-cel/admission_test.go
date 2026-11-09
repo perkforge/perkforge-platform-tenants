@@ -41,9 +41,9 @@ func TestNextcloudAdmission(t *testing.T) {
 		Policies []admissionv1.ValidatingAdmissionPolicy
 		Schemas  fixtureSchemas
 		Cases    []struct {
-			Name, Policy, Resource string
-			Object                 map[string]any
-			Allowed                bool
+			Name, Policy, Resource, Operation string
+			Object, OldObject                 map[string]any
+			Allowed                           bool
 		}
 	}
 	if err = json.Unmarshal(data, &f); err != nil {
@@ -107,7 +107,7 @@ func TestNextcloudAdmission(t *testing.T) {
 				t.Fatal("unknown policy")
 			}
 			vars := map[string]any{}
-			bindings := map[string]any{"object": tc.Object, "oldObject": nil, "namespaceObject": nil, "request": map[string]any{"operation": "CREATE", "resource": map[string]any{"resource": tc.Resource}, "userInfo": map[string]any{"username": "system:serviceaccount:tenant-home-nextcloud-config:nextcloud-deployer"}}, "variables": vars}
+			bindings := map[string]any{"object": tc.Object, "oldObject": tc.OldObject, "namespaceObject": nil, "request": map[string]any{"operation": tc.Operation, "resource": map[string]any{"resource": tc.Resource}, "userInfo": map[string]any{"username": "system:serviceaccount:tenant-home-nextcloud-config:nextcloud-deployer"}}, "variables": vars}
 			evaluate := func(source string, variable bool) (any, error) {
 				r := compiler.CompileCELExpression(expression{source, variable}, admissioncel.OptionalVariableDeclarations{}, environment.NewExpressions)
 				if r.Error != nil {

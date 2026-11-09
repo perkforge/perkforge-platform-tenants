@@ -10,8 +10,8 @@ spec:
     pods: '6'
     services: '5'
     persistentvolumeclaims: '2'
-    requests.storage: 48Gi
-    longhorn-dedicated.storageclass.storage.k8s.io/requests.storage: 48Gi
+    requests.storage: 144Gi
+    longhorn-dedicated.storageclass.storage.k8s.io/requests.storage: 144Gi
 ---
 apiVersion: v1
 kind: LimitRange
