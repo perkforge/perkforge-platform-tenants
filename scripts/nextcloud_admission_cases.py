@@ -46,13 +46,15 @@ cases = []
 resources = {'Deployment':'deployments','CronJob':'cronjobs','Service':'services','Ingress':'ingresses','PersistentVolumeClaim':'persistentvolumeclaims','Cluster':'clusters','ConfigMap':'configmaps','HelmRelease':'helmreleases','Kustomization':'kustomizations','GitRepository':'gitrepositories','HelmRepository':'helmrepositories'}
 
 
-def case(name, policy, obj, allowed=True, path=None, value=None):
+def case(name, policy, obj, allowed=True, path=None, value=None, *, old=None):
     obj = copy.deepcopy(obj)
     if path:
         target = obj
         for key in path[:-1]: target = target[key]
         target[path[-1]] = value
-    cases.append(dict(Name=name, Policy=policy, Resource=resources[obj['kind']], Object=obj, Allowed=allowed))
+    cases.append(dict(Name=name, Policy=policy, Resource=resources[obj['kind']], Object=obj,
+                      OldObject=copy.deepcopy(old), Operation='UPDATE' if old is not None else 'CREATE',
+                      Allowed=allowed))
 
 
 # Older pinned apps have no opt-in sidecar yet. Derive that allowed mutation
@@ -128,6 +130,32 @@ claim = next(x for x in app if x['kind']=='PersistentVolumeClaim')
 case('deny-single-excess','nextcloud-files',claim,False,['spec','storageClassName'],'longhorn-single-excess')
 case('deny-unreviewed-expansion','nextcloud-files',claim,False,['spec','resources','requests','storage'],'250Gi')
 case('deny-existing-pv-adoption','nextcloud-files',claim,False,['spec','volumeName'],'existing-pv')
+# Exercise real CREATE and UPDATE bindings, including no-shrink rollback denial.
+case('allow-reviewed-128gi-create','nextcloud-files',claim,True,['spec','resources','requests','storage'],'128Gi')
+for size in ['16Gi', '64Gi', '129Gi']:
+    case('deny-unreviewed-create-'+size,'nextcloud-files',claim,False,
+         ['spec','resources','requests','storage'],size)
+for before, after, allowed in [('32Gi','32Gi',True), ('32Gi','128Gi',True),
+                               ('128Gi','128Gi',True), ('128Gi','32Gi',False),
+                               ('32Gi','64Gi',False), ('128Gi','250Gi',False)]:
+    old_claim = copy.deepcopy(claim)
+    old_claim['spec']['resources']['requests']['storage'] = before
+    old_claim['spec']['volumeName'] = 'retained-files-pv'
+    case('files-update-'+before+'-to-'+after,'nextcloud-files',old_claim,allowed,
+         ['spec','resources','requests','storage'],after,old=old_claim)
+expanded = copy.deepcopy(claim)
+expanded['spec']['resources']['requests']['storage'] = '128Gi'
+expanded['spec']['volumeName'] = 'retained-files-pv'
+for name, path, value in [
+    ('different-volume', ['spec','volumeName'], 'other-pv'),
+    ('generic-tier', ['spec','storageClassName'], 'longhorn'),
+    ('shared-access', ['spec','accessModes'], ['ReadWriteMany']),
+    ('different-claim', ['metadata','name'], 'other-files'),
+    ('snapshot-adoption', ['spec','dataSource'], {'apiGroup':'snapshot.storage.k8s.io','kind':'VolumeSnapshot','name':'other'}),
+    ('data-source-ref', ['spec','dataSourceRef'], {'apiGroup':'snapshot.storage.k8s.io','kind':'VolumeSnapshot','name':'other'}),
+]:
+    case('deny-expanded-'+name,'nextcloud-files',expanded,False,path,value,old=expanded)
+case('deny-database-expansion','nextcloud-database',db,False,['spec','storage','size'],'128Gi')
 service = next(x for x in app if x['kind']=='Service')
 case('deny-nodeport','nextcloud-service',service,False,['spec','type'],'NodePort')
 cm = next(x for x in app if x['kind']=='ConfigMap')

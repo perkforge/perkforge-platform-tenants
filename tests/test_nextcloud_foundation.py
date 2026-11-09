@@ -41,7 +41,8 @@ class NextcloudFoundation(unittest.TestCase):
                     if set(rule['resources']) & {'clusters','persistentvolumeclaims'}:
                         self.assertNotIn('delete',rule['verbs'])
         budget = next(x for x in self.objects if x['kind']=='ResourceQuota' and x['metadata']['name']=='nextcloud-budget')
-        self.assertEqual(budget['spec']['hard']['requests.storage'],'48Gi')
+        self.assertEqual(budget['spec']['hard']['requests.storage'],'144Gi')
+        self.assertEqual(budget['spec']['hard']['longhorn-dedicated.storageclass.storage.k8s.io/requests.storage'],'144Gi')
         self.assertEqual(budget['spec']['hard']['persistentvolumeclaims'],'2')
         for x in self.objects:
             if x['kind']=='ServiceAccount':self.assertFalse(x['automountServiceAccountToken'])

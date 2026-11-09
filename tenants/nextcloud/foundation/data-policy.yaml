@@ -16,10 +16,13 @@ spec:
   validations:
   - expression: >-
       object.metadata.name == 'nextcloud-files' && object.spec.storageClassName == 'longhorn-dedicated' &&
-      object.spec.accessModes == ['ReadWriteOnce'] && quantity(object.spec.resources.requests.storage) == quantity('32Gi') &&
+      object.spec.accessModes == ['ReadWriteOnce'] &&
+      [quantity('32Gi'), quantity('128Gi')].exists(size, quantity(object.spec.resources.requests.storage) == size) &&
+      (request.operation != 'UPDATE' ||
+        quantity(object.spec.resources.requests.storage).compareTo(quantity(oldObject.spec.resources.requests.storage)) >= 0) &&
       (!has(object.spec.volumeName) || (request.operation == 'UPDATE' && object.spec.volumeName == oldObject.spec.volumeName)) &&
       !has(object.spec.dataSource) && !has(object.spec.dataSourceRef)
-    message: The 32Gi pilot files claim cannot select another tier or adopt existing data.
+    message: Only the retained 32Gi pilot or reviewed 128Gi files claim is allowed; shrinking, another tier and data adoption are forbidden.
 ---
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingAdmissionPolicyBinding

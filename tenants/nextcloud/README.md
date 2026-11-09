@@ -56,6 +56,36 @@ allowed here. One web process, one database instance and serial cron are an empt
 pilot, not application HA or accepted household load. Both prefer worker-2; worker-1
 remains eligible. On fresh installation or recovery, verify initialization, trusted HTTPS, synthetic retention and bounded same-Pod execution with the released policy. Verify matching container/volume SELinux labels and two successful background runs after the controlled rollout.
 
+## Reviewed expansion foundation: 128Gi files / 144Gi quota
+
+This candidate raises both `nextcloud-budget` storage quota keys from `48Gi` to
+`144Gi` for 128Gi files plus the unchanged 16Gi database. The two-PVC count and
+all CPU/memory, class, identity, image, network and deletion boundaries remain
+unchanged. Files admission permits only the existing 32Gi or reviewed 128Gi size,
+with monotonic UPDATEs. The selected app v1.1.0 still requests 32Gi; its pin and
+release evidence are deliberately unchanged so the foundation can precede expansion.
+A rollback to a 32Gi app manifest after expansion is denied, not a recovery path.
+
+Merge/publish the paired app change and this foundation through human review.
+For a separately authorized rollout, first verify the published enrollment
+release and apply only the reviewed quota/files-policy objects. Foundation is
+operator-applied separately; the `clusters/local-nextcloud` Flux root does not
+include it and must not be granted authority to reconcile its own boundaries.
+Recheck native schema/type warnings and positive/negative admission, then verify
+actual new app tags before updating app pin/evidence and the platform enrollment
+pin in later reviewed releases. Do not fabricate future tags or apply a feature
+branch. Publishing these changes alone performs no live expansion or promotion.
+
+Before rollout require the exact expandable `longhorn-dedicated` class, two healthy
+replicas on the actual dedicated disks, current free/scheduled capacity including
+96Gi additional per replica, snapshots/reserves/rebuild headroom and a recoverable
+paired backup for protected data. Afterward verify the original PVC/PV identities,
+128Gi request/capacity and filesystem, both healthy replicas, unchanged 16Gi DB,
+144Gi quota use and web/cron/synthetic-file retention. Preserve resources on any
+failure; never shrink, delete/recreate claims, or loosen admission to roll back.
+Any required restart is a separate disruption decision. Backup/restore acceptance
+and household import remain separate gates.
+
 ## What the foundation owns
 
 Corey retains full platform administration. This foundation adds no ClusterRole,
