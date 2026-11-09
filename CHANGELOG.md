@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.5.2](https://github.com/perkforge/perkforge-platform-tenants/compare/v1.5.1...v1.5.2) (2026-11-09)
+
+
+### Bug Fixes
+
+* **nextcloud:** allow guarded 128Gi files expansion [skip ci] ([#43](https://github.com/perkforge/perkforge-platform-tenants/issues/43)) ([195562d](https://github.com/perkforge/perkforge-platform-tenants/commit/195562dcfdd88d3ed0c2f92cf61fb7806c0a1238))
+* **nextcloud:** pin published app v1.1.1 [skip ci] ([#44](https://github.com/perkforge/perkforge-platform-tenants/issues/44)) ([079f04d](https://github.com/perkforge/perkforge-platform-tenants/commit/079f04dd391142b9b4328f256454a93efe04b705))
+
 ## [1.5.1](https://github.com/perkforge/perkforge-platform-tenants/compare/v1.5.0...v1.5.1) (2026-11-07)
 
 
