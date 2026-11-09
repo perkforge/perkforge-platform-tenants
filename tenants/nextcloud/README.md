@@ -2,11 +2,12 @@
 
 ## Selected source contract
 
-`clusters/local-nextcloud` selects published app **v1.1.0**, commit
-`8c8ed5e140049b41e676dffd1c45a953ff1ef23b`; `release-evidence.json` records and
-verifies that pin. Platform **v0.26.0** selects enrollment **v1.5.0** through this
-Nextcloud-only root. It includes no Portal resources. Shared defaults remain
-paused/UNCONFIGURED; `clusters/local` and `clusters/dev` are separate Portal paths,
+`clusters/local-nextcloud` selects published app **v1.1.1**, commit
+`e5529b679f603f68049d45a0cc8a195d38dd680e`; `release-evidence.json` records and
+verifies that pin. This is a source candidate, not a live promotion. The accepted
+platform chain still selects enrollment **v1.5.0** / app **v1.1.0** through this
+Nextcloud-only root until separate release/promotion approval. It includes no
+Portal resources. Shared defaults remain paused/UNCONFIGURED; `clusters/local` and `clusters/dev` are separate Portal paths,
 not alternatives for Nextcloud activation.
 
 The selected app uses the digest-pinned private SSO image, enabled database/web
@@ -24,8 +25,8 @@ remain pending. Recheck current readiness and recovery before maintenance.
 
 ### Sources and operator procedures
 
-- [App operations](https://github.com/perkforge/perkforge-tenant-nextcloud/blob/v1.1.0/docs/operations.md)
-  and [native SSO](https://github.com/perkforge/perkforge-tenant-nextcloud/blob/v1.1.0/sso/README.md)
+- [App operations](https://github.com/perkforge/perkforge-tenant-nextcloud/blob/v1.1.1/docs/physical-deployment.md)
+  and [native SSO](https://github.com/perkforge/perkforge-tenant-nextcloud/blob/v1.1.1/sso/README.md)
   own workload/native-provider procedures and independent local recovery.
 - [OIDC/CA delivery and registry prerequisites](sso/README.md) own protected input
   delivery. Required runtime references are `nextcloud-registry-existing`,
@@ -48,10 +49,10 @@ v1.2.1/app v1.0.1; it is historical staging, not a reason to downgrade or replay
 bootstrap on the accepted installation.
 
 The guarded same-Pod activation originated in app v1.0.4 and is preserved in
-v1.1.0. The pilot uses
-32Gi files plus 16Gi PostgreSQL on the accepted two-replica longhorn-dedicated
-tier (platform v0.19.0). Storage expansion requires coordinated app values,
-admission and quota review before household import. No single-excess claim is
+v1.1.1. This candidate selects 128Gi files plus unchanged 16Gi PostgreSQL on the
+accepted two-replica longhorn-dedicated tier (platform v0.19.0). Storage expansion
+requires the reviewed quota/admission foundation before app promotion; household
+import remains separately gated. No single-excess claim is
 allowed here. One web process, one database instance and serial cron are an empty
 pilot, not application HA or accepted household load. Both prefer worker-2; worker-1
 remains eligible. On fresh installation or recovery, verify initialization, trusted HTTPS, synthetic retention and bounded same-Pod execution with the released policy. Verify matching container/volume SELinux labels and two successful background runs after the controlled rollout.
@@ -62,18 +63,19 @@ This candidate raises both `nextcloud-budget` storage quota keys from `48Gi` to
 `144Gi` for 128Gi files plus the unchanged 16Gi database. The two-PVC count and
 all CPU/memory, class, identity, image, network and deletion boundaries remain
 unchanged. Files admission permits only the existing 32Gi or reviewed 128Gi size,
-with monotonic UPDATEs. The selected app v1.1.0 still requests 32Gi; its pin and
-release evidence are deliberately unchanged so the foundation can precede expansion.
+with monotonic UPDATEs. The selected app v1.1.1 requests 128Gi; its verified tag
+and exact release evidence are pinned here. Apply the released foundation before
+promoting this source, while the live v1.1.0 app still requests 32Gi.
 A rollback to a 32Gi app manifest after expansion is denied, not a recovery path.
 
-Merge/publish the paired app change and this foundation through human review.
+App v1.1.1 is already published. After human review/merge of this pin, publish
+the enrollment release and prepare a platform pin to that verified release.
 For a separately authorized rollout, first verify the published enrollment
 release and apply only the reviewed quota/files-policy objects. Foundation is
 operator-applied separately; the `clusters/local-nextcloud` Flux root does not
 include it and must not be granted authority to reconcile its own boundaries.
-Recheck native schema/type warnings and positive/negative admission, then verify
-actual new app tags before updating app pin/evidence and the platform enrollment
-pin in later reviewed releases. Do not fabricate future tags or apply a feature
+Recheck native schema/type warnings and positive/negative admission before
+promoting the reviewed platform enrollment pin. Do not fabricate future tags or apply a feature
 branch. Publishing these changes alone performs no live expansion or promotion.
 
 Before rollout require the exact expandable `longhorn-dedicated` class, two healthy
@@ -166,7 +168,7 @@ acceptance remain outstanding even though the current pilot is selected.
 
 1. Review app and enrollment together. Verify chart 9.4.1 archive
    hash and both image digests, version/security compatibility and the accepted
-   dedicated disks. App v1.1.0 is published and pinned with exact evidence. Keep the
+   dedicated disks. App v1.1.1 is published and pinned with exact evidence. Keep the
    platform parent unselected through prerequisites and credential preparation.
    First accept the published data-only stage and deliver its public database CA.
    Then promote this released web stage; accept the disabled correction and bounded same-Pod checks before this controlled activation, then verify real sidecar progress and sustained web health.
@@ -188,7 +190,7 @@ acceptance remain outstanding even though the current pilot is selected.
    its fingerprint and Service hostname SAN to match the database. App/cron mount
    this public ConfigMap read-only at /etc/nextcloud-postgres-ca. Do not weaken
    verify-full or mount certificates below an image's read-only /etc subdirectory.
-5. Activate app only after DB/public-CA/TLS gates. Verify the 32Gi files claim's SSD
+5. Activate app only after DB/public-CA/TLS gates. Verify the selected 128Gi files claim's SSD
    replica placement, directory ownership, initialized web and trusted private
    HTTPS. Run the app repository's database TLS probe for positive verified TLS and
    wrong-CA, wrong-hostname and plaintext denials. Keep credentials out of output.
@@ -260,7 +262,7 @@ Repeat the offline checks with Python/PyYAML/Ansible, kubectl, Helm and Go 1.27.
 ```sh
 mkdir -m 700 /ABS/FRESH/schema-fixtures
 bash tests/nextcloud-cel/fetch-schemas.sh /ABS/FRESH/schema-fixtures
-export NEXTCLOUD_APP_CHECKOUT=/ABS/PUBLISHED/v1.1.0-nextcloud-checkout
+export NEXTCLOUD_APP_CHECKOUT=/ABS/PUBLISHED/v1.1.1-nextcloud-checkout
 export NEXTCLOUD_ROLLBACK_APP_CHECKOUT=/ABS/PUBLISHED/v1.0.4-nextcloud-checkout
 export NEXTCLOUD_CHART=/ABS/VERIFIED/nextcloud-9.4.1.tgz
 export NEXTCLOUD_OPENAPI=/ABS/FRESH/schema-fixtures/openapi.json
@@ -271,9 +273,10 @@ cd tests/nextcloud-cel && go test -count=1 -v .
 
 The schema fetcher pins source commits for Kubernetes 1.36.5, Flux helm-controller
 1.6.4/source-controller 1.9.5/kustomize-controller 1.9.5 and CNPG 1.30.1, matching
-the reviewed target. No cluster API is called. CI verifies and checks out the selected v1.1.0 release
-and the explicit v1.0.4 rollback fixture at their recorded commits. Both real
-chart renders remain covered; the former app PR head is no longer a fixture.
+the reviewed target. No cluster API is called. CI verifies and checks out the
+selected v1.1.1 release and the explicit v1.0.4 rollback fixture at their recorded
+commits. Both real chart renders and the published 32Gi-to-128Gi transition remain
+covered; the former app PR head is no longer a fixture.
 Every policy is type-checked, including an intentionally invalid-field control,
 before positive real renders and negative mutations are evaluated. Repeat against
 the actual controller schema/defaults before live acceptance. Never treat a successful offline case as proof of authorization or
