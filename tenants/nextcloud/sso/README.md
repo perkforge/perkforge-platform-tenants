@@ -93,7 +93,7 @@ package or digest does not require a tenant policy release; app Git still pins
 and reviews the exact artifact. This trusts PerkForge package publishers. It does
 not verify signatures, attestations, vulnerability scans or image contents.
 
-The selected published app v1.1.0 pins
+The selected published app v1.1.1 pins
 `ghcr.io/perkforge/nextcloud-sso:35.0.2-oidc8.13.0@sha256:57c90b70d3c7261debbd5f2f2d760222fd6db65b8235a5c75f4ae7cb59df1d03`.
 Only the previous public rollback image
 `docker.io/library/nextcloud:35.0.2-apache@sha256:d88929dc8386420b8963f86cabb667fdaf733eef9dcf8fc98e226801a32c023c`

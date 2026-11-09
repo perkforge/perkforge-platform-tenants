@@ -17,10 +17,10 @@ class NextcloudCandidate(unittest.TestCase):
         release = json.loads((ROOT / 'release-evidence.json').read_text())['dependencies']['nextcloud']
         self.assertEqual(release, {
             'repository': 'perkforge/perkforge-tenant-nextcloud',
-            'tag': 'v1.1.0',
-            'resolvedCommit': '8c8ed5e140049b41e676dffd1c45a953ff1ef23b',
-            'publishedAt': '2026-11-07T05:23:39Z',
-            'releaseUrl': 'https://github.com/perkforge/perkforge-tenant-nextcloud/releases/tag/v1.1.0',
+            'tag': 'v1.1.1',
+            'resolvedCommit': 'e5529b679f603f68049d45a0cc8a195d38dd680e',
+            'publishedAt': '2026-11-09T17:12:10Z',
+            'releaseUrl': 'https://github.com/perkforge/perkforge-tenant-nextcloud/releases/tag/v1.1.1',
         })
 
     def test_ci_verifies_selected_and_distinct_legacy_fixtures(self):
@@ -54,7 +54,7 @@ class NextcloudCandidate(unittest.TestCase):
     @unittest.skipUnless(os.environ.get('NEXTCLOUD_APP_CHECKOUT') and
                          os.environ.get('NEXTCLOUD_ROLLBACK_APP_CHECKOUT'),
                          'both published app checkouts are required')
-    def test_actual_releases_preserve_non_image_runtime_values(self):
+    def test_actual_releases_preserve_runtime_except_approved_storage_and_sso(self):
         selected = Path(os.environ['NEXTCLOUD_APP_CHECKOUT'])
         legacy = Path(os.environ['NEXTCLOUD_ROLLBACK_APP_CHECKOUT'])
         release = json.loads((ROOT / 'release-evidence.json').read_text())['dependencies']['nextcloud']
@@ -70,6 +70,9 @@ class NextcloudCandidate(unittest.TestCase):
         self.assertEqual(current_local['nextcloud'].pop('configs'), {
             'oidc-origin.config.php': '<?php\n$CONFIG = [\'overwrite.cli.url\' => "https://nextcloud.perkforge.home.arpa"];\n',
         })
+        self.assertEqual(current_local['filesStorage'], {'storageClass': 'longhorn-dedicated', 'size': '128Gi'})
+        self.assertEqual(old_local['filesStorage'], {'storageClass': 'longhorn-dedicated', 'size': '32Gi'})
+        current_local['filesStorage']['size'] = '32Gi'
         self.assertEqual(current_local, old_local)
         current = yaml.safe_load((selected / 'gitops/base/app-values.yaml').read_text())
         old = yaml.safe_load((legacy / 'gitops/base/app-values.yaml').read_text())

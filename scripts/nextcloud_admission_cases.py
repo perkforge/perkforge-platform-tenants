@@ -161,8 +161,17 @@ case('deny-nodeport','nextcloud-service',service,False,['spec','type'],'NodePort
 cm = next(x for x in app if x['kind']=='ConfigMap')
 case('deny-delivered-ca-write','nextcloud-rendered-resources',cm,False,['metadata','name'],'nextcloud-db-ca')
 # The legacy published app remains an explicit rollback fixture. Independently
-# render the actual selected v1.1.0 release, not the former app PR head.
+# render the actual selected v1.1.1 release, not the former app PR head.
 sso_app = render(CHART, 'gitops/base/app-values.yaml', 'gitops/clusters/local/app-values.yaml', checkout=SSO_APP)
+selected_claim = next(x for x in sso_app if x['kind'] == 'PersistentVolumeClaim')
+assert selected_claim['spec']['resources']['requests']['storage'] == '128Gi'
+case('allow-published-128gi-files-render', 'nextcloud-files', selected_claim)
+selected_bound = copy.deepcopy(selected_claim)
+selected_bound['spec']['volumeName'] = 'retained-files-pv'
+legacy_bound = copy.deepcopy(claim)
+legacy_bound['spec']['volumeName'] = 'retained-files-pv'
+case('allow-published-files-expansion', 'nextcloud-files', selected_bound, old=legacy_bound)
+case('deny-published-files-shrink-to-legacy', 'nextcloud-files', legacy_bound, False, old=selected_bound)
 sso_deploy = next(x for x in sso_app if x['kind'] == 'Deployment')
 pod = sso_deploy['spec']['template']['spec']
 assert {c['image'] for c in pod['containers'] + pod.get('initContainers', [])} == {SSO_IMAGE}
