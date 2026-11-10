@@ -1,7 +1,7 @@
 # Included only by the approved no_log block after TLS and ownership checks.
 - name: Apply only three intended inputs through private stdin
   ansible.builtin.command:
-    argv: [kubectl, --kubeconfig, '{{ target_kubeconfig }}', apply, --server-side, --field-manager=portal-inputs, -f, '-']
+    argv: [kubectl, --kubeconfig, '{{ target_kubeconfig }}', --context, '{{ target_context }}', apply, --server-side, --field-manager=portal-inputs, -f, '-']
     stdin: '{{ item | to_nice_yaml }}'
   loop:
   - apiVersion: v1

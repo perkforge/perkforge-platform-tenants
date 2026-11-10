@@ -11,8 +11,8 @@ implicitFlowEnabled: false
 directAccessGrantsEnabled: false
 serviceAccountsEnabled: false
 fullScopeAllowed: false
-redirectUris: [https://portal-local-il2.local-lab.test/auth/callback]
-webOrigins: [https://portal-local-il2.local-lab.test]
+redirectUris: [https://portal.perkforge.home.arpa/auth/callback]
+webOrigins: [https://portal.perkforge.home.arpa]
 defaultClientScopes: [basic, profile]
 optionalClientScopes: []
 attributes:

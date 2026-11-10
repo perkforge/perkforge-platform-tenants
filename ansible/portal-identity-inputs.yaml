@@ -1,6 +1,18 @@
+- name: Inspect private input directories without following links
+  ansible.builtin.stat: {path: '{{ item }}', follow: false}
+  loop: ['{{ sso_client_username_file | dirname }}', '{{ sso_client_password_file | dirname }}', '{{ portal_private_dir }}']
+  register: portal_directories
+- name: Require owned private directories before reading credentials
+  ansible.builtin.assert:
+    that:
+    - item.stat.isdir | default(false)
+    - not (item.stat.islnk | default(false))
+    - item.stat.mode == '0700'
+    - item.stat.uid == lookup('pipe', 'id -u') | int
+  loop: '{{ portal_directories.results }}'
 - name: Inspect exact credential inputs without following links
   ansible.builtin.stat: {path: '{{ item }}', follow: false}
-  loop: ['{{ identity_private_dir }}/bootstrap-password', '{{ portal_private_dir }}/client-secret']
+  loop: ['{{ sso_client_username_file }}', '{{ sso_client_password_file }}', '{{ portal_private_dir }}/client-secret']
   register: portal_inputs
 - name: Require private owned nonempty regular files
   ansible.builtin.assert:
@@ -8,7 +20,7 @@
     - item.stat.isreg | default(false)
     - not (item.stat.islnk | default(false))
     - item.stat.mode == '0600'
-    - item.stat.pw_name == lookup('ansible.builtin.env', 'USER')
+    - item.stat.uid == lookup('pipe', 'id -u') | int
     - item.stat.size > 0
   loop: '{{ portal_inputs.results }}'
 - name: Authenticate existing bootstrap admin over verified HTTPS
@@ -19,8 +31,8 @@
     body:
       client_id: admin-cli
       grant_type: password
-      username: local-bootstrap-admin
-      password: "{{ lookup('ansible.builtin.file', identity_private_dir ~ '/bootstrap-password') | trim }}"
+      username: "{{ lookup('ansible.builtin.file', sso_client_username_file) | trim }}"
+      password: "{{ lookup('ansible.builtin.file', sso_client_password_file) | trim }}"
   register: portal_admin_session
 - name: Keep token in private task state only
   ansible.builtin.set_fact:

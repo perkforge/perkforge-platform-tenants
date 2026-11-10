@@ -1,39 +1,22 @@
 # Portal enrollment: platform-owned
 
-`source.yaml` selects the published app configuration tag; `clusters/local` and
-`clusters/dev` explicitly choose `gitops/clusters/<name>`. No tenant folder is
-automatically enrolled. The app repository owns HelmRelease and values, never
-Big Bang or platform security configuration.
+Portal remains independent of Nextcloud. `clusters/local` and `clusters/dev`
+explicitly select app paths; both Portal source/child selections are suspended.
+Published physical app configuration `v2.0.0` is selected with verified tag/commit
+evidence and remains disabled/suspended. Physical activation is blocked pending
+reviewed enrollment/platform releases and OpenBao + ESO runtime custody.
 
-The **local trial proposal** adds separately applied boundaries and a scoped
-three-namespace deployment. Start with [LOCAL-TRIAL.md](LOCAL-TRIAL.md) for the
-entrypoint, release order, budget and later live approval. `dev` keeps the prior
-contract-only example; its foundation identities are not provisioned here.
+The tenant owns HelmRelease/chart/values, never platform security. Operator-owned
+`foundation/` provides namespace/RBAC, PSA, quota, network and native admission;
+it is absent from ordinary enrollment roots. The scoped reconciler/deployer retain
+three separate namespaces and runtime has no API authority or persistent storage.
+`ansible/prepare-local-portal.yaml` remains default off with explicit context/UID and
+published-code guards; routing has its own later TLS readiness gate.
 
-Local source/child Kustomization live in `tenant-portal-config`; the child
-impersonates `portal-reconciler` there. Tenant Git can apply only ConfigMaps and
-the reviewed HelmRelease. It cannot change its enrollment/source or RBAC.
-The app HelmRelease impersonates `portal-deployer` from that same control namespace,
-targets runtime `tenant-portal` and stores Helm history in `tenant-portal-release`.
-`portal-runtime` has no API grants or mounted API token. Human admin access is an
-application policy; it never grants workload/deployer cluster-admin.
+See [LOCAL-TRIAL.md](LOCAL-TRIAL.md) for the physical source contract, release order,
+network/public trust preparation, credential custody blocker and later acceptance.
+Offline source validation is not live authorization or isolation verification.
 
-`foundation/` is operator-owned namespace/RBAC, PSA, quota, network and native
-admission; it is deliberately absent from the ordinary cluster enrollment root.
-`ansible/prepare-local-portal.yaml` applies it only after published-code/UID guards
-and separate approval. `foundation/routing.yaml` has its own later TLS readiness gate.
-No credentials, tenant memberships, OpenBao/ESO or new controllers are supplied.
-
-The app pin selects published v0.3.0, containing the portal v0.3.0 image digest
-and explicit local admin-only configuration. Only local source/child and the selected local app are declaratively active.
-Dev/shared defaults remain paused/disabled; the live platform still selects the
-identity-only stage, so publication alone cannot deploy. The operator image allowlist
-now matches the published source v0.3.0 digest selected by app v0.3.0. Private GHCR
-credential delivery and all live security steps still require approval. Offline checks are not live tests.
-
-Cluster/environment/profile annotations remain matching selection evidence, not
-security enforcement or IL authorization. App values cannot relax platform
-boundaries; admission negative tests and real authorization/network checks remain
-separate. The protected parent/child pattern follows the
-[official Flux multi-tenancy example](https://github.com/fluxcd/flux2-multi-tenancy).
-No change to the existing Fleet deployment or controller lifecycle is included.
+An [inactive ESO foundation](eso/README.md) defines the separately reviewed
+post-controller/auth Store and bounded controller role. It is absent from all
+ordinary roots and contains no ExternalSecret or credential delivery.

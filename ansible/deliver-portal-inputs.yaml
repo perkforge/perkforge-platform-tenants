@@ -1,3 +1,5 @@
+# LEGACY VM DELIVERY ONLY. Not the physical Portal credential path.
+# Physical runtime inputs require reviewed OpenBao + ESO delivery; see LOCAL-TRIAL.md.
 - name: Deliver only reviewed external local portal inputs after live approval
   hosts: localhost
   connection: local
@@ -7,6 +9,7 @@
     enrollment_tag: UNCONFIGURED
     portal_private_dir: /UNCONFIGURED/portal
     identity_ca_file: /UNCONFIGURED/identity-ca.crt
+    target_context: UNCONFIGURED
     target_kubeconfig: /UNCONFIGURED/kubeconfig
     expected_cluster_uid: UNCONFIGURED
   tasks:
@@ -22,13 +25,14 @@
     - name: Refuse missing target inputs
       ansible.builtin.assert:
         that:
+        - target_context != 'UNCONFIGURED'
         - target_kubeconfig != '/UNCONFIGURED/kubeconfig'
         - expected_cluster_uid != 'UNCONFIGURED'
         - portal_private_dir != '/UNCONFIGURED/portal'
         - identity_ca_file != '/UNCONFIGURED/identity-ca.crt'
     - name: Verify intended cluster UID
       ansible.builtin.command:
-        argv: [kubectl, --kubeconfig, '{{ target_kubeconfig }}', get, namespace, kube-system, -o, 'jsonpath={.metadata.uid}']
+        argv: [kubectl, --kubeconfig, '{{ target_kubeconfig }}', --context, '{{ target_context }}', get, namespace, kube-system, -o, 'jsonpath={.metadata.uid}']
       register: portal_uid
       changed_when: false
     - name: Refuse another cluster

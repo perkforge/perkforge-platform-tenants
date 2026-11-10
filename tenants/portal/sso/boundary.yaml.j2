@@ -1,0 +1,24 @@
+# UNSELECTED REVIEW OUTPUT. Exact endpoint must pass actual CNI/NAT tests.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: {name: portal-oidc-issuer, namespace: tenant-portal}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: perkforge-portal
+  policyTypes: [Egress]
+  egress:
+  - to:
+    - ipBlock: {cidr: '{{ portal_sso_issuer_ipv4 }}/32'}
+    ports: [{protocol: TCP, port: 443}]
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: portal-identity-ca
+  namespace: tenant-portal
+  labels: {platform.perkforge.io/managed-input: portal-sso-v1}
+  annotations:
+    platform.perkforge.io/public-ca-sha256: '{{ portal_sso_ca_sha256 }}'
+immutable: true
+data: {ca.crt: {{ lookup('file', portal_sso_ca_file) | trim | to_json }}}

@@ -1,3 +1,5 @@
+# LEGACY VM DELIVERY ONLY. Not the physical Portal credential path.
+# Physical runtime inputs require reviewed OpenBao + ESO delivery; see LOCAL-TRIAL.md.
 - name: Deliver only the separately approved portal GHCR pull credential
   hosts: localhost
   connection: local
@@ -6,6 +8,7 @@
     portal_registry_apply: false
     enrollment_tag: UNCONFIGURED
     portal_registry_file: /UNCONFIGURED/dockerconfigjson
+    target_context: UNCONFIGURED
     target_kubeconfig: /UNCONFIGURED/kubeconfig
     expected_cluster_uid: UNCONFIGURED
   tasks:
@@ -22,11 +25,12 @@
       ansible.builtin.assert:
         that:
         - portal_registry_file != '/UNCONFIGURED/dockerconfigjson'
+        - target_context != 'UNCONFIGURED'
         - target_kubeconfig != '/UNCONFIGURED/kubeconfig'
         - expected_cluster_uid != 'UNCONFIGURED'
     - name: Verify intended cluster UID before reading credentials
       ansible.builtin.command:
-        argv: [kubectl, --kubeconfig, '{{ target_kubeconfig }}', get, namespace, kube-system, -o, 'jsonpath={.metadata.uid}']
+        argv: [kubectl, --kubeconfig, '{{ target_kubeconfig }}', --context, '{{ target_context }}', get, namespace, kube-system, -o, 'jsonpath={.metadata.uid}']
       register: portal_registry_uid
       changed_when: false
     - name: Refuse another cluster
@@ -35,7 +39,7 @@
       ansible.builtin.include_tasks: portal-registry-input.yaml
     - name: Deliver only the approved runtime pull Secret through private stdin
       ansible.builtin.command:
-        argv: [kubectl, --kubeconfig, '{{ target_kubeconfig }}', apply, --server-side, --field-manager=portal-registry-inputs, -f, '-']
+        argv: [kubectl, --kubeconfig, '{{ target_kubeconfig }}', --context, '{{ target_context }}', apply, --server-side, --field-manager=portal-registry-inputs, -f, '-']
         stdin: '{{ portal_registry_manifest | to_nice_yaml }}'
       vars:
         portal_registry_manifest:

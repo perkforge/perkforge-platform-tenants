@@ -6,10 +6,12 @@
     portal_identity_apply: false
     portal_subject_scope_apply: false
     enrollment_tag: UNCONFIGURED
-    identity_private_dir: /UNCONFIGURED/identity
+    sso_client_username_file: /UNCONFIGURED/recovery-username
+    sso_client_password_file: /UNCONFIGURED/recovery-password
     portal_private_dir: /UNCONFIGURED/portal
+    identity_ca_sha256: UNCONFIGURED
     identity_ca_file: /UNCONFIGURED/identity-ca.crt
-    identity_url: https://keycloak-local-il2.local-lab.test/auth
+    identity_url: https://keycloak.perkforge.home.arpa/auth
     portal_api: '{{ identity_url }}/admin/realms/perkforge'
   module_defaults:
     ansible.builtin.uri:
@@ -23,7 +25,7 @@
   - name: Refuse another identity endpoint
     ansible.builtin.assert:
       that:
-      - identity_url == 'https://keycloak-local-il2.local-lab.test/auth'
+      - identity_url == 'https://keycloak.perkforge.home.arpa/auth'
       - portal_api == identity_url ~ '/admin/realms/perkforge'
   - name: Default and check mode read no credentials and call no API
     ansible.builtin.debug:
@@ -34,6 +36,8 @@
     block:
     - name: Verify published enrollment code
       ansible.builtin.include_tasks: verify-release.yaml
+    - name: Require reviewed public CA before reading credentials
+      ansible.builtin.include_tasks: portal-public-ca.yaml
     - name: Use existing bootstrap access without logging credentials or tokens
       ansible.builtin.include_tasks: portal-identity-inputs.yaml
       no_log: true

@@ -1,0 +1,168 @@
+{
+  "apiVersion": "apps/v1",
+  "kind": "Deployment",
+  "metadata": {
+    "name": "portal",
+    "namespace": "tenant-portal",
+    "labels": {
+      "app.kubernetes.io/name": "perkforge-portal"
+    }
+  },
+  "spec": {
+    "replicas": 1,
+    "strategy": {
+      "type": "Recreate"
+    },
+    "selector": {
+      "matchLabels": {
+        "app.kubernetes.io/name": "perkforge-portal"
+      }
+    },
+    "template": {
+      "metadata": {
+        "labels": {
+          "app.kubernetes.io/name": "perkforge-portal"
+        }
+      },
+      "spec": {
+        "serviceAccountName": "portal-runtime",
+        "automountServiceAccountToken": false,
+        "nodeSelector": {
+          "kubernetes.io/hostname": "cks-worker"
+        },
+        "imagePullSecrets": [
+          {
+            "name": "portal-registry-existing"
+          }
+        ],
+        "hostAliases": [
+          {
+            "hostnames": [
+              "keycloak-local-il2.local-lab.test"
+            ],
+            "ip": "192.168.122.201"
+          }
+        ],
+        "volumes": [
+          {
+            "name": "identity-ca",
+            "configMap": {
+              "name": "portal-identity-ca",
+              "items": [
+                {
+                  "key": "ca.crt",
+                  "path": "ca.crt"
+                }
+              ]
+            }
+          }
+        ],
+        "securityContext": {
+          "runAsNonRoot": true,
+          "runAsUser": 1000,
+          "runAsGroup": 1000,
+          "seccompProfile": {
+            "type": "RuntimeDefault"
+          }
+        },
+        "containers": [
+          {
+            "name": "portal",
+            "image": "ghcr.io/perkforge/perkforge-portal@sha256:ae13143108562e9753eab40650cfcef4b53d8336e733adc6a94dbccabc0a2616",
+            "imagePullPolicy": "IfNotPresent",
+            "securityContext": {
+              "allowPrivilegeEscalation": false,
+              "readOnlyRootFilesystem": true,
+              "capabilities": {
+                "drop": [
+                  "ALL"
+                ]
+              }
+            },
+            "ports": [
+              {
+                "name": "http",
+                "containerPort": 3000
+              }
+            ],
+            "volumeMounts": [
+              {
+                "name": "identity-ca",
+                "mountPath": "/etc/portal/identity-ca",
+                "readOnly": true
+              }
+            ],
+            "env": [
+              {
+                "name": "NODE_EXTRA_CA_CERTS",
+                "value": "/etc/portal/identity-ca/ca.crt"
+              },
+              {
+                "name": "LISTEN_HOST",
+                "value": "0.0.0.0"
+              },
+              {
+                "name": "PORTAL_ORIGIN",
+                "value": "https://portal-local-il2.local-lab.test"
+              },
+              {
+                "name": "TENANT_SOURCE",
+                "value": "disabled"
+              },
+              {
+                "name": "PORTAL_ACCESS_POLICY",
+                "value": "platform-admins"
+              },
+              {
+                "name": "OIDC_ISSUER",
+                "value": "https://keycloak-local-il2.local-lab.test/auth/realms/perkforge"
+              },
+              {
+                "name": "OIDC_CLIENT_ID",
+                "value": "portal-local"
+              },
+              {
+                "name": "OIDC_AUDIENCE",
+                "value": "portal-local"
+              },
+              {
+                "name": "OIDC_CLIENT_SECRET",
+                "valueFrom": {
+                  "secretKeyRef": {
+                    "name": "portal-oidc-existing",
+                    "key": "client-secret"
+                  }
+                }
+              }
+            ],
+            "resources": {
+              "requests": {
+                "cpu": "25m",
+                "memory": "64Mi"
+              },
+              "limits": {
+                "cpu": "250m",
+                "memory": "192Mi"
+              }
+            },
+            "readinessProbe": {
+              "httpGet": {
+                "path": "/healthz",
+                "port": "http"
+              },
+              "periodSeconds": 10
+            },
+            "livenessProbe": {
+              "httpGet": {
+                "path": "/healthz",
+                "port": "http"
+              },
+              "initialDelaySeconds": 10,
+              "periodSeconds": 20
+            }
+          }
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,23 @@
+apiVersion: external-secrets.io/v1
+kind: SecretStore
+metadata:
+  name: openbao-tenant
+  namespace: tenant-portal
+spec:
+  controller: perkforge
+  provider:
+    vault:
+      server: https://openbao.perkforge.home.arpa
+      path: tenants
+      version: v2
+      caProvider:
+        type: ConfigMap
+        name: eso-openbao-ca
+        key: ca.crt
+      auth:
+        kubernetes:
+          mountPath: kubernetes-eso
+          role: eso-tenant-portal
+          serviceAccountRef:
+            name: eso-tenant-portal
+            audiences: [openbao-eso]
