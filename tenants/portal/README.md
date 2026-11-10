@@ -16,3 +16,7 @@ published-code guards; routing has its own later TLS readiness gate.
 See [LOCAL-TRIAL.md](LOCAL-TRIAL.md) for the physical source contract, release order,
 network/public trust preparation, credential custody blocker and later acceptance.
 Offline source validation is not live authorization or isolation verification.
+
+An [inactive ESO foundation](eso/README.md) defines the separately reviewed
+post-controller/auth Store and bounded controller role. It is absent from all
+ordinary roots and contains no ExternalSecret or credential delivery.

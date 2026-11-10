@@ -1,0 +1,22 @@
+name: portal-eso-foundation
+on: [push, pull_request]
+permissions: {contents: read}
+jobs:
+  inactive-stage:
+    runs-on: ubuntu-24.04
+    env:
+      KUBECONFIG: /dev/null
+    steps:
+    - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+    - name: Fetch checksum-pinned native schema only
+      shell: bash
+      run: |
+        set -euo pipefail
+        python3 -m pip install PyYAML==6.0.3 jsonschema==4.25.1
+        curl --fail --location --retry 3 --connect-timeout 20 --max-time 120 -o "$RUNNER_TEMP/eso-source.tgz" https://repo1.dso.mil/big-bang/product/packages/external-secrets/-/archive/2.12.0-bb.0/external-secrets-2.12.0-bb.0.tar.gz
+        echo "f2d2f3baf6efddaee5cf32c3997762dd699430639a6c45998df39e1e0f81f57e  $RUNNER_TEMP/eso-source.tgz" | sha256sum -c -
+        tar -xOf "$RUNNER_TEMP/eso-source.tgz" external-secrets-2.12.0-bb.0/chart/crds/bundle.yaml > "$RUNNER_TEMP/eso-crds.yaml"
+        echo "2b2aa2e85a4c081a11688f0b31ebdb33153c0885d4c2e3604d11058995a11b75  $RUNNER_TEMP/eso-crds.yaml" | sha256sum -c -
+        echo "ESO_CRD_BUNDLE=$RUNNER_TEMP/eso-crds.yaml" >> "$GITHUB_ENV"
+    - name: Validate inactive stage, native schema and scoped RBAC contracts
+      run: python3 scripts/test_portal_eso_foundation.py -v

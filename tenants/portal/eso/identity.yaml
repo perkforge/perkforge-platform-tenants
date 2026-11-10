@@ -1,0 +1,7 @@
+# TokenRequest subject only, not a workload or controller identity. No API grants.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: eso-tenant-portal
+  namespace: tenant-portal
+automountServiceAccountToken: false
