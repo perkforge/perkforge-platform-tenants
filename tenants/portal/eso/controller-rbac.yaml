@@ -1,0 +1,53 @@
+# Native shared-controller permissions only, scoped to Portal. Global informer
+# list/watch is platform-owned and is not a cross-tenant security boundary.
+# Redundant namespaced Store/ExternalSecret reads document this stage's contract;
+# they do not expand the platform informer scope.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: portal-eso-controller
+  namespace: tenant-portal
+rules:
+- apiGroups: ['']
+  resources: [secrets]
+  verbs: [get, create, update, patch, delete]
+- apiGroups: [external-secrets.io]
+  resources: [externalsecrets]
+  verbs: [get, list, watch, update, patch]
+- apiGroups: [external-secrets.io]
+  resources: [externalsecrets/status]
+  verbs: [update, patch]
+- apiGroups: [external-secrets.io]
+  resources: [externalsecrets/finalizers]
+  verbs: [update]
+- apiGroups: [external-secrets.io]
+  resources: [secretstores]
+  verbs: [get, list, watch]
+- apiGroups: [external-secrets.io]
+  resources: [secretstores/status]
+  verbs: [patch]
+- apiGroups: ['']
+  resources: [configmaps]
+  resourceNames: [eso-openbao-ca]
+  verbs: [get]
+- apiGroups: ['']
+  resources: [serviceaccounts/token]
+  resourceNames: [eso-tenant-portal]
+  verbs: [create]
+- apiGroups: ['']
+  resources: [events]
+  verbs: [create, patch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: portal-eso-controller
+  namespace: tenant-portal
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: portal-eso-controller
+subjects:
+- kind: ServiceAccount
+  name: external-secrets
+  namespace: external-secrets

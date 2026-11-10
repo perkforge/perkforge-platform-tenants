@@ -30,6 +30,7 @@ for key,val in [('PORTAL_ACCESS_POLICY','home'),('PORTAL_ORIGIN','https://portal
     add(key,lambda x,key=key,val=val:next(e for e in x['containers'][0]['env'] if e['name']==key).update(value=val))
 add('host-alias',lambda x:x.update(hostAliases=[{'ip':'192.168.100.11','hostnames':['keycloak.perkforge.home.arpa']}]))
 add('dns-override',lambda x:x.update(dnsPolicy='Default'))
+add('eso-token-service-account',lambda x:x.update(serviceAccountName='eso-tenant-portal'))
 add('api-token',lambda x:x.update(automountServiceAccountToken=True))
 add('additional-volume',lambda x:x['volumes'].append({'name':'data','emptyDir':{}}))
 add('extra-env',lambda x:x['containers'][0]['env'].append({'name':'NODE_TLS_REJECT_UNAUTHORIZED','value':'0'}))
