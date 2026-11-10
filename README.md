@@ -45,9 +45,10 @@ isolation. Start with the focused [local trial plan](tenants/portal/LOCAL-TRIAL.
 
 Portal source/child selections are suspended. Physical host, worker, identity and
 operator boundary preparation is described in [the Portal baseline](tenants/portal/LOCAL-TRIAL.md).
-The actual published app configuration remains `v1.0.0`; it is not physical activation
-ready. Update its tag/resolved evidence only after the disabled physical app release
-exists. Reviewed OpenBao + ESO runtime delivery is another activation prerequisite.
+The selected published physical app configuration is `v2.0.0`, with exact resolved
+evidence. Actual released-chart checks verify disabled output and force-enabled
+physical admission compatibility offline. Reviewed enrollment/platform releases,
+OpenBao + ESO runtime delivery and separate live approval remain prerequisites.
 The existing Nextcloud-only platform selection remains independent and unchanged.
 
 Offline build checks (no API access):

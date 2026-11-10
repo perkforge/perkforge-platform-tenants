@@ -2,9 +2,9 @@
 
 Portal remains independent of Nextcloud. `clusters/local` and `clusters/dev`
 explicitly select app paths; both Portal source/child selections are suspended.
-The published app configuration pin is still `v1.0.0`; it is not the physical
-configuration release. Physical activation is blocked pending the real app release,
-updated tag/evidence and reviewed OpenBao + ESO runtime custody.
+Published physical app configuration `v2.0.0` is selected with verified tag/commit
+evidence and remains disabled/suspended. Physical activation is blocked pending
+reviewed enrollment/platform releases and OpenBao + ESO runtime custody.
 
 The tenant owns HelmRelease/chart/values, never platform security. Operator-owned
 `foundation/` provides namespace/RBAC, PSA, quota, network and native admission;

@@ -42,7 +42,7 @@ class PortalPhysical(unittest.TestCase):
             self.run_play(path,args)
             policy,ca=list(yaml.safe_load_all((output/'boundary.yaml').read_text()))
             self.assertEqual(policy['metadata']['namespace'],'tenant-portal')
-            app=json.loads((ROOT/'scripts/fixtures/portal-physical-deployment.json').read_text())
+            app=json.loads((ROOT/'scripts/fixtures/portal-v2.0.0-deployment.json').read_text())
             labels=app['spec']['template']['metadata']['labels']
             for key,value in policy['spec']['podSelector']['matchLabels'].items():
                 self.assertEqual(labels[key],value)

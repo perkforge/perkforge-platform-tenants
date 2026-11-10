@@ -6,6 +6,7 @@ from pathlib import Path
 import re
 import subprocess
 import unittest
+import tempfile
 
 import yaml
 
@@ -48,15 +49,41 @@ def app_selection(parent, app):
     for obj in objects:
         assert context(obj) == selected
         if obj['kind'] == 'HelmRelease':
-            assert obj['spec']['suspend'] is (selected['cluster'] != 'local')
+            assert obj['spec']['suspend'] is True
             assert obj['spec']['serviceAccountName'] == 'portal-deployer'
             assert obj['spec']['storageNamespace'] == ('tenant-portal-release' if selected['cluster'] == 'local' else 'tenant-example-portal-release')
             if selected['cluster'] == 'local':
                 assert obj['spec']['targetNamespace'] == 'tenant-portal'
         elif obj['kind'] == 'ConfigMap':
             enabled = yaml.safe_load(obj['data']['values.yaml']).get('enabled')
-            assert (enabled is True) == (selected['cluster'] == 'local' and obj['metadata']['name'] == 'portal-cluster')
+            assert enabled is not True
     return objects
+
+
+def verify_app_checkout(app):
+    release = selected_release()
+    head = subprocess.check_output(['git', '-C', str(app), 'rev-parse', 'HEAD'], text=True).strip()
+    tag = subprocess.check_output(['git', '-C', str(app), 'rev-parse', release['tag'] + '^{commit}'], text=True).strip()
+    assert head == tag == release['resolvedCommit']
+
+
+def render_local_app(app, enabled=False):
+    """Render actual selected release with its ordered Flux values; no API access."""
+    verify_app_checkout(app)
+    objects = build(app / 'gitops/clusters/local')
+    release = next(obj for obj in objects if obj['kind'] == 'HelmRelease')
+    maps = {obj['metadata']['name']: obj for obj in objects if obj['kind'] == 'ConfigMap'}
+    with tempfile.TemporaryDirectory() as tmp:
+        args = [os.environ.get('HELM', 'helm'), 'template', 'portal', str(app / 'bundles/portal/chart'),
+                '--namespace', release['spec']['targetNamespace']]
+        for i, ref in enumerate(release['spec']['valuesFrom']):
+            path = Path(tmp) / f'values-{i}.yaml'
+            path.write_text(maps[ref['name']]['data'][ref['valuesKey']])
+            args += ['-f', str(path)]
+        if enabled:
+            args += ['--set', 'enabled=true']
+        output = subprocess.check_output(args, text=True)
+    return [obj for obj in yaml.safe_load_all(output) if obj]
 
 
 class EnrollmentReleaseTests(unittest.TestCase):
@@ -95,6 +122,14 @@ class EnrollmentReleaseTests(unittest.TestCase):
                 app_objects = app_selection(parent, app)
                 defaults = next(obj for obj in app_objects if obj['kind'] == 'ConfigMap' and obj['metadata']['name'] == 'portal-defaults')
                 self.assertFalse(yaml.safe_load(defaults['data']['values.yaml'])['enabled'])
+
+    def test_actual_released_chart_is_disabled_and_matches_physical_boundary_fixture(self):
+        app = Path(os.environ['TENANT_APP_CHECKOUT'])
+        self.assertEqual(render_local_app(app), [])
+        objects = render_local_app(app, enabled=True)
+        self.assertEqual({obj['kind'] for obj in objects}, {'Deployment', 'Service'})
+        deployment = next(obj for obj in objects if obj['kind'] == 'Deployment')
+        self.assertEqual(deployment, json.loads((ROOT / 'scripts/fixtures/portal-v2.0.0-deployment.json').read_text()))
 
     def test_wrong_activation_state_is_rejected(self):
         for cluster in ('local', 'dev'):

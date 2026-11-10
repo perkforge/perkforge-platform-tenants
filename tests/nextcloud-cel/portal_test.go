@@ -16,7 +16,7 @@ import (
 	"testing"
 )
 
-// Source-only candidate fixture, not evidence of a published activation chain.
+// Render the actual published app offline; this does not activate the paused chain.
 func TestPortalPhysicalAdmission(t *testing.T) {
 	raw, err := exec.Command("python3", "../../scripts/portal_admission_cases.py").CombinedOutput()
 	if err != nil {

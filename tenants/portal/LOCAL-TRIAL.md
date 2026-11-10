@@ -2,8 +2,9 @@
 
 Portal is separate from Nextcloud. `clusters/local` selects only Portal; the existing
 `clusters/local-nextcloud` source, release and render are unchanged. Both Portal
-source and child are suspended. App configuration `v1.0.0` remains the actual
-published dependency, not a physical activation candidate. Do not unsuspend it.
+source and child are suspended. Published physical app configuration `v2.0.0` is
+selected with verified release evidence. Its local HelmRelease remains suspended and its chart disabled.
+Do not unsuspend this chain before the remaining custody and activation gates.
 
 ## Boundary and release order
 
@@ -21,15 +22,18 @@ published dependency, not a physical activation candidate. Do not unsuspend it.
   Application authorization still requires signed claims, `/platform/admins`, and
   the client-specific `tenant-reader` role. UI changes are outside this baseline.
 
-Publish and verify the disabled physical app configuration first, then update this
-repository's real app tag and resolved commit together. Release enrollment next,
-then separately review the independent platform Portal selection. Never use future
-or moved tags. The current v1.0.0 pin and future physical admission intentionally
-cannot be activated together. Publication is not deployment approval.
+The published physical app configuration `v2.0.0` resolves to
+`e8de0e3cf68d01860b0addaa3b38e24f928d5ff6`. Offline checks render that actual
+release, verify disabled output, and force-enable it only in tests against the
+physical admission boundary. The historical VM v1.0.0 fixture must remain denied.
+Review/release this enrollment next, then separately review the independent platform
+Portal selection at that real enrollment tag. Never use future or moved tags.
+Publication is not deployment approval.
 
 ## Required runtime custody work
 
-Physical deployment is blocked on reviewed OpenBao + ESO runtime input delivery.
+Physical deployment is blocked on reviewed isolated OpenBao + ESO runtime input
+delivery. Controller and Store/RBAC isolation design remains a separate review.
 The platform migration is tracked in
 [platform issue #32](https://github.com/perkforge/perkforge-platform/issues/32).
 Do not introduce manual Kubernetes Secret delivery as a competing physical design.

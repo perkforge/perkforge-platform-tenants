@@ -6,10 +6,25 @@ jobs:
     runs-on: ubuntu-24.04
     env:
       KUBECONFIG: /dev/null
+      TENANT_APP_CHECKOUT: ${{ github.workspace }}/.inputs/portal
       NEXTCLOUD_APP_CHECKOUT: ${{ github.workspace }}/.inputs/nextcloud
       NEXTCLOUD_ROLLBACK_APP_CHECKOUT: ${{ github.workspace }}/.inputs/nextcloud-rollback
     steps:
     - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+    - uses: azure/setup-helm@v4.3.1
+      with:
+        version: v3.19.0
+    - name: Verify the published physical Portal fixture before checkout
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: scripts/verify-release-ref.sh perkforge/perkforge-tenant-portal v2.0.0 e8de0e3cf68d01860b0addaa3b38e24f928d5ff6
+    - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      with:
+        repository: perkforge/perkforge-tenant-portal
+        ref: v2.0.0
+        path: .inputs/portal
+        fetch-depth: 0
+        persist-credentials: false
     - name: Verify the published Nextcloud candidate tag before checkout
       env:
         GH_TOKEN: ${{ github.token }}

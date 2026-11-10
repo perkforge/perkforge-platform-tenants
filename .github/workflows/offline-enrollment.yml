@@ -12,6 +12,9 @@ jobs:
       KUBECONFIG: /dev/null
     steps:
     - uses: actions/checkout@v4
+    - uses: azure/setup-helm@v4.3.1
+      with:
+        version: v3.19.0
     - run: python3 -m pip install PyYAML==6.0.3
     # Test fixture selection only; this is not tenant discovery or a config generator.
     - name: Read reviewed app release evidence

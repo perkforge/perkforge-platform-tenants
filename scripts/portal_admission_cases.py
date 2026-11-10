@@ -1,20 +1,23 @@
-"""Frozen candidate fixture from app PR #15 commit 61253438c95798d1d9189186d19f116485d7463d.
-Force-enabled offline only, not a selected/published dependency or live activation.
+"""Actual published v2.0.0 rendered offline; forced enablement is test-only.
+Historical v1.0.0 render remains a denial fixture, never a selected dependency.
 """
 from copy import deepcopy
 import json
+import os
+from test_enrollment_release import render_local_app
 from pathlib import Path
 import yaml
 ROOT=Path(__file__).resolve().parents[1]
 p=next(yaml.safe_load_all((ROOT/'tenants/portal/foundation/deployment-policy.yaml').read_text()))
-base=json.loads((ROOT/'scripts/fixtures/portal-physical-deployment.json').read_text())
+base=next(obj for obj in render_local_app(Path(os.environ['TENANT_APP_CHECKOUT']), enabled=True) if obj['kind']=='Deployment')
+assert base == json.loads((ROOT/'scripts/fixtures/portal-v2.0.0-deployment.json').read_text())
 params=yaml.safe_load((ROOT/'tenants/portal/foundation/runtime-contract.yaml').read_text())
 cases=[]
 def add(name,mutate=None):
     obj=deepcopy(base)
     if mutate: mutate(obj['spec']['template']['spec'])
     cases.append({'name':name,'object':obj,'allowed':mutate is None})
-add('physical-candidate')
+add('published-v2.0.0-physical')
 add('old-vm-selector',lambda x:x.update(nodeSelector={'kubernetes.io/hostname':'cks-worker'}))
 add('missing-affinity',lambda x:x.pop('affinity'))
 add('node-name-bypass',lambda x:x.update(nodeName='control-plane'))
