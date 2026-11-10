@@ -8,7 +8,8 @@ placeholder, credential, OpenBao policy or live grant. Publication does not appl
 
 Offline review: `kubectl kustomize tenants/portal/eso`. Do not apply until a separately
 approved operation verifies the exact released chain, cluster UID/context, native
-ESO `2.12.0-bb.0` CRDs/controller readiness, protected trust and bounded OpenBao auth
+ESO `2.12.0-bb.0` CRDs/controller readiness with PushSecret disabled, protected
+trust and bounded OpenBao auth
 configuration. The platform owner coordinates those prerequisites; Kustomize order
 is not a CRD/readiness or authorization gate. Existing Nextcloud enrollment stays
 unchanged. No runtime input migration or adoption is included.
@@ -53,5 +54,7 @@ That is a documented alternative, not additional controllers or permissions here
 
 The controller can currently mutate Secrets within Portal, not only three names,
 because native creation and lifecycle handling require namespace-level verbs.
+The minimal Store status-only mutation contract assumes PushSecret remains disabled;
+enabling it requires another RBAC/security review, not ad hoc permission widening.
 Future ExternalSecret consumers and their admission/lifecycle constraints require
 separate review; none are included in this stage.
