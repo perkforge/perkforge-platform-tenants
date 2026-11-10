@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.4](https://github.com/perkforge/perkforge-platform-tenants/compare/v1.5.3...v1.5.4) (2026-11-10)
+
+
+### Bug Fixes
+
+* **nextcloud:** pin published app v1.1.3 [skip ci] ([#48](https://github.com/perkforge/perkforge-platform-tenants/issues/48)) ([7c8a047](https://github.com/perkforge/perkforge-platform-tenants/commit/7c8a0475d7db58bbb1fa8cc6b2da2262f27cfb15))
+
 ## [1.5.3](https://github.com/perkforge/perkforge-platform-tenants/compare/v1.5.2...v1.5.3) (2026-11-10)
 
 
