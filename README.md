@@ -12,9 +12,9 @@ quota and enrollment) belong here as they are reviewed, not in app repositories.
   [portal enrollment](tenants/portal/README.md).
 - Omit a tenant resource from a cluster root to omit enrollment on that cluster.
 - [Nextcloud pilot enrollment](tenants/nextcloud/README.md) has a separate
-  `clusters/local-nextcloud` selector pinned to published app v1.1.2. It enables
-  no Portal resources. The selected app adds two Apache workers and a 512Mi/1Gi
-  memory budget; CPU, probes, PHP and retained storage stay unchanged. Publication
+  `clusters/local-nextcloud` selector pinned to published app v1.1.3. It enables
+  no Portal resources. The selected app raises only cron memory to a 128Mi request
+  and 256Mi limit; web, CPU, probes, PHP and retained storage stay unchanged. Publication
   does not change the live chain; reviewed enrollment/platform releases and
   separately approved promotion and runtime checks are still required.
   There is no automatic repository or directory discovery.

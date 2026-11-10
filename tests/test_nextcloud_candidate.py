@@ -17,10 +17,10 @@ class NextcloudCandidate(unittest.TestCase):
         release = json.loads((ROOT / 'release-evidence.json').read_text())['dependencies']['nextcloud']
         self.assertEqual(release, {
             'repository': 'perkforge/perkforge-tenant-nextcloud',
-            'tag': 'v1.1.2',
-            'resolvedCommit': '92f70a46892847aee15aaea7bbe00fb75e9f0e0c',
-            'publishedAt': '2026-11-10T02:13:16Z',
-            'releaseUrl': 'https://github.com/perkforge/perkforge-tenant-nextcloud/releases/tag/v1.1.2',
+            'tag': 'v1.1.3',
+            'resolvedCommit': 'c079cdff6a859064805abfa887cee67caaf8d255',
+            'publishedAt': '2026-11-10T11:04:25Z',
+            'releaseUrl': 'https://github.com/perkforge/perkforge-tenant-nextcloud/releases/tag/v1.1.3',
         })
 
     def test_ci_verifies_selected_and_distinct_legacy_fixtures(self):
@@ -54,7 +54,7 @@ class NextcloudCandidate(unittest.TestCase):
     @unittest.skipUnless(os.environ.get('NEXTCLOUD_APP_CHECKOUT') and
                          os.environ.get('NEXTCLOUD_ROLLBACK_APP_CHECKOUT'),
                          'both published app checkouts are required')
-    def test_actual_releases_preserve_runtime_except_approved_storage_sso_and_workers(self):
+    def test_actual_releases_preserve_runtime_except_approved_storage_sso_workers_and_cron_memory(self):
         selected = Path(os.environ['NEXTCLOUD_APP_CHECKOUT'])
         legacy = Path(os.environ['NEXTCLOUD_ROLLBACK_APP_CHECKOUT'])
         release = json.loads((ROOT / 'release-evidence.json').read_text())['dependencies']['nextcloud']
@@ -82,6 +82,11 @@ class NextcloudCandidate(unittest.TestCase):
             'limits': {'cpu': '750m', 'memory': '1Gi'},
         })
         normalized['resources'] = old['resources']
+        self.assertEqual(current['cronjob']['sidecar']['resources'], {
+            'requests': {'cpu': '25m', 'memory': '128Mi'},
+            'limits': {'cpu': '250m', 'memory': '256Mi'},
+        })
+        normalized['cronjob']['sidecar']['resources'] = old['cronjob']['sidecar']['resources']
         profile = 'platform.perkforge.io/apache-profile'
         self.assertEqual(current['podAnnotations'][profile], 'two-worker-no-keepalive-v1')
         normalized['podAnnotations'][profile] = old['podAnnotations'][profile]

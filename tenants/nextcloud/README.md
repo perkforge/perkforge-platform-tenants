@@ -2,8 +2,8 @@
 
 ## Selected source contract
 
-`clusters/local-nextcloud` selects published app **v1.1.2**, commit
-`92f70a46892847aee15aaea7bbe00fb75e9f0e0c`; `release-evidence.json` records and
+`clusters/local-nextcloud` selects published app **v1.1.3**, commit
+`c079cdff6a859064805abfa887cee67caaf8d255`; `release-evidence.json` records and
 verifies that pin. This is a source candidate, not a live promotion. Publish the
 reviewed enrollment release, then review/publish its platform pin before separately
 approved promotion. This Nextcloud-only root includes no Portal resources. Shared
@@ -15,14 +15,17 @@ releases, guarded non-root same-Pod cron and fixed read-only OIDC mounts.
 Foundation remains operator-owned and separately applied from a clean published
 enrollment checkout; the tenant child cannot reconcile its own authority.
 
-App v1.1.2 adds two Apache workers, a 512Mi memory request and 1Gi limit, with a
-changed pod profile annotation. CPU, probes, PHP/upload limits, image, cron and
-database remain unchanged. Namespace memory totals are 768Mi requested / 1472Mi
-limited, within the existing 1536Mi/2Gi quotas; no foundation policy/quota change
-is included. Recheck node headroom before activation. Finish transfers before the
-single-replica Recreate rollout, then verify an approved synthetic large upload,
-concurrent browser/status requests, checksum and probe/resource history. Two long
-requests can still occupy both workers; live capacity acceptance remains pending.
+App v1.1.3 raises only the same-Pod cron memory request from 64Mi to 128Mi and
+limit from 128Mi to 256Mi. PHP remains 96M and cron CPU remains 25m/250m.
+The two Apache workers and web 512Mi/1Gi budget from v1.1.2 are preserved, as are
+probes, image, security, database and retained storage. Namespace memory totals
+are 832Mi requested / 1600Mi limited, within the existing 1536Mi/2Gi quotas;
+no foundation policy/quota change is included. Recheck node headroom before
+activation. Finish transfer/readback operations before the single-replica Recreate
+rollout, then require two successful cron cycles, metadata-backlog progress,
+stable HTTP readiness, no new OOMs/restarts and retained-file checksums.
+Interrupted metadata jobs require separate completeness checks. The 256Mi budget
+remains a candidate until live acceptance; no import retry is included.
 
 The earlier 2026-11-07 acceptance check observed the then-selected source chain
 Ready, working private
@@ -35,8 +38,8 @@ remain pending. Recheck current readiness and recovery before maintenance.
 
 ### Sources and operator procedures
 
-- [App operations](https://github.com/perkforge/perkforge-tenant-nextcloud/blob/v1.1.2/docs/physical-deployment.md)
-  and [native SSO](https://github.com/perkforge/perkforge-tenant-nextcloud/blob/v1.1.2/sso/README.md)
+- [App operations](https://github.com/perkforge/perkforge-tenant-nextcloud/blob/v1.1.3/docs/physical-deployment.md)
+  and [native SSO](https://github.com/perkforge/perkforge-tenant-nextcloud/blob/v1.1.3/sso/README.md)
   own workload/native-provider procedures and independent local recovery.
 - [OIDC/CA delivery and registry prerequisites](sso/README.md) own protected input
   delivery. Required runtime references are `nextcloud-registry-existing`,
@@ -59,7 +62,7 @@ v1.2.1/app v1.0.1; it is historical staging, not a reason to downgrade or replay
 bootstrap on the accepted installation.
 
 The guarded same-Pod activation originated in app v1.0.4 and is preserved in
-v1.1.2. This candidate selects 128Gi files plus unchanged 16Gi PostgreSQL on the
+v1.1.3. This candidate selects 128Gi files plus unchanged 16Gi PostgreSQL on the
 accepted two-replica longhorn-dedicated tier (platform v0.19.0). Storage expansion
 requires the reviewed quota/admission foundation before app promotion; household
 import remains separately gated. No single-excess claim is
@@ -73,12 +76,12 @@ The existing foundation provides `144Gi` for both `nextcloud-budget` storage
 quota keys: 128Gi files plus the unchanged 16Gi database. This pin preserves that
 foundation, its two-PVC count and all quota, class, identity, image, network and
 deletion boundaries. Files admission permits only 32Gi or 128Gi with monotonic
-UPDATEs. App v1.1.2 retains the 128Gi request introduced in v1.1.1; its verified
+UPDATEs. App v1.1.3 retains the 128Gi request introduced in v1.1.1; its verified
 tag and exact release evidence are pinned here. Verify the released foundation
-before promotion; this worker-profile pin does not repeat a storage expansion.
+before promotion; this cron-memory pin does not repeat a storage expansion.
 A rollback to a 32Gi app manifest after expansion is denied, not a recovery path.
 
-App v1.1.2 is already published. After human review/merge of this pin, publish
+App v1.1.3 is already published. After human review/merge of this pin, publish
 the enrollment release and prepare a platform pin to that verified release.
 For a separately authorized rollout, first verify the published enrollment
 release and existing quota/files-policy prerequisites. Any missing foundation
@@ -178,7 +181,7 @@ acceptance remain outstanding even though the current pilot is selected.
 
 1. Review app and enrollment together. Verify chart 9.4.1 archive
    hash and both image digests, version/security compatibility and the accepted
-   dedicated disks. App v1.1.2 is published and pinned with exact evidence. Keep the
+   dedicated disks. App v1.1.3 is published and pinned with exact evidence. Keep the
    platform parent unselected through prerequisites and credential preparation.
    First accept the published data-only stage and deliver its public database CA.
    Then promote this released web stage; accept the disabled correction and bounded same-Pod checks before this controlled activation, then verify real sidecar progress and sustained web health.
@@ -272,7 +275,7 @@ Repeat the offline checks with Python/PyYAML/Ansible, kubectl, Helm and Go 1.27.
 ```sh
 mkdir -m 700 /ABS/FRESH/schema-fixtures
 bash tests/nextcloud-cel/fetch-schemas.sh /ABS/FRESH/schema-fixtures
-export NEXTCLOUD_APP_CHECKOUT=/ABS/PUBLISHED/v1.1.2-nextcloud-checkout
+export NEXTCLOUD_APP_CHECKOUT=/ABS/PUBLISHED/v1.1.3-nextcloud-checkout
 export NEXTCLOUD_ROLLBACK_APP_CHECKOUT=/ABS/PUBLISHED/v1.0.4-nextcloud-checkout
 export NEXTCLOUD_CHART=/ABS/VERIFIED/nextcloud-9.4.1.tgz
 export NEXTCLOUD_OPENAPI=/ABS/FRESH/schema-fixtures/openapi.json
@@ -284,7 +287,7 @@ cd tests/nextcloud-cel && go test -count=1 -v .
 The schema fetcher pins source commits for Kubernetes 1.36.5, Flux helm-controller
 1.6.4/source-controller 1.9.5/kustomize-controller 1.9.5 and CNPG 1.30.1, matching
 the reviewed target. No cluster API is called. CI verifies and checks out the
-selected v1.1.2 release and the explicit v1.0.4 rollback fixture at their recorded
+selected v1.1.3 release and the explicit v1.0.4 rollback fixture at their recorded
 commits. Both real chart renders and the published 32Gi-to-128Gi transition remain
 covered; the former app PR head is no longer a fixture.
 Every policy is type-checked, including an intentionally invalid-field control,
