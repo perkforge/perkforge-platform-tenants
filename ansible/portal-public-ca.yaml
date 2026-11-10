@@ -1,0 +1,20 @@
+# Public trust only. Never import an old VM CA or its signing key.
+- ansible.builtin.assert:
+    that:
+    - identity_ca_file is match('^/') and not identity_ca_file.startswith('/UNCONFIGURED/')
+    - identity_ca_sha256 is match('^[a-f0-9]{64}$')
+- ansible.builtin.stat:
+    path: '{{ identity_ca_file }}'
+    follow: false
+    checksum_algorithm: sha256
+  register: portal_ca
+- ansible.builtin.assert:
+    that:
+    - portal_ca.stat.isreg | default(false)
+    - not (portal_ca.stat.islnk | default(false))
+    - portal_ca.stat.checksum == identity_ca_sha256
+    - "'PRIVATE KEY' not in lookup('file', identity_ca_file)"
+    - "'-----BEGIN CERTIFICATE-----' in lookup('file', identity_ca_file)"
+- ansible.builtin.command:
+    argv: [openssl, x509, -in, '{{ identity_ca_file }}', -noout, -checkend, '0']
+  changed_when: false

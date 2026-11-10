@@ -14,7 +14,7 @@ class KeycloakAttributeTests(unittest.TestCase):
         tasks=yaml.safe_load((ROOT/'ansible/portal-identity-client.yaml').read_text())
         selected=[t for t in tasks if t['name'] in ['Reject drift instead of silently rewriting an existing client','Require exact managed attributes and reject unknown server additions',"Validate each recognized server attribute's exact string value"]]
         self.assertEqual(len(selected),3)
-        desired={'clientId':'portal-local','fullScopeAllowed':False,'redirectUris':['https://portal-local-il2.local-lab.test/auth/callback'],
+        desired={'clientId':'portal-local','fullScopeAllowed':False,'redirectUris':['https://portal.perkforge.home.arpa/auth/callback'],
                  'attributes':{'perkforge-managed-by':'platform-tenants/local-portal','pkce.code.challenge.method':'S256','access.token.lifespan':'300'}}
         normalized=deepcopy(desired);normalized['attributes'].update(SERVER)
         cases=[('original response',deepcopy(desired),True),('Keycloak defaults',deepcopy(normalized),True)]

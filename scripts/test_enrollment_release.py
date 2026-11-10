@@ -20,8 +20,7 @@ def selected_release(source=None, evidence=None):
     assert re.fullmatch(r'v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)', evidence['tag'])
     assert re.fullmatch(r'[0-9a-f]{40}', evidence['resolvedCommit'])
     assert source['spec']['url'] == f"https://github.com/{evidence['repository']}.git"
-    selected = source['metadata'].get('annotations', {}).get(PREFIX + 'cluster')
-    assert source['spec']['suspend'] is (selected != 'local')
+    assert source['spec']['suspend'] is True
     return evidence
 
 
@@ -76,7 +75,7 @@ class EnrollmentReleaseTests(unittest.TestCase):
         self.assertEqual(head, release['resolvedCommit'])
         self.assertEqual(tag, head)
 
-    def test_local_activation_and_paused_dev_match_released_app(self):
+    def test_suspended_enrollment_retains_real_published_app_evidence(self):
         app = Path(os.environ['TENANT_APP_CHECKOUT'])
         # Portal release checks stay scoped to its two roots. Nextcloud's separate
         # paused selector has its own native/render tests and must not activate Portal.
@@ -88,8 +87,8 @@ class EnrollmentReleaseTests(unittest.TestCase):
                 selected_release(source)
                 parent = next(obj for obj in objects if obj['kind'] == 'Kustomization')
                 self.assertEqual(context(parent), {'cluster': cluster, 'environment': cluster, 'profile': 'il2'})
-                self.assertEqual(parent['spec']['suspend'], cluster != 'local')
-                self.assertEqual(source['spec']['suspend'], cluster != 'local')
+                self.assertTrue(parent['spec']['suspend'])
+                self.assertTrue(source['spec']['suspend'])
                 self.assertFalse(parent['spec']['prune'])
                 self.assertEqual(parent['spec']['serviceAccountName'], 'portal-reconciler')
                 self.assertEqual(parent['spec']['sourceRef']['name'], source['metadata']['name'])

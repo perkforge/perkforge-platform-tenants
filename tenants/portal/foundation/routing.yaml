@@ -9,10 +9,10 @@ metadata:
 spec:
   ingressClassName: traefik
   tls:
-  - hosts: [portal-local-il2.local-lab.test]
+  - hosts: [portal.perkforge.home.arpa]
     secretName: portal-local-tls
   rules:
-  - host: portal-local-il2.local-lab.test
+  - host: portal.perkforge.home.arpa
     http:
       paths:
       - path: /

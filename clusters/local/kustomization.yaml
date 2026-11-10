@@ -25,12 +25,12 @@ patches:
   patch: |-
     - op: replace
       path: /spec/suspend
-      value: false
+      value: true
 - target: {kind: Kustomization, name: tenant-portal}
   patch: |-
     - op: replace
       path: /spec/suspend
-      value: false
+      value: true
 commonAnnotations:
   platform.perkforge.io/cluster: local
   platform.perkforge.io/environment: local

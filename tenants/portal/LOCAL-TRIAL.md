@@ -1,158 +1,90 @@
-# Local portal trial: activation selection requires live approval
+# Physical Portal baseline: source preparation only
 
-The platform root knows only this enrollment repository. `clusters/local` selects
-portal; `dev` is unchanged. The app owns chart/values, this repo owns security.
+Portal is separate from Nextcloud. `clusters/local` selects only Portal; the existing
+`clusters/local-nextcloud` source, release and render are unchanged. Both Portal
+source and child are suspended. App configuration `v1.0.0` remains the actual
+published dependency, not a physical activation candidate. Do not unsuspend it.
 
-| Namespace | Purpose |
-| --- | --- |
-| `tenant-portal-config` | Protected source/child reconciler, app HelmRelease/values and deployer identities; zero Pods allowed |
-| `tenant-portal` | Runtime and portal-specific OIDC/TLS inputs; no runtime API token or RoleBinding |
-| `tenant-portal-release` | Scoped Helm history, inaccessible to runtime; zero Pods allowed |
+## Boundary and release order
 
-Flux impersonates `portal-reconciler` for app ConfigMaps/HelmRelease and
-`portal-deployer` for runtime Deployment/Service plus readiness reads and isolated
-Helm storage. Neither can create RBAC/security or mount identities across namespaces.
-Native admission fixes source/identity/namespace references, approved image,
-admin-only environment and private Service. The operator image contract pins the published v0.3.0 image digest selected by
-app v0.3.0; missing or mismatched image contracts deny runtime creation. No new controller,
-OpenBao, ESO, database or PVC. PSA restricted and quotas remain platform-owned.
-This constrains tenant automation, not trusted cluster administrators.
+- `tenant-portal-config`: source/child, app HelmRelease/values and scoped deployer
+  identities; zero Pods. The existing `flux-system/tenant-enrollment-admin` receives
+  only namespaced GitRepository/Kustomization CRUD through `portal-enrollment`.
+  A separately named platform source/parent can reuse it without changing Nextcloud.
+- `tenant-portal`: stateless runtime, no API grants/token or PVC. One Recreate Pod,
+  25m/64Mi requests, 250m/192Mi limits, frozen published Portal v0.3.0 digest.
+- `tenant-portal-release`: isolated Helm history, zero Pods.
+- Physical workers require `storage.perkforge.io/worker=true` and required absence
+  of control-plane/master labels. Admission denies nodeName and tolerations.
+- Admission fixes the image, issuer, client/audience `portal-local`, exact server-side
+  `platform-admins` policy, disabled tenant source, public CA mount and resource budget.
+  Application authorization still requires signed claims, `/platform/admins`, and
+  the client-specific `tenant-reader` role. UI changes are outside this baseline.
 
-## Release order
+Publish and verify the disabled physical app configuration first, then update this
+repository's real app tag and resolved commit together. Release enrollment next,
+then separately review the independent platform Portal selection. Never use future
+or moved tags. The current v1.0.0 pin and future physical admission intentionally
+cannot be activated together. Publication is not deployment approval.
 
-1. Source policy release/image: verify published digest, dependency audit, image smoke. GHCR remains private; authenticated pull verification is pending.
-2. App configuration: pin digest in local values, release chart/config.
-3. Enrollment: select the real app tag/evidence; pin the same image in the operator
-   contract; release. Platform then selects that enrollment tag/evidence.
+## Required runtime custody work
 
-No nonexistent tags are inserted. App v0.3.0 is now published and selected, with its exact image in the operator
-allowlist. This does not enable or authorize deployment. Only the published local app/source/child selection is active; dev/shared defaults
-remain paused/disabled. The existing live platform stage does not enroll this source.
-Advancing it requires separate live approval. Offline proposal checks do not validate a future published chain.
+Physical deployment is blocked on reviewed OpenBao + ESO runtime input delivery.
+The platform migration is tracked in
+[platform issue #32](https://github.com/perkforge/perkforge-platform/issues/32).
+Do not introduce manual Kubernetes Secret delivery as a competing physical design.
+There is no ESO delivery implementation in this change. Required app contracts are:
 
-## Later bundled live approval
+- `portal-oidc-existing/client-secret`, scoped only to `portal-local`.
+- `portal-registry-existing`, GHCR read-only pull authentication, not mounted.
+- `portal-local-tls`, certificate/key for `portal.perkforge.home.arpa`.
+- `portal-identity-ca/ca.crt`, public CA trust only.
 
-- Verify exact cluster UID, published chain and fresh headroom. Apply generic
-  platform enrollment prerequisites and this local foundation with gated Ansible.
-  Check policy type warnings and server dry-run denials before unpausing anything.
-- Generate one portal client secret and HTTPS leaf/key under protected
-  `.secrets/bigbang-local-trial-01/portal/`. Reuse the public trial CA; keep its
-  signing key on the workstation. Deliver only portal-specific Secret/TLS inputs
-  and the public CA. Readers can use those credentials; no secrets enter Git/logs.
-- Run `ansible/configure-portal-identity.yaml` from the approved published tag.
-  Create/reuse only owned `portal-local` in existing `perkforge`, exact HTTPS
-  callback `/auth/callback`, code+S256 and audience/azp `portal-local`. Map only the
-  client-specific `tenant-reader` role to existing `/platform/admins`. No users,
-  memberships, realm import, rotation, Headlamp client or API OIDC changes.
-  Unowned clients or drift fail instead of being overwritten.
-- Add only `portal-local-il2.local-lab.test` routing to `.201`; verify its CA-signed
-  TLS leaf without warning bypass. Supply `portal-oidc-existing/client-secret`,
-  `portal-local-tls` and `portal-identity-ca/ca.crt`, then explicitly apply routing.
-- Separately approve read-only GHCR credential delivery as runtime
-  `portal-registry-existing` and verify an authenticated pull; never reuse Registry1
-  credentials against GHCR or change package visibility. The default-off registry delivery playbook still requires separate live approval.
-- Enable only the reviewed portal app and resume protected enrollment/source/
-  reconciler/release in order. Test real admin SSO, developer/no-grants denials,
-  signed tenant-only fixtures, session/logout, network and scoped identity denials.
+`ansible/deliver-portal-inputs.yaml` and `deliver-portal-registry.yaml` are historical
+VM helpers, not physical runbook steps. Never import VM credentials or CA signing
+keys, rotate existing identities, or reuse Registry1 credentials for GHCR.
 
-One Recreate Pod requests **25m/64Mi**, limits **250m/192Mi**. Prior worker request
-snapshot of 1500m/1792Mi becomes 1525m/1856Mi, leaving 475m/1797Mi before system reserve.
-No added controller/storage. Admission overhead and actual Node startup peaks are
-unmeasured. Keep existing host 2048Mi/node 512Mi, swap/PSI/OOM guards and ten-minute watch.
+## Source-only identity and network preparation
 
-On failure, pause only new enrollment/portal reconcilers and scale portal to 0;
-preserve namespaces, credentials, policies and existing Headlamp/Keycloak/Flux.
-No restart is needed. Capture sanitized failures/retries; never widen roles to pass.
-Publication does not authorize credential, security, host/network or workload writes.
+`ansible/configure-portal-identity.yaml` remains default off. Default/check mode
+reads no credentials and makes no API calls. The guarded path verifies the published
+source, exact physical issuer endpoint, reviewed public CA fingerprint, and owned
+private input directories/files. Later approved execution may create only the owned
+`portal-local` client in existing `perkforge`, with code + S256, exact callback
+`https://portal.perkforge.home.arpa/auth/callback`, basic/profile scopes and exact
+client-role/group mappings. It rejects unowned clients and drift, not rewrites them.
+No users, memberships, realm import, Headlamp client or API OIDC changes are included.
+Secret provisioning for that later operation must follow the reviewed custody design.
+See [MAPPER-LIFECYCLE.md](MAPPER-LIFECYCLE.md) for the existing exact-response tests.
 
-## Private registry delivery (default off)
+`tenants/portal/sso/prepare.yaml` renders only unselected review output. Set
+`portal_sso_render=true` with a fresh absolute `portal_sso_output` in a private
+directory outside this checkout. Never commit the generated boundary or physical IP.
+Supply reviewed private
+`portal_sso_issuer_ipv4`, and public `portal_sso_ca_file`/`portal_sso_ca_sha256`.
+It permits only one RFC1918 IPv4 /32 on TCP 443, checks public certificate/fingerprint,
+and refuses overwriting output. No physical address is committed. Default/check
+mode performs no input reads or writes. Operator foundation provides DNS and
+Traefik ingress only; issuer egress is denied until this separately approved output
+is applied. Real CNI/NAT behavior and TLS verification remain live acceptance gates.
+An L3/L4 allowance to shared ingress cannot constrain HTTPS Host/SNI to Keycloak;
+other applications on that endpoint may be reachable. This does not prove complete
+cross-tenant network isolation. Do not widen egress to pass a test.
 
-The app references `tenant-portal/portal-registry-existing` as an imagePullSecret.
-It is not a mounted workload credential. Before activation, separately approve a
-read-only GHCR `read:packages` credential with access to only the private portal
-package where supported. Agree its owner, expiry/rotation, owner-only local file
-and exact Secret delivery method. `ansible/deliver-portal-registry.yaml` accepts only a preexisting `portal_registry_file`
-with one `auths.ghcr.io.auth` entry. It rejects helpers/other registries, symlinks,
-non-owner/private-mode files and malformed credentials. Its `no_log` gate verifies
-clean published source and exact cluster UID, then creates only that named
-`kubernetes.io/dockerconfigjson` Secret in `tenant-portal` via private stdin.
-It defaults off (`portal_registry_apply: false`), and check mode reads no files/API.
-The current input playbook deliberately delivers only OIDC/TLS/public-CA inputs;
-it does not read or provision registry credentials; the new separate registry
-playbook is the only registry input path. Do not use Registry1 credentials
-for GHCR, persist Docker login, change package visibility, or place credentials in Git.
-Verify an authenticated manifest/pull before unpausing; preserve failed pull evidence
-without credential headers. Secret readers can reuse the credential.
+## Later, separately approved activation
 
+Verify the cluster UID/context, published chain, actual worker headroom, immutable
+image and authenticated GHCR pull. Complete runtime custody, review/apply foundation,
+validate admission warnings/negative cases, public trust/leaf SAN/key, exact issuer
+route, owned client, and Portal-only DNS/ingress. Then review explicit activation
+changes in app, enrollment and independent platform source. All other tenants stay
+unchanged. Test real admin SSO, developer/no-grant denials, session/logout, network
+and scoped identity denials. Offline tests do not prove live isolation or capacity.
 
-## Activation ordering and containment
-
-Preparation changes never clear suspension or set app enablement. Activation is a
-separate reviewed diff: local app `enabled: true` plus local HelmRelease unsuspended;
-local enrollment source/child unsuspended; local platform enrollment source/parent
-unsuspended. Shared defaults and dev stay paused/disabled. Publish and select actual
-release tags in app → enrollment → platform order; never substitute future tags.
-The activation review must update pause-only regression expectations while retaining
-dev/default assertions and adding exact local activation assertions.
-
-Live order after explicit approval: verify UID/releases/headroom; apply generic
-platform and tenant foundations; verify admission warnings/server dry-run denials;
-deliver portal registry/OIDC/TLS/CA inputs and configure the owned client; validate
-TLS, authenticated image pull and routes; select the reviewed platform stage last.
-Sources and child reconciliation then proceed through the reviewed scoped identities.
-No resource relies on Kustomize file order: foundations/inputs are explicit operator
-prerequisites before unpaused app reconciliation. Routing is separately gated.
-
-For containment, suspend root `flux-system/cluster-root` first so it cannot
-restore parent reconciliation, then parent `flux-system/tenant-enrollments`, child
-`tenant-portal-config/tenant-portal`, app HelmRelease `tenant-portal-config/portal`
-and its source. Pause only the portal HelmChart source as needed to stop retries.
-Scale only `tenant-portal/portal` to zero after reconcilers are paused. Preserve
-namespaces, policies, credentials, data and existing Headlamp/Keycloak/Flux Pods.
-The shared root pause temporarily stops GitOps changes, not running services.
-Return to a reviewed paused platform stage/tag before resuming that root; an old
-app tag alone cannot override admission or automatically remove portal safely.
-
-
-## Keycloak response normalization
-
-The pinned Keycloak 26.8.0 server adds logout defaults and the computed
-`realm_client` response field. The drift check tolerates only these extra string
-values when present: `backchannel.logout.session.required: 'true'`,
-`backchannel.logout.revoke.offline.tokens: 'false'`, `realm_client: 'false'`.
-All requested attributes remain exact; unknown additions, wrong types/values,
-client field changes, mapper changes and secret mismatch still stop execution.
-No existing client is rewritten or secret rotated to satisfy this check.
-The regression executes the actual Ansible assertions with 13 synthetic cases.
-
-Versioned upstream sources: [OIDC client creation defaults](https://github.com/keycloak/keycloak/blob/26.8.0/services/src/main/java/org/keycloak/protocol/oidc/OIDCLoginProtocolFactory.java#L705-L709)
-and [computed realm-client representation](https://github.com/keycloak/keycloak/blob/26.8.0/server-spi-private/src/main/java/org/keycloak/models/utils/ModelToRepresentation.java#L842).
-After a reviewed release, reuse the owned `portal-local` client and protected
-files at the checkpoint; do not rerun credential generation or realm initialization.
-
-
-The audience and API-role mappers explicitly declare `userinfo.token.claim: 'false'`,
-matching the pinned server response and the existing groups mapper. Exact mapper
-comparison is retained; wrong claim values/types and unknown fields still fail.
-CI also exercises the full Ansible client/role/mapping sequence against an isolated
-HTTPS fixture with the observed client defaults, including idempotence and rejected
-role/container/composite/mapping drift. This is not a live role-mapping result.
-
-
-## Required subject claim
-
-The portal verifier still requires signed `sub`, `exp` and `iat`, correct issuer,
-audience/authorized party, exact admin group and portal reader role. This pinned
-Keycloak version supplies the access-token subject through the existing `basic`
-client scope; the portal therefore declares exactly `[basic, profile]` defaults.
-Scope order is irrelevant, but duplicates and extra scopes fail. No realm scope is
-created/edited. For the already-created profile-only client, a separate default-off
-`portal_subject_scope_apply` flag authorizes only assigning the verified existing
-basic scope after all managed fields, secret custody and mappers pass. Unexpected
-basic mapper names/types fail; only the built-in sub/auth_time pair is accepted.
-The playbook reads back the exact scope set; repeated execution does not reassign.
-This adds subject/authentication-time claims, not roles, memberships, token-validator
-exceptions or Kubernetes authority. Publish/review before live assignment/resume.
-
-See [the pinned mapper lifecycle review](MAPPER-LIFECYCLE.md) for token-time
-normalization, independent response fixtures, covered providers and known limits.
+Contain through a reviewed Git change that suspends only the independent Portal
+parent/source. Wait for shared cluster-root to reconcile that exact change, then
+pause the Portal child/HelmRelease and scale Portal to zero. Manual parent suspension
+alone is insufficient because cluster-root can restore it. Emergency live-only
+containment needs a separately reviewed plan. Preserve Nextcloud, transfers,
+namespace/policy/credential state and existing identity/platform services. No shared
+root suspension, VM capacity estimates or VM credential paths are part of this plan.

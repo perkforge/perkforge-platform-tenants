@@ -41,19 +41,14 @@ Local portal namespace/RBAC, PSA, quota, network and native admission definition
 are proposed under `tenants/portal/foundation`; they are not live-verified tenant
 isolation. Start with the focused [local trial plan](tenants/portal/LOCAL-TRIAL.md).
 
-## Portal staging context
+## Portal physical staging
 
-The following describes the earlier Portal staging sequence, not the current
-Nextcloud selection linked above. Only Portal local is declaratively unsuspended;
-dev and shared defaults stay suspended.
-Publication alone does not activate a Portal platform selection.
-Portal config release `v1.0.0` is published and selected by `spec.ref.tag`.
-`release-evidence.json` records its resolved source commit separately; CI rejects
-missing/unpublished or moved tags and validates the actual checked-out app paths.
-After a reviewed Portal enrollment release, platform can separately select its
-verified tag. The Nextcloud-only platform path does not select Portal.
-That staging record used an identity-only platform stage. Advancing Portal to
-this activation release and live security tests require separate approval.
+Portal source/child selections are suspended. Physical host, worker, identity and
+operator boundary preparation is described in [the Portal baseline](tenants/portal/LOCAL-TRIAL.md).
+The actual published app configuration remains `v1.0.0`; it is not physical activation
+ready. Update its tag/resolved evidence only after the disabled physical app release
+exists. Reviewed OpenBao + ESO runtime delivery is another activation prerequisite.
+The existing Nextcloud-only platform selection remains independent and unchanged.
 
 Offline build checks (no API access):
 

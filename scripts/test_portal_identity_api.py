@@ -76,13 +76,13 @@ class PortalIdentityAPITests(unittest.TestCase):
         self.addCleanup(server.server_close);self.addCleanup(server.shutdown)
         self.repo=Path(__file__).resolve().parents[1]
         (self.work/'ansible').mkdir();(self.work/'tenants').symlink_to(self.repo/'tenants',target_is_directory=True)
-        for name in ['bootstrap-password','client-secret']:
-            p=self.work/name;p.write_text('synthetic-bootstrap-secret' if name=='bootstrap-password' else 'synthetic-portal-secret');p.chmod(0o600)
+        for name in ['recovery-username','bootstrap-password','client-secret']:
+            p=self.work/name;p.write_text('synthetic-bootstrap-secret' if name=='bootstrap-password' else ('synthetic-admin' if name=='recovery-username' else 'synthetic-portal-secret'));p.chmod(0o600)
         url=f'https://localhost:{server.server_port}/auth';self.fixture_url=url
         # Only the fixture wrapper supplies the loopback URL. Production endpoint
         # assertions and release gates are tested separately; never relaxed there.
         wrapper=[{'name':'isolated synthetic client tasks','hosts':'localhost','connection':'local','gather_facts':False,
-                  'vars':{'identity_url':url,'portal_api':url+'/admin/realms/perkforge','identity_private_dir':str(self.work),'portal_private_dir':str(self.work)},
+                  'vars':{'identity_url':url,'portal_api':url+'/admin/realms/perkforge','sso_client_username_file':str(self.work/'recovery-username'),'sso_client_password_file':str(self.work/'bootstrap-password'),'portal_private_dir':str(self.work)},
                   'module_defaults':{'ansible.builtin.uri':{'validate_certs':True,'ca_path':str(self.work/'ca.pem'),'follow_redirects':'none','use_proxy':False,'use_netrc':False}},
                   'tasks':[{'name':'private fixture tasks','no_log':True,'block':[
                     {'ansible.builtin.include_tasks':str(self.repo/'ansible'/name)}
