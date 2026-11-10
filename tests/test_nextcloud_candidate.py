@@ -17,10 +17,10 @@ class NextcloudCandidate(unittest.TestCase):
         release = json.loads((ROOT / 'release-evidence.json').read_text())['dependencies']['nextcloud']
         self.assertEqual(release, {
             'repository': 'perkforge/perkforge-tenant-nextcloud',
-            'tag': 'v1.1.1',
-            'resolvedCommit': 'e5529b679f603f68049d45a0cc8a195d38dd680e',
-            'publishedAt': '2026-11-09T17:12:10Z',
-            'releaseUrl': 'https://github.com/perkforge/perkforge-tenant-nextcloud/releases/tag/v1.1.1',
+            'tag': 'v1.1.2',
+            'resolvedCommit': '92f70a46892847aee15aaea7bbe00fb75e9f0e0c',
+            'publishedAt': '2026-11-10T02:13:16Z',
+            'releaseUrl': 'https://github.com/perkforge/perkforge-tenant-nextcloud/releases/tag/v1.1.2',
         })
 
     def test_ci_verifies_selected_and_distinct_legacy_fixtures(self):
@@ -54,7 +54,7 @@ class NextcloudCandidate(unittest.TestCase):
     @unittest.skipUnless(os.environ.get('NEXTCLOUD_APP_CHECKOUT') and
                          os.environ.get('NEXTCLOUD_ROLLBACK_APP_CHECKOUT'),
                          'both published app checkouts are required')
-    def test_actual_releases_preserve_runtime_except_approved_storage_and_sso(self):
+    def test_actual_releases_preserve_runtime_except_approved_storage_sso_and_workers(self):
         selected = Path(os.environ['NEXTCLOUD_APP_CHECKOUT'])
         legacy = Path(os.environ['NEXTCLOUD_ROLLBACK_APP_CHECKOUT'])
         release = json.loads((ROOT / 'release-evidence.json').read_text())['dependencies']['nextcloud']
@@ -77,6 +77,21 @@ class NextcloudCandidate(unittest.TestCase):
         current = yaml.safe_load((selected / 'gitops/base/app-values.yaml').read_text())
         old = yaml.safe_load((legacy / 'gitops/base/app-values.yaml').read_text())
         normalized = copy.deepcopy(current)
+        self.assertEqual(current['resources'], {
+            'requests': {'cpu': '150m', 'memory': '512Mi'},
+            'limits': {'cpu': '750m', 'memory': '1Gi'},
+        })
+        normalized['resources'] = old['resources']
+        profile = 'platform.perkforge.io/apache-profile'
+        self.assertEqual(current['podAnnotations'][profile], 'two-worker-no-keepalive-v1')
+        normalized['podAnnotations'][profile] = old['podAnnotations'][profile]
+        def apache(values):
+            return next(obj for obj in values['extraManifests'] if isinstance(obj, dict)
+                        and obj['metadata']['name'] == 'nextcloud-apache-budget')
+        expected_config = apache(old)['data']['mpm_prefork.conf'].replace(
+            'ServerLimit 1', 'ServerLimit 2').replace('MaxRequestWorkers 1', 'MaxRequestWorkers 2')
+        self.assertEqual(apache(current)['data']['mpm_prefork.conf'], expected_config)
+        apache(normalized)['data']['mpm_prefork.conf'] = apache(old)['data']['mpm_prefork.conf']
         normalized['image'] = old['image']
         for candidate, original in zip(normalized['nextcloud']['extraInitContainers'],
                                        old['nextcloud']['extraInitContainers'], strict=True):
