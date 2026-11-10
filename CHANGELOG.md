@@ -1,5 +1,23 @@
 # Changelog
 
+## [2.0.0](https://github.com/perkforge/perkforge-platform-tenants/compare/v1.5.4...v2.0.0) (2026-11-10)
+
+
+### ⚠ BREAKING CHANGES
+
+* **portal:** local Portal becomes suspended physical-cluster preparation rather than VM activation. Physical admission rejects the old VM app; guarded identity setup now requires protected recovery username/password file inputs. A published physical app release and reviewed OpenBao+ESO runtime custody are required before activation.
+
+### Features
+
+* **portal:** add inactive scoped ESO store stage ([c893856](https://github.com/perkforge/perkforge-platform-tenants/commit/c893856b9eff8f6780bb6dd9c2e011f0b6455409))
+* **portal:** add inactive scoped ESO store stage ([15c7926](https://github.com/perkforge/perkforge-platform-tenants/commit/15c7926eab8bbb04da5aea1162fcdd6edcbc4f03))
+* **portal:** stage physical enrollment and SSO boundaries ([17d7dfe](https://github.com/perkforge/perkforge-platform-tenants/commit/17d7dfe03faa80360bd76c4b53319221eb07c980))
+
+
+### Bug Fixes
+
+* **portal:** pin verified physical app v2.0.0 ([c235b95](https://github.com/perkforge/perkforge-platform-tenants/commit/c235b9500bc13de02872a99ae1be57fc0875c8c5))
+
 ## [1.5.4](https://github.com/perkforge/perkforge-platform-tenants/compare/v1.5.3...v1.5.4) (2026-11-10)
 
 
