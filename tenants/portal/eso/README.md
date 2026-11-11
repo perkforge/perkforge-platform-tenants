@@ -58,3 +58,6 @@ The minimal Store status-only mutation contract assumes PushSecret remains disab
 enabling it requires another RBAC/security review, not ad hoc permission widening.
 Future ExternalSecret consumers and their admission/lifecycle constraints require
 separate review; none are included in this stage.
+
+The separate inactive [runtime consumer candidate](../eso-consumers/README.md)
+defines exact fields and retention gates; it is deliberately not selected here.

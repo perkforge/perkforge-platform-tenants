@@ -1,0 +1,7 @@
+# INACTIVE: never select from foundation, ESO foundation or cluster roots.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+- oidc.yaml
+- registry.yaml
+- tls.yaml
