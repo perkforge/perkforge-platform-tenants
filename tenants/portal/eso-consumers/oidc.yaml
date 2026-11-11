@@ -1,0 +1,27 @@
+# INACTIVE: separate operator-reviewed consumer stage only.
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: portal-oidc
+  namespace: tenant-portal
+spec:
+  refreshPolicy: OnChange
+  secretStoreRef:
+    name: openbao-tenant
+    kind: SecretStore
+  target:
+    name: portal-oidc-existing
+    creationPolicy: Orphan
+    deletionPolicy: Retain
+    template:
+      engineVersion: v2
+      type: Opaque
+      mergePolicy: Merge
+  data:
+  - secretKey: client-secret
+    remoteRef:
+      key: tenant-portal/oidc
+      property: client-secret
+      conversionStrategy: Default
+      decodingStrategy: None
+      metadataPolicy: None

@@ -20,3 +20,5 @@ jobs:
         echo "ESO_CRD_BUNDLE=$RUNNER_TEMP/eso-crds.yaml" >> "$GITHUB_ENV"
     - name: Validate inactive stage, native schema and scoped RBAC contracts
       run: python3 scripts/test_portal_eso_foundation.py -v
+    - name: Validate separate inactive runtime consumers
+      run: python3 scripts/test_portal_eso_consumers.py -v

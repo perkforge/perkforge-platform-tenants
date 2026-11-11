@@ -1,0 +1,27 @@
+# INACTIVE: separate operator-reviewed consumer stage only.
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: portal-registry
+  namespace: tenant-portal
+spec:
+  refreshPolicy: OnChange
+  secretStoreRef:
+    name: openbao-tenant
+    kind: SecretStore
+  target:
+    name: portal-registry-existing
+    creationPolicy: Orphan
+    deletionPolicy: Retain
+    template:
+      engineVersion: v2
+      type: kubernetes.io/dockerconfigjson
+      mergePolicy: Merge
+  data:
+  - secretKey: .dockerconfigjson
+    remoteRef:
+      key: tenant-portal/registry/ghcr
+      property: dockerconfigjson
+      conversionStrategy: Default
+      decodingStrategy: None
+      metadataPolicy: None

@@ -1,0 +1,34 @@
+# INACTIVE: separate operator-reviewed consumer stage only.
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: portal-tls
+  namespace: tenant-portal
+spec:
+  refreshPolicy: OnChange
+  secretStoreRef:
+    name: openbao-tenant
+    kind: SecretStore
+  target:
+    name: portal-local-tls
+    creationPolicy: Orphan
+    deletionPolicy: Retain
+    template:
+      engineVersion: v2
+      type: kubernetes.io/tls
+      mergePolicy: Merge
+  data:
+  - secretKey: tls.crt
+    remoteRef:
+      key: tenant-portal/tls
+      property: certificate
+      conversionStrategy: Default
+      decodingStrategy: None
+      metadataPolicy: None
+  - secretKey: tls.key
+    remoteRef:
+      key: tenant-portal/tls
+      property: private-key
+      conversionStrategy: Default
+      decodingStrategy: None
+      metadataPolicy: None
