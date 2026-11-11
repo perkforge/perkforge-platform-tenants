@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.1.0](https://github.com/perkforge/perkforge-platform-tenants/compare/v2.0.0...v2.1.0) (2026-11-11)
+
+
+### Features
+
+* **portal:** prepare isolated ESO runtime consumers ([#53](https://github.com/perkforge/perkforge-platform-tenants/issues/53)) ([09bcdff](https://github.com/perkforge/perkforge-platform-tenants/commit/09bcdff22a7b59a5483e6354239e02d48d8efa90))
+
 ## [2.0.0](https://github.com/perkforge/perkforge-platform-tenants/compare/v1.5.4...v2.0.0) (2026-11-10)
 
 
