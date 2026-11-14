@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.6.0](https://github.com/perkforge/perkforge-platform-tenants/compare/v2.5.3...v2.6.0) (2026-11-14)
+
+
+### Features
+
+* **identity:** prepare native automatic group-foundation trigger and executor ([#79](https://github.com/perkforge/perkforge-platform-tenants/issues/79)) ([8705db0](https://github.com/perkforge/perkforge-platform-tenants/commit/8705db03dfcd15b187dd8fccd30c402b5b1f26c7))
+
 ## [2.5.3](https://github.com/perkforge/perkforge-platform-tenants/compare/v2.5.2...v2.5.3) (2026-11-14)
 
 
