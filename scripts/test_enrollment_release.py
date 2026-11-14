@@ -117,7 +117,7 @@ class EnrollmentReleaseTests(unittest.TestCase):
         app = Path(os.environ['TENANT_APP_CHECKOUT'])
         # Portal release checks stay scoped to its two roots. Nextcloud's separate
         # paused selector has its own native/render tests and must not activate Portal.
-        self.assertEqual({p.name for p in (ROOT / 'clusters').iterdir()}, {'local', 'dev', 'local-nextcloud', 'local-nextcloud-portal'})
+        self.assertEqual({p.name for p in (ROOT / 'clusters').iterdir()}, {'local', 'dev', 'local-nextcloud', 'local-nextcloud-portal', 'local-identity-portal'})
         for cluster in ('local', 'dev'):
             with self.subTest(cluster=cluster):
                 objects = build(ROOT / 'clusters' / cluster)

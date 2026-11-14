@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import base64,copy,hashlib,unittest
+import base64,copy,hashlib,pathlib,subprocess,unittest
 from finite_identity import render,IMAGE,digest
 class Tests(unittest.TestCase):
  def sample(self):
@@ -12,6 +12,9 @@ class Tests(unittest.TestCase):
   data={x['key']:base64.b64encode(raw[x['path']]).decode() for x in items};d['sourceBundleSHA256']=sha;d['sourceBundleName']='identity-source-'+sha[:20]
   d['sourceBundle']={'sha256':sha,'items':items,'configMaps':[{'apiVersion':'v1','kind':'ConfigMap','metadata':{'name':d['sourceBundleName'],'namespace':ns},'immutable':True,'binaryData':data} for ns in ('tenant-identity-writer','tenant-identity-attestor')]}
   return d
+ def test_current_opt_in_root_is_empty(self):
+  root=pathlib.Path(__file__).resolve().parents[1]
+  self.assertEqual(subprocess.check_output(['kubectl','kustomize',str(root/'clusters/local-identity-portal')],text=True).strip(),'')
  def test_disabled(self):self.assertEqual(render({'schemaVersion':1,'context':'portal','enabled':False})['kustomization.yaml']['resources'],[])
  def test_identity_and_sequencing(self):
   d=self.sample();a=render(d);self.assertEqual(a,render(copy.deepcopy(d)))
