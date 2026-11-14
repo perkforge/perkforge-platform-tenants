@@ -82,10 +82,10 @@ class PortalIdentityAPITests(unittest.TestCase):
         # Only the fixture wrapper supplies the loopback URL. Production endpoint
         # assertions and release gates are tested separately; never relaxed there.
         wrapper=[{'name':'isolated synthetic client tasks','hosts':'localhost','connection':'local','gather_facts':False,
-                  'vars':{'identity_url':url,'portal_api':url+'/admin/realms/perkforge','sso_client_username_file':str(self.work/'recovery-username'),'sso_client_password_file':str(self.work/'bootstrap-password'),'portal_private_dir':str(self.work)},
+                  'vars':{'portal_identity_access_policy':'tenant-reader','identity_url':url,'portal_api':url+'/admin/realms/perkforge','sso_client_username_file':str(self.work/'recovery-username'),'sso_client_password_file':str(self.work/'bootstrap-password'),'portal_private_dir':str(self.work)},
                   'module_defaults':{'ansible.builtin.uri':{'validate_certs':True,'ca_path':str(self.work/'ca.pem'),'follow_redirects':'none','use_proxy':False,'use_netrc':False}},
                   'tasks':[{'name':'private fixture tasks','no_log':True,'block':[
-                    {'ansible.builtin.include_tasks':str(self.repo/'ansible'/name), **({'when': "portal_identity_access_policy | default('tenant-reader') == 'tenant-reader'"} if name == 'portal-identity-role.yaml' else {})}
+                    {'ansible.builtin.include_tasks':str(self.repo/'ansible'/name), **({'when': "portal_identity_access_policy | default('platform-admins') == 'tenant-reader'"} if name == 'portal-identity-role.yaml' else {})}
                     for name in ['portal-identity-inputs.yaml','portal-identity-client.yaml','portal-identity-group.yaml','portal-identity-role.yaml']]}]}]
         (self.work/'ansible/test.yaml').write_text(yaml.safe_dump(wrapper,sort_keys=False))
 

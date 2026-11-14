@@ -5,7 +5,7 @@
   vars:
     portal_identity_apply: false
     portal_subject_scope_apply: false
-    portal_identity_access_policy: tenant-reader
+    portal_identity_access_policy: platform-admins
     enrollment_tag: UNCONFIGURED
     sso_client_username_file: /UNCONFIGURED/recovery-username
     sso_client_password_file: /UNCONFIGURED/recovery-password

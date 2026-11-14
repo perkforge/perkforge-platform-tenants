@@ -36,6 +36,7 @@ class PortalPhysical(unittest.TestCase):
         legacy['protocolMappers']=[m for m in legacy['protocolMappers'] if m['name']!='portal-api-role']
         self.assertEqual(admin,legacy)
         play=yaml.safe_load((ROOT/'ansible/configure-portal-identity.yaml').read_text())[0]
+        self.assertEqual(play['vars']['portal_identity_access_policy'],'platform-admins')
         role=play['tasks'][-1]['block'][-1]
         self.assertEqual(role['when'],"portal_identity_access_policy == 'tenant-reader'")
 

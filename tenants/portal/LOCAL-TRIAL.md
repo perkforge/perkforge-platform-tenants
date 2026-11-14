@@ -103,7 +103,8 @@ explicit Portal audience. It omits the client-role mapper, creates no tenant rol
 and adds no role or scope mappings. The existing exact admin group is read only;
 users and memberships are never changed. `fullScopeAllowed` remains false.
 
-The default `tenant-reader` retains the legacy client-role/mapping procedure for
+The default is `platform-admins`; it cannot accidentally grant a tenant role.
+Explicit `tenant-reader` retains the legacy client-role/mapping procedure for
 older application releases. Select policy together with the compatible application
 release; changing this input alone neither upgrades the app nor migrates an existing
 client. Existing incompatible mapper/role state is refused, not silently rewritten,
