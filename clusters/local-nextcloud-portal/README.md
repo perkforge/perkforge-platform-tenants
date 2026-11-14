@@ -33,8 +33,8 @@ apply consumers before reviewing their targets. Verify actual synchronized paylo
 and TLS chain before activating the app. The renderer does not provision credentials,
 change Keycloak, apply resources, enable the source, or bypass approval gates.
 
-The active Portal selection uses published configuration v2.3.2 and its normal-published
-app v0.6.1 digest. Apply the matching platform-owned runtime-contract before source
+The active Portal selection uses published configuration v2.3.3 and its normal-published
+app v0.7.0 digest. Apply the matching platform-owned runtime-contract before source
 promotion. Platform-admin access requires only the exact signed platform-admin group,
 not tenant membership. CI renders the actual released active chart and rejects the
 old auth image; historical disabled fixtures and the default paused roots remain unchanged.
@@ -46,3 +46,5 @@ Traefik pod port, opt in with `portal_ingress_pod_egress: true` and set
 ingress peer selected by namespace and pod labels; it does not bypass hostname/CA
 validation, grant direct Keycloak access or enable HTTP. Leave it off for targets
 that do not need this translated-port rule.
+
+The selected image carries the reviewed dated logging/identity, delivery pipeline and generic recovery C4. Existing compiled-asset authentication remains; new tenant-request preview code is unconfigured, with no context digest/mount or live CRUD authority added. This source pin is not deployment acceptance.
