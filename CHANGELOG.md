@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.5.3](https://github.com/perkforge/perkforge-platform-tenants/compare/v2.5.2...v2.5.3) (2026-11-14)
+
+
+### Bug Fixes
+
+* select current Portal architecture release ([6376018](https://github.com/perkforge/perkforge-platform-tenants/commit/6376018f25363eeda024d153015d69030176c0b4))
+* select current Portal architecture release ([ef69d3e](https://github.com/perkforge/perkforge-platform-tenants/commit/ef69d3ef69e5dfd63f6262d1bfc861abb3f4beea))
+* select final current-state Portal configuration ([66c92c5](https://github.com/perkforge/perkforge-platform-tenants/commit/66c92c57440b4ac2965efef3a3f3825e0c560a64))
+* select final current-state Portal configuration ([4f12964](https://github.com/perkforge/perkforge-platform-tenants/commit/4f12964a66e0ecb30259d908390cbb87556d3ca9))
+
 ## [2.5.2](https://github.com/perkforge/perkforge-platform-tenants/compare/v2.5.1...v2.5.2) (2026-11-14)
 
 
