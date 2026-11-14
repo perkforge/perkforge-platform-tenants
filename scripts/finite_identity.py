@@ -36,14 +36,14 @@ def render(d):
  bundle=d['sourceBundle']
  if set(bundle)!={'sha256','items','configMaps'} or bundle['sha256']!=d['sourceBundleSHA256'] or bundle['items']!=items or len(bundle['configMaps'])!=2:raise ValueError('bundle contract')
  for cm,namespace in zip(bundle['configMaps'],('tenant-identity-writer','tenant-identity-attestor')):
-  if set(cm)!={'apiVersion','kind','metadata','immutable','binaryData'} or cm['apiVersion']!='v1' or cm['kind']!='ConfigMap' or cm['immutable'] is not True or cm['metadata']!={'name':d['sourceBundleName'],'namespace':namespace}:raise ValueError('bundle scope')
-  if set(cm['binaryData'])!={x['key'] for x in items}:raise ValueError('bundle files')
-  decoded={x['path']:base64.b64decode(cm['binaryData'][x['key']],validate=True) for x in items}
+  if set(cm)!={'apiVersion','kind','metadata','immutable','data'} or cm['apiVersion']!='v1' or cm['kind']!='ConfigMap' or cm['immutable'] is not True or cm['metadata']!={'name':d['sourceBundleName'],'namespace':namespace}:raise ValueError('bundle scope')
+  if set(cm['data'])!={x['key'] for x in items}:raise ValueError('bundle files')
+  decoded={x['path']:cm['data'][x['key']].encode('utf-8') for x in items}
   if sum(map(len,decoded.values()))>524288:raise ValueError('bundle size')
   manifest=decoded.pop('provenance.sha256')
   expected=''.join(hashlib.sha256(b).hexdigest()+'  '+p+'\n' for p,b in sorted(decoded.items())).encode()
   if manifest!=expected or hashlib.sha256(manifest).hexdigest()!=bundle['sha256']:raise ValueError('bundle digest')
- if bundle['configMaps'][0]['binaryData']!=bundle['configMaps'][1]['binaryData']:raise ValueError('different phase code')
+ if bundle['configMaps'][0]['data']!=bundle['configMaps'][1]['data']:raise ValueError('different phase code')
  match(d['workerNode'],r'[a-z0-9][a-z0-9.-]{0,62}');match(d['sourcePath'],r'\./[a-zA-Z0-9/_-]+')
  if type(d['retryGeneration']) is not int or not 0<=d['retryGeneration']<=1000000:raise ValueError('retry generation')
  r=d['resources']
