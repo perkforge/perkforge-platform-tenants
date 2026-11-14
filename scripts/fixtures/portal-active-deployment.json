@@ -80,7 +80,7 @@
         "containers": [
           {
             "name": "portal",
-            "image": "ghcr.io/perkforge/perkforge-portal@sha256:a391275e3ce00f6badc5d3c270dd8c6cd59743c3ca4b4ef4ee5e2cc9fe22b28c",
+            "image": "ghcr.io/perkforge/perkforge-portal@sha256:b3418ab6d8170424523feadb83bcd3bbbc5c22cf944309565828010b6ad12941",
             "imagePullPolicy": "IfNotPresent",
             "securityContext": {
               "allowPrivilegeEscalation": false,
