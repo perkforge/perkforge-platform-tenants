@@ -1,0 +1,73 @@
+# Create-only physical Portal custody. No identity, workload, route or ESO mutation.
+- name: Seed only approved Portal OIDC and GHCR runtime records
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    portal_custody_apply: false
+  tasks:
+  - ansible.builtin.assert:
+      that:
+      - portal_custody_apply | bool
+      - portal_bao_server is match('^https://[a-z0-9.-]+(:[0-9]+)?$')
+      - portal_private_dir is match('^/[A-Za-z0-9_./-]+$')
+      - portal_private_dir == (portal_private_dir | realpath)
+      - portal_ghcr_username is match('^[a-zA-Z0-9][a-zA-Z0-9-]*$')
+  - ansible.builtin.uri:
+      url: '{{ portal_bao_server }}/v1/sys/health'
+      ca_path: '{{ portal_bao_ca_file }}'
+      use_proxy: false
+      use_netrc: false
+      follow_redirects: none
+    register: health
+  - ansible.builtin.assert:
+      that: health.json.cluster_id == portal_bao_cluster_id and health.json.initialized and not health.json.sealed
+  - name: Require protected existing approved runtime inputs
+    ansible.builtin.stat:
+      path: '{{ item }}'
+      follow: false
+    loop: ['{{ portal_private_dir }}/client-secret', '{{ portal_ghcr_token_file }}', '{{ portal_bao_token_file }}']
+    register: files
+    no_log: true
+  - ansible.builtin.assert:
+      that:
+      - item.stat.isreg | default(false)
+      - not (item.stat.islnk | default(false))
+      - item.stat.mode == '0600'
+      - item.stat.size > 0
+    loop: '{{ files.results }}'
+    no_log: true
+  - no_log: true
+    block:
+    - ansible.builtin.set_fact:
+        headers: {X-Vault-Token: '{{ lookup("file", portal_bao_token_file) | trim }}'}
+    - name: Reject existing records rather than adopting or rotating credentials
+      ansible.builtin.uri:
+        url: '{{ portal_bao_server }}/v1/tenants/data/tenant-portal/{{ item }}'
+        headers: '{{ headers }}'
+        ca_path: '{{ portal_bao_ca_file }}'
+        use_proxy: false
+        use_netrc: false
+        follow_redirects: none
+        status_code: 404
+      loop: [oidc, registry/ghcr]
+    - ansible.builtin.set_fact:
+        records:
+          oidc:
+            client-secret: '{{ lookup("file", portal_private_dir + "/client-secret") | trim }}'
+          registry/ghcr:
+            dockerconfigjson: '{{ {"auths": {"ghcr.io": {"username": portal_ghcr_username, "password": lookup("file", portal_ghcr_token_file) | trim, "auth": (portal_ghcr_username + ":" + (lookup("file", portal_ghcr_token_file) | trim)) | b64encode}}} | to_json }}'
+    - name: Create two exact records with CAS zero; retain partial success for fix-forward
+      ansible.builtin.uri:
+        url: '{{ portal_bao_server }}/v1/tenants/data/tenant-portal/{{ item.key }}'
+        method: POST
+        headers: '{{ headers }}'
+        ca_path: '{{ portal_bao_ca_file }}'
+        use_proxy: false
+        use_netrc: false
+        follow_redirects: none
+        body_format: json
+        body: {options: {cas: 0}, data: '{{ item.value }}'}
+      loop: '{{ records | dict2items }}'
+    always:
+    - ansible.builtin.set_fact: {headers: {}, records: {}}
