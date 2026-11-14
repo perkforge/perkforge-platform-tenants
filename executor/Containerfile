@@ -1,0 +1,16 @@
+# Official Python manifest, metadata verified 2026-11-14; NOT an approved Registry1 substitution.
+FROM docker.io/library/python@sha256:e48f59cdba69a3cbd9ed2cf0f348d90d45a8d350d98134cf1070bc106ee9ed90
+# Build context contains only reviewed archived sources and hashed dependency wheels.
+# No package install, Git fetch, or release lookup occurs at runtime.
+COPY wheels/ /wheels/
+COPY requirements.lock /build/requirements.lock
+RUN python3 -m pip install --no-index --find-links=/wheels --require-hashes -r /build/requirements.lock && rm -rf /wheels
+COPY --chown=65532:65532 enrollment/ /opt/enrollment/
+COPY --chown=65532:65532 platform/ /opt/platform/
+COPY provenance.sha256 /opt/provenance.sha256
+COPY revisions.json /opt/revisions.json
+COPY perkforge/ /opt/perkforge/
+RUN command -v bash && command -v flock && command -v sha256sum && command -v ansible-playbook && chmod 0555 /opt/perkforge/bin/reconcile-identity && cd /opt && sha256sum -c provenance.sha256 >/dev/null
+ENV HOME=/tmp/home GIT_OPTIONAL_LOCKS=0 PYTHONDONTWRITEBYTECODE=1 ANSIBLE_LOCAL_TEMP=/tmp/ansible-local ANSIBLE_REMOTE_TEMP=/tmp/ansible-remote
+USER 65532:65532
+ENTRYPOINT ["/opt/perkforge/bin/reconcile-identity"]
