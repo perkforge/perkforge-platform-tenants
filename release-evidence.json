@@ -13,6 +13,13 @@
       "resolvedCommit": "e8de0e3cf68d01860b0addaa3b38e24f928d5ff6",
       "publishedAt": "2026-11-10T17:19:19Z",
       "releaseUrl": "https://github.com/perkforge/perkforge-tenant-portal/releases/tag/v2.0.0"
+    },
+    "portalActive": {
+      "repository": "perkforge/perkforge-tenant-portal",
+      "tag": "v2.1.1",
+      "resolvedCommit": "832cc19e42ba1ccf0b9adafaf91b28ebba741281",
+      "publishedAt": "2026-11-14T02:01:22Z",
+      "releaseUrl": "https://github.com/perkforge/perkforge-tenant-portal/releases/tag/v2.1.1"
     }
   }
 }

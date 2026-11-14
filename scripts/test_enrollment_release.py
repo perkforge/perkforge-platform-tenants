@@ -25,6 +25,17 @@ def selected_release(source=None, evidence=None):
     return evidence
 
 
+def active_portal_release():
+    evidence = json.loads((ROOT / 'release-evidence.json').read_text())['dependencies']['portalActive']
+    objects = build(ROOT / 'clusters/local-nextcloud-portal')
+    source = next(o for o in objects if o['kind'] == 'GitRepository' and o['metadata']['name'] == 'tenant-portal')
+    assert source['spec']['ref'] == {'tag': evidence['tag']}
+    assert source['spec']['url'] == f"https://github.com/{evidence['repository']}.git"
+    assert re.fullmatch(r'v[0-9]+\.[0-9]+\.[0-9]+', evidence['tag'])
+    assert re.fullmatch(r'[0-9a-f]{40}', evidence['resolvedCommit'])
+    return evidence
+
+
 def build(path):
     output = subprocess.check_output(['kubectl', 'kustomize', str(path)], text=True,
                                      env={**os.environ, 'KUBECONFIG': '/dev/null'})
@@ -60,16 +71,16 @@ def app_selection(parent, app):
     return objects
 
 
-def verify_app_checkout(app):
-    release = selected_release()
+def verify_app_checkout(app, release=None):
+    release = release or selected_release()
     head = subprocess.check_output(['git', '-C', str(app), 'rev-parse', 'HEAD'], text=True).strip()
     tag = subprocess.check_output(['git', '-C', str(app), 'rev-parse', release['tag'] + '^{commit}'], text=True).strip()
     assert head == tag == release['resolvedCommit']
 
 
-def render_local_app(app, enabled=False):
+def render_local_app(app, enabled=False, release=None):
     """Render actual selected release with its ordered Flux values; no API access."""
-    verify_app_checkout(app)
+    verify_app_checkout(app, release)
     objects = build(app / 'gitops/clusters/local')
     release = next(obj for obj in objects if obj['kind'] == 'HelmRelease')
     maps = {obj['metadata']['name']: obj for obj in objects if obj['kind'] == 'ConfigMap'}
@@ -137,7 +148,7 @@ class EnrollmentReleaseTests(unittest.TestCase):
             self.assertEqual(obj['metadata']['namespace'], 'tenant-portal-config')
             self.assertFalse(obj['spec']['suspend'])
             if obj['kind'] == 'GitRepository':
-                self.assertEqual(obj['spec']['ref'], {'tag': 'v2.1.0'})
+                self.assertEqual(obj['spec']['ref'], {'tag': active_portal_release()['tag']})
             else:
                 self.assertEqual(obj['spec']['path'], './gitops/clusters/local')
                 self.assertEqual(obj['spec']['serviceAccountName'], 'portal-reconciler')
@@ -150,6 +161,14 @@ class EnrollmentReleaseTests(unittest.TestCase):
         self.assertEqual({obj['kind'] for obj in objects}, {'Deployment', 'Service'})
         deployment = next(obj for obj in objects if obj['kind'] == 'Deployment')
         self.assertEqual(deployment, json.loads((ROOT / 'scripts/fixtures/portal-v2.0.0-deployment.json').read_text()))
+
+    def test_active_release_matches_current_runtime_contract(self):
+        app = Path(os.environ['ACTIVE_PORTAL_APP_CHECKOUT'])
+        objects = render_local_app(app, release=active_portal_release())
+        deployment = next(o for o in objects if o['kind'] == 'Deployment')
+        self.assertEqual(deployment, json.loads((ROOT / 'scripts/fixtures/portal-active-deployment.json').read_text()))
+        contract = yaml.safe_load((ROOT / 'tenants/portal/foundation/runtime-contract.yaml').read_text())
+        self.assertEqual(deployment['spec']['template']['spec']['containers'][0]['image'], contract['data']['image'])
 
     def test_wrong_activation_state_is_rejected(self):
         for cluster in ('local', 'dev'):

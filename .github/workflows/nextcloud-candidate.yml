@@ -6,6 +6,7 @@ jobs:
     runs-on: ubuntu-24.04
     env:
       KUBECONFIG: /dev/null
+      ACTIVE_PORTAL_APP_CHECKOUT: ${{ github.workspace }}/.inputs/portal-active
       TENANT_APP_CHECKOUT: ${{ github.workspace }}/.inputs/portal
       NEXTCLOUD_APP_CHECKOUT: ${{ github.workspace }}/.inputs/nextcloud
       NEXTCLOUD_ROLLBACK_APP_CHECKOUT: ${{ github.workspace }}/.inputs/nextcloud-rollback
@@ -23,6 +24,30 @@ jobs:
         repository: perkforge/perkforge-tenant-portal
         ref: v2.0.0
         path: .inputs/portal
+        fetch-depth: 0
+        persist-credentials: false
+    - name: Read immutable active Portal release evidence
+      id: portal_active
+      run: |
+        python3 - <<'PYTHON'
+        import json, os
+        release = json.load(open('release-evidence.json'))['dependencies']['portalActive']
+        with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+            for key in ('repository', 'tag', 'resolvedCommit'):
+                output.write(key + '=' + release[key] + '\n')
+        PYTHON
+    - name: Verify active Portal release before checkout
+      env:
+        GH_TOKEN: ${{ github.token }}
+        APP_REPOSITORY: ${{ steps.portal_active.outputs.repository }}
+        APP_TAG: ${{ steps.portal_active.outputs.tag }}
+        APP_COMMIT: ${{ steps.portal_active.outputs.resolvedCommit }}
+      run: scripts/verify-release-ref.sh "$APP_REPOSITORY" "$APP_TAG" "$APP_COMMIT"
+    - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      with:
+        repository: ${{ steps.portal_active.outputs.repository }}
+        ref: ${{ steps.portal_active.outputs.tag }}
+        path: .inputs/portal-active
         fetch-depth: 0
         persist-credentials: false
     - name: Verify the published Nextcloud candidate tag before checkout
