@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.4.0](https://github.com/perkforge/perkforge-platform-tenants/compare/v2.3.0...v2.4.0) (2026-11-14)
+
+
+### Features
+
+* derive enrollment inventory from explicit cluster selections ([#64](https://github.com/perkforge/perkforge-platform-tenants/issues/64)) ([ac3b52f](https://github.com/perkforge/perkforge-platform-tenants/commit/ac3b52f0e456b68e48c753582aa9877591915680))
+
 ## [2.3.0](https://github.com/perkforge/perkforge-platform-tenants/compare/v2.2.1...v2.3.0) (2026-11-14)
 
 
