@@ -13,3 +13,4 @@ resources:
 - deployment-policy.yaml
 - service-policy.yaml
 - runtime-contract.yaml
+- inventory-configmap-policy.yaml

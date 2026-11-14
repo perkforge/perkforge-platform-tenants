@@ -1,0 +1,31 @@
+# Apply and verify this fail-closed policy/binding BEFORE granting create.
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata: {name: portal-inventory-configmap-boundary}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    namespaceSelector: {matchLabels: {platform.perkforge.io/portal-runtime: 'true'}}
+    resourceRules:
+    - apiGroups: ['']
+      apiVersions: [v1]
+      operations: [CREATE, UPDATE]
+      resources: [configmaps]
+  validations:
+  - expression: >-
+      request.userInfo.username != 'system:serviceaccount:tenant-portal-config:portal-deployer' ||
+      (object.metadata.name == 'portal-enrollment-inventory' &&
+        object.metadata.namespace == 'tenant-portal' &&
+        has(object.data) && object.data.size() == 1 &&
+        'enrollment-inventory.json' in object.data &&
+        size(object.data['enrollment-inventory.json']) <= 131072 &&
+        (!has(object.binaryData) || object.binaryData.size() == 0) &&
+        (!has(object.immutable) || object.immutable == false))
+    message: Portal deployer may create or update only its exact nonsecret inventory ConfigMap.
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata: {name: portal-inventory-configmap-boundary}
+spec:
+  policyName: portal-inventory-configmap-boundary
+  validationActions: [Deny]
