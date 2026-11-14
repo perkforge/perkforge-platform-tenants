@@ -5,6 +5,7 @@
   vars:
     portal_identity_apply: false
     portal_subject_scope_apply: false
+    portal_identity_access_policy: tenant-reader
     enrollment_tag: UNCONFIGURED
     sso_client_username_file: /UNCONFIGURED/recovery-username
     sso_client_password_file: /UNCONFIGURED/recovery-password
@@ -25,6 +26,7 @@
   - name: Refuse another identity endpoint
     ansible.builtin.assert:
       that:
+      - portal_identity_access_policy in ['tenant-reader', 'platform-admins']
       - identity_url == 'https://keycloak.perkforge.home.arpa/auth'
       - portal_api == identity_url ~ '/admin/realms/perkforge'
   - name: Default and check mode read no credentials and call no API
@@ -41,9 +43,13 @@
     - name: Use existing bootstrap access without logging credentials or tokens
       ansible.builtin.include_tasks: portal-identity-inputs.yaml
       no_log: true
-    - name: Configure owned client and exact application role only
+    - name: Configure the owned client for the selected access policy
       ansible.builtin.include_tasks: portal-identity-client.yaml
+      no_log: true
+    - name: Verify the existing exact admin group without membership changes
+      ansible.builtin.include_tasks: portal-identity-group.yaml
       no_log: true
     - name: Bind only the existing exact admin group to the app-specific role
       ansible.builtin.include_tasks: portal-identity-role.yaml
       no_log: true
+      when: portal_identity_access_policy == 'tenant-reader'

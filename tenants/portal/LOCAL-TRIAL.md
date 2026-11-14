@@ -92,3 +92,22 @@ alone is insufficient because cluster-root can restore it. Emergency live-only
 containment needs a separately reviewed plan. Preserve Nextcloud, transfers,
 namespace/policy/credential state and existing identity/platform services. No shared
 root suspension, VM capacity estimates or VM credential paths are part of this plan.
+
+## Platform administrator identity without tenant roles
+
+For the compatible Portal application that authorizes `platform-admins` using
+validated issuer/audience/authorized-party and exact `/platform/admins` membership,
+select `portal_identity_access_policy: platform-admins` in reviewed operator inputs.
+The client body keeps code + S256, basic/profile, exact callback/origin, groups and
+explicit Portal audience. It omits the client-role mapper, creates no tenant role,
+and adds no role or scope mappings. The existing exact admin group is read only;
+users and memberships are never changed. `fullScopeAllowed` remains false.
+
+The default `tenant-reader` retains the legacy client-role/mapping procedure for
+older application releases. Select policy together with the compatible application
+release; changing this input alone neither upgrades the app nor migrates an existing
+client. Existing incompatible mapper/role state is refused, not silently rewritten,
+deleted or adopted. Any existing-client transition requires separately reviewed
+scope. Both paths retain release, CA, protected-input, ownership, exact mapper and
+credential-custody gates; default/check mode remains inert. This source addition
+authorizes no live identity change or grant.

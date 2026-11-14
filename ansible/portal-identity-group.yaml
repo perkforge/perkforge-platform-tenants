@@ -1,0 +1,16 @@
+- name: Read the existing platform parent group
+  ansible.builtin.uri:
+    url: '{{ portal_api }}/groups?search=platform&exact=true'
+    headers: '{{ portal_headers }}'
+  register: portal_parents
+- name: Require exact parent group
+  ansible.builtin.assert:
+    that: portal_parents.json | selectattr('path', 'equalto', '/platform') | list | length == 1
+- name: Read only its existing admins child
+  ansible.builtin.uri:
+    url: "{{ portal_api }}/groups/{{ (portal_parents.json | selectattr('path', 'equalto', '/platform') | first).id }}/children?search=admins&exact=true"
+    headers: '{{ portal_headers }}'
+  register: portal_admin_groups
+- name: Require exact existing admin group; never create or change members
+  ansible.builtin.assert:
+    that: portal_admin_groups.json | selectattr('path', 'equalto', '/platform/admins') | list | length == 1
