@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.5.1](https://github.com/perkforge/perkforge-platform-tenants/compare/v2.5.0...v2.5.1) (2026-11-14)
+
+
+### Bug Fixes
+
+* admit exact Portal inventory values source ([#69](https://github.com/perkforge/perkforge-platform-tenants/issues/69)) ([17d3456](https://github.com/perkforge/perkforge-platform-tenants/commit/17d3456c3048520dae5c3e7567459c91baa506be))
+
 ## [2.5.0](https://github.com/perkforge/perkforge-platform-tenants/compare/v2.4.0...v2.5.0) (2026-11-14)
 
 
