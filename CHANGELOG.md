@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.2.1](https://github.com/perkforge/perkforge-platform-tenants/compare/v2.2.0...v2.2.1) (2026-11-14)
+
+
+### Bug Fixes
+
+* **portal:** allow native ingress TLS after destination translation ([#60](https://github.com/perkforge/perkforge-platform-tenants/issues/60)) ([46d1d87](https://github.com/perkforge/perkforge-platform-tenants/commit/46d1d874ae8e1ef5c7c36f105174a72711aa40ce))
+
 ## [2.2.0](https://github.com/perkforge/perkforge-platform-tenants/compare/v2.1.0...v2.2.0) (2026-11-14)
 
 
