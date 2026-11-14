@@ -21,7 +21,8 @@ git -C "$pr" archive "$ps" | tar -x -C "$out/platform"
 [[ -f $out/enrollment/executor/embedded-stage.yaml ]] || exit 2
 cp "$out/enrollment/executor/Containerfile" "$out/Containerfile"
 cp "$out/enrollment/executor/requirements.lock" "$out/requirements.lock"
-cp "$out/enrollment/executor/reconcile-identity" "$out/reconcile-identity"
+mkdir -p "$out/perkforge/bin"
+cp "$out/enrollment/executor/reconcile-identity" "$out/perkforge/bin/reconcile-identity"
 printf '{"enrollment":"%s","platform":"%s"}\n' "$es" "$ps" > "$out/revisions.json"
-(cd "$out"; find enrollment platform -type f -print0 | sort -z | xargs -0 sha256sum > provenance.sha256)
+(cd "$out"; find enrollment platform perkforge revisions.json -type f -print0 | sort -z | xargs -0 sha256sum > provenance.sha256)
 echo 'Prepared source-only context. Wheel download, container build/publication and runtime approval still required.'

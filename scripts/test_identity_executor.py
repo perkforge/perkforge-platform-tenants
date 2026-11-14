@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-import importlib.util,pathlib,tempfile,unittest,os,subprocess
+import importlib.util,pathlib,tempfile,unittest,os,subprocess,sys
+sys.dont_write_bytecode=True
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 spec=importlib.util.spec_from_file_location('runtime',ROOT/'executor/verify-runtime.py')
 m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
