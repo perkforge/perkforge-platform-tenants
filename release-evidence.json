@@ -16,10 +16,10 @@
     },
     "portalActive": {
       "repository": "perkforge/perkforge-tenant-portal",
-      "tag": "v2.3.0",
-      "resolvedCommit": "df3dcd8d061308beaf64dfb0e81cc8b3a14d88ae",
-      "publishedAt": "2026-11-14T04:30:54Z",
-      "releaseUrl": "https://github.com/perkforge/perkforge-tenant-portal/releases/tag/v2.3.0"
+      "tag": "v2.3.1",
+      "resolvedCommit": "be7c66130cbdaf3e7307314feba7a7c35107323c",
+      "publishedAt": "2026-11-14T06:07:20Z",
+      "releaseUrl": "https://github.com/perkforge/perkforge-tenant-portal/releases/tag/v2.3.1"
     }
   }
 }
