@@ -28,6 +28,18 @@ class PortalPhysical(unittest.TestCase):
         self.run_play('ansible/configure-portal-identity.yaml',
                       {'identity_url': 'https://unexpected.invalid/auth'}, success=False)
 
+    def test_admin_identity_policy_is_explicit_and_default_off(self):
+        self.run_play('ansible/configure-portal-identity.yaml', {'portal_identity_access_policy':'platform-admins'})
+        self.run_play('ansible/configure-portal-identity.yaml', {'portal_identity_access_policy':'typo'}, success=False)
+        admin=yaml.safe_load((ROOT/'tenants/portal/identity/client-platform-admins.yaml').read_text())
+        legacy=yaml.safe_load((ROOT/'tenants/portal/identity/client.yaml').read_text())
+        legacy['protocolMappers']=[m for m in legacy['protocolMappers'] if m['name']!='portal-api-role']
+        self.assertEqual(admin,legacy)
+        play=yaml.safe_load((ROOT/'ansible/configure-portal-identity.yaml').read_text())[0]
+        self.assertEqual(play['vars']['portal_identity_access_policy'],'platform-admins')
+        role=play['tasks'][-1]['block'][-1]
+        self.assertEqual(role['when'],"portal_identity_access_policy == 'tenant-reader'")
+
     def test_review_output_and_invalid_inputs(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp); cert=root/'ca.pem'; key=root/'key.pem'

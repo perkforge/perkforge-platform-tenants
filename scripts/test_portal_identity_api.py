@@ -82,11 +82,11 @@ class PortalIdentityAPITests(unittest.TestCase):
         # Only the fixture wrapper supplies the loopback URL. Production endpoint
         # assertions and release gates are tested separately; never relaxed there.
         wrapper=[{'name':'isolated synthetic client tasks','hosts':'localhost','connection':'local','gather_facts':False,
-                  'vars':{'identity_url':url,'portal_api':url+'/admin/realms/perkforge','sso_client_username_file':str(self.work/'recovery-username'),'sso_client_password_file':str(self.work/'bootstrap-password'),'portal_private_dir':str(self.work)},
+                  'vars':{'portal_identity_access_policy':'tenant-reader','identity_url':url,'portal_api':url+'/admin/realms/perkforge','sso_client_username_file':str(self.work/'recovery-username'),'sso_client_password_file':str(self.work/'bootstrap-password'),'portal_private_dir':str(self.work)},
                   'module_defaults':{'ansible.builtin.uri':{'validate_certs':True,'ca_path':str(self.work/'ca.pem'),'follow_redirects':'none','use_proxy':False,'use_netrc':False}},
                   'tasks':[{'name':'private fixture tasks','no_log':True,'block':[
-                    {'ansible.builtin.include_tasks':str(self.repo/'ansible'/name)}
-                    for name in ['portal-identity-inputs.yaml','portal-identity-client.yaml','portal-identity-role.yaml']]}]}]
+                    {'ansible.builtin.include_tasks':str(self.repo/'ansible'/name), **({'when': "portal_identity_access_policy | default('platform-admins') == 'tenant-reader'"} if name == 'portal-identity-role.yaml' else {})}
+                    for name in ['portal-identity-inputs.yaml','portal-identity-client.yaml','portal-identity-group.yaml','portal-identity-role.yaml']]}]}]
         (self.work/'ansible/test.yaml').write_text(yaml.safe_dump(wrapper,sort_keys=False))
 
     def run_play(self, extra=None):
@@ -148,6 +148,21 @@ class PortalIdentityAPITests(unittest.TestCase):
             self.assertEqual(self.state['client']['protocolMappers'],mappers)
             checked=self.run_play();self.assertEqual(checked.returncode,0,checked.stdout+checked.stderr)
             self.assertEqual(self.state['writes'],writes)
+
+    def test_platform_admin_client_never_creates_roles_or_mappings(self):
+        args=['-e','portal_identity_access_policy=platform-admins']
+        result=self.run_play(args);self.assertEqual(result.returncode,0,result.stdout+result.stderr)
+        self.assertIsNone(self.state['role']);self.assertEqual(self.state['mappings'],{})
+        writes=deepcopy(self.state['writes']);self.assertEqual(len(writes),1)
+        client=self.state['client']
+        self.assertFalse(client['fullScopeAllowed'])
+        self.assertEqual(client['defaultClientScopes'],['basic','profile'])
+        self.assertEqual({m['name'] for m in client['protocolMappers']},{'portal-groups','portal-audience'})
+        repeat=self.run_play(args);self.assertEqual(repeat.returncode,0,repeat.stdout+repeat.stderr)
+        self.assertEqual(self.state['writes'],writes)
+        # No silent conversion to legacy policy or removal/adoption of drift.
+        denied=self.run_play();self.assertNotEqual(denied.returncode,0)
+        self.assertEqual(self.state['writes'],writes)
 
     def test_exposed_input_refused_before_any_authentication(self):
         (self.work/'client-secret').chmod(0o644)

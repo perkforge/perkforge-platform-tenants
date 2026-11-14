@@ -7,7 +7,7 @@
   ansible.builtin.assert: {that: portal_clients.json | length <= 1}
 - name: Load the native client definition only in this no_log block
   ansible.builtin.set_fact:
-    portal_desired: "{{ lookup('ansible.builtin.template', playbook_dir ~ '/../tenants/portal/identity/client.yaml') | from_yaml }}"
+    portal_desired: "{{ lookup('ansible.builtin.template', playbook_dir ~ '/../tenants/portal/identity/' ~ ('client-platform-admins.yaml' if portal_identity_access_policy | default('platform-admins') == 'platform-admins' else 'client.yaml')) | from_yaml }}"
 - name: Refuse adopting an unrelated existing client
   ansible.builtin.assert:
     that: portal_clients.json[0].attributes['perkforge-managed-by'] | default('') == 'platform-tenants/local-portal'
