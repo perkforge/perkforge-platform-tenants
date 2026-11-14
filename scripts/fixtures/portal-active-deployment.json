@@ -22,6 +22,9 @@
       "metadata": {
         "labels": {
           "app.kubernetes.io/name": "perkforge-portal"
+        },
+        "annotations": {
+          "checksum/enrollment-inventory": "9513d136ddfd037698110772af48210e7a19c63bc8944281e6d75b6f644c650f"
         }
       },
       "spec": {
@@ -57,6 +60,12 @@
         ],
         "volumes": [
           {
+            "name": "enrollment-inventory",
+            "configMap": {
+              "name": "portal-enrollment-inventory"
+            }
+          },
+          {
             "name": "identity-ca",
             "configMap": {
               "name": "portal-identity-ca",
@@ -80,7 +89,7 @@
         "containers": [
           {
             "name": "portal",
-            "image": "ghcr.io/perkforge/perkforge-portal@sha256:b3418ab6d8170424523feadb83bcd3bbbc5c22cf944309565828010b6ad12941",
+            "image": "ghcr.io/perkforge/perkforge-portal@sha256:eaa66ab13be20079f188f4b5d8c5d79e274612f0f5742a8d3c0d2f0f6a48560d",
             "imagePullPolicy": "IfNotPresent",
             "securityContext": {
               "allowPrivilegeEscalation": false,
@@ -99,12 +108,33 @@
             ],
             "volumeMounts": [
               {
+                "name": "enrollment-inventory",
+                "mountPath": "/etc/portal/enrollment",
+                "readOnly": true
+              },
+              {
                 "name": "identity-ca",
                 "mountPath": "/etc/portal/identity-ca",
                 "readOnly": true
               }
             ],
             "env": [
+              {
+                "name": "ENROLLMENT_SOURCE",
+                "value": "gitops-configmap"
+              },
+              {
+                "name": "ENROLLMENT_SOURCE_COMMIT",
+                "value": "49839241472c17e73b0562d43983d07347b26f58"
+              },
+              {
+                "name": "ENROLLMENT_SELECTOR",
+                "value": "local-nextcloud-portal"
+              },
+              {
+                "name": "ENROLLMENT_INVENTORY_SHA256",
+                "value": "9513d136ddfd037698110772af48210e7a19c63bc8944281e6d75b6f644c650f"
+              },
               {
                 "name": "NODE_EXTRA_CA_CERTS",
                 "value": "/etc/portal/identity-ca/ca.crt"

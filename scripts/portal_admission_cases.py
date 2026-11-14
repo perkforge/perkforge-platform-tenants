@@ -39,6 +39,8 @@ add('extra-env',lambda x:x['containers'][0]['env'].append({'name':'NODE_TLS_REJE
 cases.append({'name':'published-v1.0.0-rejected','object':json.loads((ROOT/'scripts/fixtures/portal-v1.0.0-deployment.json').read_text()),'allowed':False})
 # Optional inventory remains inside exact named public-config boundary.
 def inventory_pod(pod):
+    if any(v['name']=='enrollment-inventory' for v in pod['volumes']):
+        return
     pod['volumes'].append({'name':'enrollment-inventory','configMap':{'name':'portal-enrollment-inventory'}})
     pod['containers'][0]['volumeMounts'].append({'name':'enrollment-inventory','mountPath':'/etc/portal/enrollment','readOnly':True})
     pod['containers'][0]['env'].extend([
@@ -49,12 +51,18 @@ def inventory_pod(pod):
 positive=deepcopy(base)
 inventory_pod(positive['spec']['template']['spec'])
 cases.append({'name':'exact-inventory-mounted','object':positive,'allowed':True})
+ca_only=deepcopy(positive)
+cp=ca_only['spec']['template']['spec']
+cp['volumes']=[v for v in cp['volumes'] if v['name']=='identity-ca']
+cp['containers'][0]['volumeMounts']=[v for v in cp['containers'][0]['volumeMounts'] if v['name']=='identity-ca']
+cp['containers'][0]['env']=[e for e in cp['containers'][0]['env'] if not e['name'].startswith('ENROLLMENT_')]
+cases.append({'name':'ca-only-still-allowed','object':ca_only,'allowed':True})
 for label, change in [
-    ('wrong-cm',lambda x:x['volumes'][1]['configMap'].update(name='other')),
-    ('writable',lambda x:x['containers'][0]['volumeMounts'][1].update(readOnly=False)),
-    ('wrong-path',lambda x:x['containers'][0]['volumeMounts'][1].update(mountPath='/tmp')),
-    ('subpath',lambda x:x['containers'][0]['volumeMounts'][1].update(subPath='other')),
-    ('missing-pin',lambda x:x['containers'][0]['env'].pop(-3)),
+    ('wrong-cm',lambda x:next(v for v in x['volumes'] if v['name']=='enrollment-inventory')['configMap'].update(name='other')),
+    ('writable',lambda x:next(v for v in x['containers'][0]['volumeMounts'] if v['name']=='enrollment-inventory').update(readOnly=False)),
+    ('wrong-path',lambda x:next(v for v in x['containers'][0]['volumeMounts'] if v['name']=='enrollment-inventory').update(mountPath='/tmp')),
+    ('subpath',lambda x:next(v for v in x['containers'][0]['volumeMounts'] if v['name']=='enrollment-inventory').update(subPath='other')),
+    ('missing-pin',lambda x:x['containers'][0].update(env=[e for e in x['containers'][0]['env'] if e['name']!='ENROLLMENT_SOURCE_COMMIT'])),
     ('bad-hash',lambda x:next(e for e in x['containers'][0]['env'] if e['name']=='ENROLLMENT_INVENTORY_SHA256').update(value='bad')),
     ('network-mode',lambda x:next(e for e in x['containers'][0]['env'] if e['name']=='ENROLLMENT_SOURCE').update(value='github-public'))]:
     obj=deepcopy(positive); change(obj['spec']['template']['spec'])
