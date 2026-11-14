@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.2.0](https://github.com/perkforge/perkforge-platform-tenants/compare/v2.1.0...v2.2.0) (2026-11-14)
+
+
+### Features
+
+* **portal:** create-only physical OIDC and GHCR custody ([#57](https://github.com/perkforge/perkforge-platform-tenants/issues/57)) ([38d2528](https://github.com/perkforge/perkforge-platform-tenants/commit/38d2528afab49e60f8b205d277fdc0b2b19d5f54))
+* **portal:** preserve Nextcloud in explicit Portal activation root ([#55](https://github.com/perkforge/perkforge-platform-tenants/issues/55)) ([9b56ae7](https://github.com/perkforge/perkforge-platform-tenants/commit/9b56ae799aaf6a8b0178f6a501e5517ba89379f9))
+* **portal:** separate platform admin identity from tenant roles ([#58](https://github.com/perkforge/perkforge-platform-tenants/issues/58)) ([8991faa](https://github.com/perkforge/perkforge-platform-tenants/commit/8991faaf21a0e0425cfaa93a587190faa0a0103e))
+
+
+### Bug Fixes
+
+* **portal:** select released admin image and admission contract ([#59](https://github.com/perkforge/perkforge-platform-tenants/issues/59)) ([60aa425](https://github.com/perkforge/perkforge-platform-tenants/commit/60aa425c38341a363fa8719d8faba78dd94443e9))
+
 ## [2.1.0](https://github.com/perkforge/perkforge-platform-tenants/compare/v2.0.0...v2.1.0) (2026-11-11)
 
 
