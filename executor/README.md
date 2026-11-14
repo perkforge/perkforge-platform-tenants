@@ -1,9 +1,8 @@
 # Executor source candidate, not a published artifact
 
-This candidate implements the native trigger ABI and private staging. It remains
-unbuildable until a reviewed `embedded-stage.yaml`, hashed dependency wheel lock,
-clean source archives, complete source hash manifest and exact revisions.json are
-provided by the build preparation. No placeholder image digest is supplied.
+This candidate implements the native trigger ABI and private staging. It remains unbuilt and unreviewed. The embedded stage and dependency lock are
+now source candidates; clean published source archives, wheel availability, complete
+source hash manifest and exact revisions.json must pass build preparation. No placeholder image digest is supplied.
 
 The official Python base manifest was read from Docker's registry on 2026-11-14.
 It is a reputable candidate, not Registry1: an explicit reviewed exception or

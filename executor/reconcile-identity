@@ -17,14 +17,10 @@ done
 [[ $inputs == /inputs/inputs.yaml && $credentials == /credentials && $receipts == /receipts ]] || exit 2
 # Verify all embedded executable source before touching credentials.
 (cd /opt && sha256sum --strict -c provenance.sha256 >/dev/null)
-python3 /opt/enrollment/executor/verify-runtime.py "$enrollment" "$platform" "$context" "$expected"
-# The verifier checks projected roots; copy fixed files into a private regular-file tree.
 work=$(mktemp -d /tmp/identity.XXXXXXXX)
 trap 'rm -rf -- "$work"' EXIT
-install -m 0600 /inputs/inputs.yaml "$work/inputs.yaml"
-[[ $(sha256sum "$work/inputs.yaml" | cut -d' ' -f1) == "$expected" ]] || exit 2
-install -m 0600 /credentials/group-writer "$work/token"
-install -m 0600 /credentials/ca.crt "$work/ca.crt"
+# One helper stages EXACT bounded validated bytes, never reopens the projection.
+python3 /opt/enrollment/executor/verify-runtime.py "$enrollment" "$platform" "$context" "$expected" "$work"
 # Stable context directory/lock, NEVER invocation-specific lock.
 python3 /opt/enrollment/executor/verify-runtime.py --receipt "$context"
 exec 9>"/receipts/$context/trigger.lock"

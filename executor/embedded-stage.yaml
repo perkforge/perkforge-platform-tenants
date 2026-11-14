@@ -1,0 +1,63 @@
+# Only the reviewed executor invokes this after byte/provenance/literal-schema gates.
+# No release checker network bypass in the operator entrypoint: this is distinct.
+- name: Reconcile embedded group-foundation stage only
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+  - name: Bind immutable context and preapproved scoped parent
+    no_log: true
+    ansible.builtin.assert:
+      that:
+      - executor_context == gitlab_group_context
+      - executor_enrollment_revision == gitlab_group_source_revision
+      - executor_platform_revision is match('^[a-f0-9]{40}$')
+      - gitlab_group_run is sameas true
+      - not (gitlab_group_allow_parent_create | default(false))
+      - gitlab_group_expected_parent_id | type_debug == 'int'
+      - gitlab_group_expected_parent_id > 0
+      - executor_receipt_file == '/receipts/' + executor_context + '/group.json'
+      - executor_token_file is match('^/tmp/identity\.[A-Za-z0-9]+/token$')
+      - executor_ca_file == executor_token_file | dirname + '/ca.crt'
+  - name: Build private fixed-path native adapter input using only literal allowlisted fields
+    no_log: true
+    ansible.builtin.copy:
+      dest: '{{ executor_token_file | dirname }}/adapter.json'
+      mode: '0600'
+      content: '{{ {"gitlab_group_run": true, "gitlab_group_scope": "gitlab-enrollment-group-foundation-v1", "gitlab_group_context": executor_context, "gitlab_group_source_revision": executor_enrollment_revision, "gitlab_group_previous_revision": gitlab_group_previous_revision | default(""), "gitlab_group_allow_parent_create": false, "gitlab_group_expected_parent_id": gitlab_group_expected_parent_id, "gitlab_native_origin": gitlab_native_origin, "gitlab_native_ca_file": executor_ca_file} | to_json }}'
+  - name: Invoke exact pinned serialized native group adapter
+    no_log: true
+    ansible.builtin.command:
+      argv:
+      - /opt/platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/run-groups.sh
+      - --apply
+      - '{{ executor_token_file }}'
+      - '{{ executor_receipt_file }}'
+      - '{{ executor_token_file | dirname }}/adapter.json'
+    changed_when: false
+  - name: Read back exact bounded receipt through native path guard
+    no_log: true
+    ansible.builtin.command:
+      argv:
+      - /opt/platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/run-groups.sh
+      - --validate
+      - '{{ executor_token_file }}'
+      - '{{ executor_receipt_file }}'
+      - '{{ executor_token_file | dirname }}/adapter.json'
+    changed_when: false
+  - no_log: true
+    ansible.builtin.set_fact:
+      completed_group: '{{ lookup("file", executor_receipt_file) | from_json }}'
+  - name: Never turn partial provider writes into completed onboarding
+    no_log: true
+    ansible.builtin.assert:
+      that:
+      - completed_group.context == executor_context
+      - completed_group.source_revision == executor_enrollment_revision
+      - completed_group.origin == gitlab_native_origin
+      - completed_group.parent_id == gitlab_group_expected_parent_id
+      - completed_group.group_id | type_debug == 'int'
+      - completed_group.group_id > 0
+      - completed_group.stage == 'group-ready'
+  - ansible.builtin.set_stats:
+      data: {group: ReadyGroup, membership: PendingIdentity, automatic_phase: group-foundation-only}
