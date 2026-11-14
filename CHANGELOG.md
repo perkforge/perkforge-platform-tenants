@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.6.0](https://github.com/perkforge/perkforge-platform-tenants/compare/v2.5.3...v2.6.0) (2026-11-14)
+
+
+### Features
+
+* **identity:** prepare isolated runtime foundation boundaries ([5492889](https://github.com/perkforge/perkforge-platform-tenants/commit/54928891c9a08af8e1ed7f97dd4c4df8809fda75))
+* **identity:** prepare isolated runtime foundation boundaries ([d5981ae](https://github.com/perkforge/perkforge-platform-tenants/commit/d5981ae9a92148572b238b5e2a478a56e7069acf))
+* **identity:** prepare native automatic group-foundation trigger and executor ([#79](https://github.com/perkforge/perkforge-platform-tenants/issues/79)) ([8705db0](https://github.com/perkforge/perkforge-platform-tenants/commit/8705db03dfcd15b187dd8fccd30c402b5b1f26c7))
+* **identity:** wire finite declared onboarding to maintained runtime ([#81](https://github.com/perkforge/perkforge-platform-tenants/issues/81)) ([1b11747](https://github.com/perkforge/perkforge-platform-tenants/commit/1b11747ddb8610e6b8d0c820ae88ef79f101f02c))
+
 ## [2.5.3](https://github.com/perkforge/perkforge-platform-tenants/compare/v2.5.2...v2.5.3) (2026-11-14)
 
 
