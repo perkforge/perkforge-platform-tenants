@@ -29,3 +29,14 @@ publishes source releases only. A separately reviewed, manually dispatched
 image-build workflow may publish exact reviewed archives/digests after approval;
 this source adds no workflow or CI activation. Current launcher needs native tests
 and independent review before any credential or provider operation.
+
+`prepare-build.sh` now defines a default-inert, explicit build-preparation path:
+require clean exact source heads, verify published tags through the existing gh
+CLI verifier at PREPARATION time, archive Git-tracked files only, reject symlinks,
+require embedded stage, and hash all archived source bytes. No image operation is
+performed. A failed preparation leaves a private inspectable context, never a
+successful receipt; do not reuse it without explicit cleanup/review.
+`requirements.lock` pins published PyPI wheel hashes. Approved build preparation
+must download matching wheels with `--require-hashes --only-binary=:all:` into
+`wheels/`; build installs only from that offline directory. Dependency resolution
+and native image tool availability still require an actual isolated build test.
