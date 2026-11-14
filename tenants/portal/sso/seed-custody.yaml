@@ -1,5 +1,5 @@
-# Create-only physical Portal custody. No identity, workload, route or ESO mutation.
-- name: Seed only approved Portal OIDC and GHCR runtime records
+# Create-only physical Portal custody with exact-match partial retry. No live identity/workload changes.
+- name: Seed only approved Portal OIDC, GHCR and TLS runtime records
   hosts: localhost
   connection: local
   gather_facts: false
@@ -12,6 +12,7 @@
       - portal_bao_server is match('^https://[a-z0-9.-]+(:[0-9]+)?$')
       - portal_private_dir is match('^/[A-Za-z0-9_./-]+$')
       - portal_private_dir == (portal_private_dir | realpath)
+      - portal_hostname is match('^[a-z0-9][a-z0-9.-]+[a-z0-9]$')
       - portal_ghcr_username is match('^[a-zA-Z0-9][a-zA-Z0-9-]*$')
   - ansible.builtin.uri:
       url: '{{ portal_bao_server }}/v1/sys/health'
@@ -26,7 +27,7 @@
     ansible.builtin.stat:
       path: '{{ item }}'
       follow: false
-    loop: ['{{ portal_private_dir }}/client-secret', '{{ portal_ghcr_token_file }}', '{{ portal_bao_token_file }}']
+    loop: ['{{ portal_private_dir }}/client-secret', '{{ portal_ghcr_token_file }}', '{{ portal_bao_token_file }}', '{{ portal_private_dir }}/portal.crt', '{{ portal_private_dir }}/portal.key']
     register: files
     no_log: true
   - ansible.builtin.assert:
@@ -37,29 +38,56 @@
       - item.stat.size > 0
     loop: '{{ files.results }}'
     no_log: true
+  - name: Verify Portal leaf chain, hostname and server purpose against selected CA
+    ansible.builtin.command:
+      argv: [openssl, verify, -CAfile, '{{ portal_bao_ca_file }}', -purpose, sslserver, -verify_hostname, '{{ portal_hostname }}', '{{ portal_private_dir }}/portal.crt']
+    changed_when: false
+  - name: Read leaf public key only
+    ansible.builtin.command:
+      argv: [openssl, x509, -in, '{{ portal_private_dir }}/portal.crt', -pubkey, -noout]
+    changed_when: false
+    register: leaf_public
+    no_log: true
+  - name: Derive public key from protected Portal leaf key
+    ansible.builtin.command:
+      argv: [openssl, pkey, -in, '{{ portal_private_dir }}/portal.key', -pubout]
+    changed_when: false
+    register: key_public
+    no_log: true
+  - ansible.builtin.assert:
+      that: leaf_public.stdout == key_public.stdout
+    no_log: true
   - no_log: true
     block:
     - ansible.builtin.set_fact:
         headers: {X-Vault-Token: '{{ lookup("file", portal_bao_token_file) | trim }}'}
-    - name: Reject existing records rather than adopting or rotating credentials
-      ansible.builtin.uri:
-        url: '{{ portal_bao_server }}/v1/tenants/data/tenant-portal/{{ item }}'
-        headers: '{{ headers }}'
-        ca_path: '{{ portal_bao_ca_file }}'
-        use_proxy: false
-        use_netrc: false
-        follow_redirects: none
-        status_code: 404
-      loop: [oidc, registry/ghcr]
     - ansible.builtin.set_fact:
         records:
           oidc:
             client-secret: '{{ lookup("file", portal_private_dir + "/client-secret") | trim }}'
           registry/ghcr:
             dockerconfigjson: '{{ {"auths": {"ghcr.io": {"username": portal_ghcr_username, "password": lookup("file", portal_ghcr_token_file) | trim, "auth": (portal_ghcr_username + ":" + (lookup("file", portal_ghcr_token_file) | trim)) | b64encode}}} | to_json }}'
-    - name: Create two exact records with CAS zero; retain partial success for fix-forward
+          tls:
+            certificate: '{{ lookup("file", portal_private_dir + "/portal.crt", rstrip=false) }}'
+            private-key: '{{ lookup("file", portal_private_dir + "/portal.key", rstrip=false) }}'
+    - name: Inspect only the three approved records for safe partial retry
       ansible.builtin.uri:
         url: '{{ portal_bao_server }}/v1/tenants/data/tenant-portal/{{ item.key }}'
+        headers: '{{ headers }}'
+        ca_path: '{{ portal_bao_ca_file }}'
+        use_proxy: false
+        use_netrc: false
+        follow_redirects: none
+        status_code: [200, 404]
+      loop: '{{ records | dict2items }}'
+      register: existing
+    - name: Refuse drift or rotation of an existing record
+      ansible.builtin.assert:
+        that: item.status == 404 or item.json.data.data == item.item.value
+      loop: '{{ existing.results }}'
+    - name: Create absent exact records with CAS zero; retain partial success for fix-forward
+      ansible.builtin.uri:
+        url: '{{ portal_bao_server }}/v1/tenants/data/tenant-portal/{{ item.item.key }}'
         method: POST
         headers: '{{ headers }}'
         ca_path: '{{ portal_bao_ca_file }}'
@@ -67,7 +95,21 @@
         use_netrc: false
         follow_redirects: none
         body_format: json
-        body: {options: {cas: 0}, data: '{{ item.value }}'}
+        body: {options: {cas: 0}, data: '{{ item.item.value }}'}
+      loop: '{{ existing.results }}'
+      when: item.status == 404
+    - name: Verify stored record payloads without printing values
+      ansible.builtin.uri:
+        url: '{{ portal_bao_server }}/v1/tenants/data/tenant-portal/{{ item.key }}'
+        headers: '{{ headers }}'
+        ca_path: '{{ portal_bao_ca_file }}'
+        use_proxy: false
+        use_netrc: false
+        follow_redirects: none
       loop: '{{ records | dict2items }}'
+      register: verified
+    - ansible.builtin.assert:
+        that: item.json.data.data == item.item.value
+      loop: '{{ verified.results }}'
     always:
-    - ansible.builtin.set_fact: {headers: {}, records: {}}
+    - ansible.builtin.set_fact: {headers: {}, records: {}, existing: {}, verified: {}, leaf_public: {}, key_public: {}}
