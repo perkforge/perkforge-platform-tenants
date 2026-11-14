@@ -106,7 +106,7 @@ class EnrollmentReleaseTests(unittest.TestCase):
         app = Path(os.environ['TENANT_APP_CHECKOUT'])
         # Portal release checks stay scoped to its two roots. Nextcloud's separate
         # paused selector has its own native/render tests and must not activate Portal.
-        self.assertEqual({p.name for p in (ROOT / 'clusters').iterdir()}, {'local', 'dev', 'local-nextcloud'})
+        self.assertEqual({p.name for p in (ROOT / 'clusters').iterdir()}, {'local', 'dev', 'local-nextcloud', 'local-nextcloud-portal'})
         for cluster in ('local', 'dev'):
             with self.subTest(cluster=cluster):
                 objects = build(ROOT / 'clusters' / cluster)
@@ -122,6 +122,26 @@ class EnrollmentReleaseTests(unittest.TestCase):
                 app_objects = app_selection(parent, app)
                 defaults = next(obj for obj in app_objects if obj['kind'] == 'ConfigMap' and obj['metadata']['name'] == 'portal-defaults')
                 self.assertFalse(yaml.safe_load(defaults['data']['values.yaml'])['enabled'])
+
+    def test_integrated_root_preserves_nextcloud_and_selects_portal_release(self):
+        before = build(ROOT / 'clusters/local-nextcloud')
+        after = build(ROOT / 'clusters/local-nextcloud-portal')
+        key = lambda obj: (obj['apiVersion'], obj['kind'], obj['metadata'].get('namespace'), obj['metadata']['name'])
+        indexed = {key(obj): obj for obj in after}
+        for obj in before:
+            self.assertEqual(indexed[key(obj)], obj)
+        self.assertEqual(len(after), len(before) + 2)
+        portal = [obj for obj in after if obj['metadata']['name'] == 'tenant-portal']
+        self.assertEqual(len(portal), 2)
+        for obj in portal:
+            self.assertEqual(obj['metadata']['namespace'], 'tenant-portal-config')
+            self.assertFalse(obj['spec']['suspend'])
+            if obj['kind'] == 'GitRepository':
+                self.assertEqual(obj['spec']['ref'], {'tag': 'v2.1.0'})
+            else:
+                self.assertEqual(obj['spec']['path'], './gitops/clusters/local')
+                self.assertEqual(obj['spec']['serviceAccountName'], 'portal-reconciler')
+                self.assertFalse(obj['spec']['prune'])
 
     def test_actual_released_chart_is_disabled_and_matches_physical_boundary_fixture(self):
         app = Path(os.environ['TENANT_APP_CHECKOUT'])
