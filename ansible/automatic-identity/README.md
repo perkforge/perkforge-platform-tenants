@@ -32,11 +32,12 @@ External Keycloak membership changes do not themselves create a Git revision.
 
 The explicit image digest must identify a separately reviewed/published image
 implementing `/opt/perkforge/bin/reconcile-identity` with the rendered path-only
-arguments. That adapter is NOT implemented by this prototype. It must embed exact
+arguments. The source adapter is implemented under `executor/`; its isolated synthetic
+container acceptance is documented there. No production image is published. It must embed exact
 clean `/opt/enrollment` and `/opt/platform` sources and verify build provenance
 against both revision arguments before invoking the reviewed Ansible stage. The
-current operator stage checks published tags over GitHub: a reviewed embedded
-provenance path is needed before claiming a network-free executor. No runtime Git
+operator stage checks published tags over GitHub. The distinct embedded stage
+checks image-bundled source hashes and revisions without runtime GitHub access. No runtime Git
 fetch, unpinned package install or global CI activation is proposed.
 
 The adapter must securely stage only the exact parent-writer token from the
