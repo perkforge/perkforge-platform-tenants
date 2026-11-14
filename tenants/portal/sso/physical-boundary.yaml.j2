@@ -21,6 +21,13 @@ spec:
   egress:
   - to: [{ipBlock: {cidr: {{ (portal_issuer_ipv4 ~ '/32') | to_json }}}}]
     ports: [{protocol: TCP, port: 443}]
+{% if portal_ingress_pod_egress | default(false) | bool %}
+  # Some CNIs evaluate egress after hostPort/service DNAT. Same TLS ingress peer.
+  - to:
+    - namespaceSelector: {matchLabels: {kubernetes.io/metadata.name: kube-system}}
+      podSelector: {matchLabels: {app.kubernetes.io/name: rke2-traefik}}
+    ports: [{protocol: TCP, port: {{ portal_ingress_pod_tls_port | default(8443) | int }}}]
+{% endif %}
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress

@@ -38,3 +38,11 @@ app v0.3.1 digest. Apply the matching platform-owned runtime-contract before sou
 promotion. Platform-admin access requires only the exact signed platform-admin group,
 not tenant membership. CI renders the actual released active chart and rejects the
 old auth image; historical disabled fixtures and the default paused roots remain unchanged.
+
+If the CNI evaluates ingress hostPort/service traffic after destination translation,
+the ingress IP/32:443 rule alone may not match. After verifying the native RKE2
+Traefik pod port, opt in with `portal_ingress_pod_egress: true` and set
+`portal_ingress_pod_tls_port` (default `8443`). This adds only the same shared TLS
+ingress peer selected by namespace and pod labels; it does not bypass hostname/CA
+validation, grant direct Keycloak access or enable HTTP. Leave it off for targets
+that do not need this translated-port rule.
