@@ -58,7 +58,7 @@ def run(a):
   guard.verify(str(w/'group-writer'),str(context/'trigger'),prepare=True)
   lock=os.open(context/'trigger.lock',os.O_RDWR|os.O_NOFOLLOW|os.O_NONBLOCK);fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
   os.environ['PERKFORGE_PHASE_LOCK_OWNER']=str(os.getpid());os.environ['PERKFORGE_GROUP_LOCK_OWNER']=str(os.getpid())
-  guard.verify(str(w/'group-writer'),str(context/'trigger'),require_locked=True)
+  subprocess.run(['python3',str(BASE/'phases/phase-lock.py'),'--locked',str(w),str(group)],check=True,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
   if a.phase=='memberships':
    subprocess.run(['/opt/perkforge/bin/refresh-identity-evidence',str(w/'phase-inputs.json'),str(w)],check=True)
    subprocess.run([str(BASE/'phases/run-memberships.sh'),'--apply',str(w/'phase-inputs.json'),str(w),str(group)],check=True);return
