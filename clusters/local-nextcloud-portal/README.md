@@ -1,7 +1,7 @@
 # Nextcloud plus admin-only Portal
 
 This optional composite preserves the existing Nextcloud selection byte-for-byte
-and selects released Portal app configuration v2.1.0. It is not selected by the
+and selects released Portal app configuration v2.1.1. It is not selected by the
 existing platform root. Portal uses the existing digest-pinned app, one 25m CPU/
 64Mi replica and admin-only server policy. No new human privileges are granted.
 
@@ -12,7 +12,7 @@ Before selecting this enrollment path at an immutable reviewed commit, verify:
 - Portal public identity CA, approved exact Keycloak HTTPS egress and ingress
   routing exist. The DNS-only baseline is insufficient for OIDC.
 - Existing scoped reconcilers, admission policies and runtime SA remain intact.
-- App config v2.1.0 and its pinned image are available without changing builds.
+- App config v2.1.1 and its pinned image are available without changing builds.
 
 Use physical native OpenBao/ESO custody, never historical VM delivery scripts.
 Keep the Portal rollout coordinated with the integrated pilot. Availability and
@@ -32,3 +32,9 @@ collision, populated exact records and matching existing Portal identity. Never
 apply consumers before reviewing their targets. Verify actual synchronized payloads
 and TLS chain before activating the app. The renderer does not provision credentials,
 change Keycloak, apply resources, enable the source, or bypass approval gates.
+
+The active Portal selection uses published configuration v2.1.1 and its normal-published
+app v0.3.1 digest. Apply the matching platform-owned runtime-contract before source
+promotion. Platform-admin access requires only the exact signed platform-admin group,
+not tenant membership. CI renders the actual released active chart and rejects the
+old auth image; historical disabled fixtures and the default paused roots remain unchanged.

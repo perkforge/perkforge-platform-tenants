@@ -1,23 +1,24 @@
-"""Actual published v2.0.0 rendered offline; forced enablement is test-only.
+"""Actual selected active Portal release rendered offline without enablement overrides.
 Historical v1.0.0 render remains a denial fixture, never a selected dependency.
 """
 from copy import deepcopy
 import json
 import os
-from test_enrollment_release import render_local_app
+from test_enrollment_release import render_local_app, active_portal_release
 from pathlib import Path
 import yaml
 ROOT=Path(__file__).resolve().parents[1]
 p=next(yaml.safe_load_all((ROOT/'tenants/portal/foundation/deployment-policy.yaml').read_text()))
-base=next(obj for obj in render_local_app(Path(os.environ['TENANT_APP_CHECKOUT']), enabled=True) if obj['kind']=='Deployment')
-assert base == json.loads((ROOT/'scripts/fixtures/portal-v2.0.0-deployment.json').read_text())
+base=next(obj for obj in render_local_app(Path(os.environ['ACTIVE_PORTAL_APP_CHECKOUT']), release=active_portal_release()) if obj['kind']=='Deployment')
+assert base == json.loads((ROOT/'scripts/fixtures/portal-active-deployment.json').read_text())
 params=yaml.safe_load((ROOT/'tenants/portal/foundation/runtime-contract.yaml').read_text())
 cases=[]
 def add(name,mutate=None):
     obj=deepcopy(base)
     if mutate: mutate(obj['spec']['template']['spec'])
     cases.append({'name':name,'object':obj,'allowed':mutate is None})
-add('published-v2.0.0-physical')
+add('published-active-physical')
+cases.append({'name':'old-auth-image-rejected','object':json.loads((ROOT/'scripts/fixtures/portal-v2.0.0-deployment.json').read_text()),'allowed':False})
 add('old-vm-selector',lambda x:x.update(nodeSelector={'kubernetes.io/hostname':'cks-worker'}))
 add('missing-affinity',lambda x:x.pop('affinity'))
 add('node-name-bypass',lambda x:x.update(nodeName='control-plane'))
