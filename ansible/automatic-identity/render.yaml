@@ -13,6 +13,8 @@
     automatic_identity_namespace: ''
     automatic_identity_receipt_claim: ''
     automatic_identity_inputs_configmap: ''
+    automatic_identity_inputs_sha256: ''
+    automatic_identity_worker_node: ''
     automatic_identity_credentials_secret: ''
     automatic_identity_worker_sa: ''
     automatic_identity_pull_secret: ''
@@ -47,6 +49,8 @@
         - automatic_identity_context in selection.contexts
         - selection.contexts[automatic_identity_context].canonicalContext == 'big-bang-bootstrap/configuration/authorization/contexts/' + automatic_identity_context + '.yaml'
         - selection.contexts[automatic_identity_context].gitlabGroupPath == 'tenants/' + automatic_identity_context
+        - automatic_identity_inputs_sha256 is match('^[0-9a-f]{64}$')
+        - automatic_identity_worker_node is match('^[a-z0-9][a-z0-9.-]{0,62}$')
         - automatic_identity_image is match('^[a-z0-9][a-z0-9./_-]+@sha256:[0-9a-f]{64}$')
         - automatic_identity_source_path is match('^\./[a-zA-Z0-9/_-]+$')
         - automatic_identity_cpu_request is match('^[1-9][0-9]*m$')
@@ -61,7 +65,7 @@
       loop: ['{{ automatic_identity_namespace }}', '{{ automatic_identity_receipt_claim }}', '{{ automatic_identity_inputs_configmap }}', '{{ automatic_identity_credentials_secret }}', '{{ automatic_identity_worker_sa }}', '{{ automatic_identity_reconciler_sa }}', '{{ automatic_identity_source_name }}', '{{ automatic_identity_pull_secret }}']
     - name: Bind immutable invocation identity
       ansible.builtin.set_fact:
-        invocation: '{{ {"context": automatic_identity_context, "platform": selection.platformRevision, "enrollment": automatic_identity_enrollment_revision, "image": automatic_identity_image, "inputs": automatic_identity_inputs_configmap, "credentials": automatic_identity_credentials_secret, "namespace": automatic_identity_namespace, "claim": automatic_identity_receipt_claim, "worker": automatic_identity_worker_sa, "pull": automatic_identity_pull_secret, "cpuRequest": automatic_identity_cpu_request, "cpuLimit": automatic_identity_cpu_limit, "memoryRequest": automatic_identity_memory_request, "memoryLimit": automatic_identity_memory_limit} | to_json | hash("sha256") }}'
+        invocation: '{{ {"context": automatic_identity_context, "platform": selection.platformRevision, "enrollment": automatic_identity_enrollment_revision, "image": automatic_identity_image, "inputs": automatic_identity_inputs_configmap, "inputsSHA256": automatic_identity_inputs_sha256, "workerNode": automatic_identity_worker_node, "credentials": automatic_identity_credentials_secret, "namespace": automatic_identity_namespace, "claim": automatic_identity_receipt_claim, "worker": automatic_identity_worker_sa, "pull": automatic_identity_pull_secret, "cpuRequest": automatic_identity_cpu_request, "cpuLimit": automatic_identity_cpu_limit, "memoryRequest": automatic_identity_memory_request, "memoryLimit": automatic_identity_memory_limit} | to_json | hash("sha256") }}'
     - ansible.builtin.file:
         path: '{{ automatic_identity_output }}/job'
         state: directory

@@ -24,6 +24,7 @@ class AutomaticIdentity(unittest.TestCase):
             'context':'portal','enrollment_revision':'b'*40,
             'image':'registry.example.test/reviewed/executor@sha256:'+'c'*64,
             'namespace':'tenant-identity','receipt_claim':'identity-receipts',
+            'inputs_sha256':'e'*64,'worker_node':'fixture-worker-1',
             'inputs_configmap':'portal-inputs-v1','credentials_secret':'portal-writer-v1',
             'worker_sa':'identity-worker','reconciler_sa':'identity-reconciler',
             'pull_secret':'registry1','source_name':'tenant-enrollments',
@@ -45,7 +46,7 @@ class AutomaticIdentity(unittest.TestCase):
         self.assertEqual(self.run_render(True).returncode,0)
         self.assertFalse(self.out.exists())
     def test_missing_approval_image_and_revision_fail_before_output(self):
-        for key,value in [('automatic_identity_foundation_approved',False),('automatic_identity_image','image:latest'),('automatic_identity_enrollment_revision','main'),('automatic_identity_worker_sa',''),('automatic_identity_context','unknown')]:
+        for key,value in [('automatic_identity_foundation_approved',False),('automatic_identity_image','image:latest'),('automatic_identity_enrollment_revision','main'),('automatic_identity_inputs_sha256',''),('automatic_identity_worker_node',''),('automatic_identity_worker_sa',''),('automatic_identity_context','unknown')]:
             with self.subTest(key=key):
                 old=self.inputs[key]; self.inputs[key]=value
                 self.assertNotEqual(self.run_render().returncode,0)
@@ -66,6 +67,13 @@ class AutomaticIdentity(unittest.TestCase):
         self.inputs['automatic_identity_enrollment_revision']='d'*40
         self.assertEqual(self.run_render().returncode,0)
         self.assertNotEqual(yaml.safe_load((self.out/'job/job.yaml').read_text())['metadata']['name'],old)
+        previous=yaml.safe_load((self.out/'job/job.yaml').read_text())['metadata']['name']
+        self.inputs['automatic_identity_inputs_sha256']='f'*64
+        self.assertEqual(self.run_render().returncode,0)
+        revised=yaml.safe_load((self.out/'job/job.yaml').read_text())
+        self.assertNotEqual(revised['metadata']['name'],previous)
+        self.assertEqual(revised['spec']['template']['spec']['nodeSelector'],{'kubernetes.io/hostname':'fixture-worker-1'})
+        self.assertIn('--inputs-sha256',revised['spec']['template']['spec']['containers'][0]['args'])
         build=subprocess.run(['kubectl','kustomize',str(self.out/'job')],capture_output=True,text=True)
         self.assertEqual(build.returncode,0,build.stderr)
     def test_existing_roots_unselected(self):

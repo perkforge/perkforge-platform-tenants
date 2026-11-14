@@ -6,6 +6,7 @@ metadata:
   annotations:
     platform.perkforge.io/enrollment-revision: {{ automatic_identity_enrollment_revision | to_json }}
     platform.perkforge.io/platform-revision: {{ selection.platformRevision | to_json }}
+    platform.perkforge.io/inputs-sha256: {{ automatic_identity_inputs_sha256 | to_json }}
     platform.perkforge.io/invocation: {{ invocation | to_json }}
 spec:
   completions: 1
@@ -18,6 +19,8 @@ spec:
     spec:
       serviceAccountName: {{ automatic_identity_worker_sa }}
       automountServiceAccountToken: false
+      nodeSelector:
+        kubernetes.io/hostname: {{ automatic_identity_worker_node | to_json }}
       restartPolicy: Never
       imagePullSecrets: [{name: {{ automatic_identity_pull_secret }}}]
       securityContext: {runAsNonRoot: true, runAsUser: 65532, runAsGroup: 65532, fsGroup: 65532, seccompProfile: {type: RuntimeDefault}}
@@ -26,7 +29,7 @@ spec:
         image: {{ automatic_identity_image | to_json }}
         imagePullPolicy: IfNotPresent
         command: [/opt/perkforge/bin/reconcile-identity]
-        args: [--context, {{ automatic_identity_context | to_json }}, --enrollment-revision, {{ automatic_identity_enrollment_revision | to_json }}, --platform-revision, {{ selection.platformRevision | to_json }}, --invocation, {{ invocation | to_json }}, --inputs, /inputs/inputs.yaml, --credentials, /credentials, --receipts, /receipts]
+        args: [--context, {{ automatic_identity_context | to_json }}, --enrollment-revision, {{ automatic_identity_enrollment_revision | to_json }}, --platform-revision, {{ selection.platformRevision | to_json }}, --invocation, {{ invocation | to_json }}, --inputs, /inputs/inputs.yaml, --inputs-sha256, {{ automatic_identity_inputs_sha256 | to_json }}, --credentials, /credentials, --receipts, /receipts]
         securityContext: {allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: {drop: [ALL]}}
         resources:
           requests: {cpu: {{ automatic_identity_cpu_request | to_json }}, memory: {{ automatic_identity_memory_request | to_json }}}

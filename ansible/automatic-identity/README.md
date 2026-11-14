@@ -81,3 +81,19 @@ removing a declaration does not delete a GitLab group or revoke users.
 
 Native references: https://fluxcd.io/flux/use-cases/running-jobs/ and
 https://kubernetes.io/docs/concepts/workloads/controllers/job/ .
+
+### Content and placement binding
+
+`automatic_identity_inputs_sha256` is the SHA256 of the exact mounted `inputs.yaml`
+bytes, not a ConfigMap name or parsed semantic approximation. Include it in the
+Job invocation and require executor equality before using any input or credential.
+Foundation must deliver an immutable ConfigMap at a revisioned/content-addressed
+name; changed bytes require replacement and a newly reviewed digest. Hashing a
+mutable name alone is insufficient and deliberately unsupported.
+`automatic_identity_worker_node` is a required, verified storage-worker hostname,
+not a guessed default. It binds native nodeSelector and the invocation hash.
+Verify CSI availability, actual CPU/memory requests, storage and household I/O
+before selecting it. This prototype cannot infer those facts from a node name.
+Current phase mounts only the group-writer credential; future admin attestor
+execution requires its own separately reviewed boundary, not both tokens in this
+same container by default.
