@@ -19,6 +19,7 @@ jobs:
     - run: python3 -m pip install PyYAML==6.0.3
     - name: Check derived enrollment inventory
       run: |
+        python3 scripts/test_preview_contract.py
         python3 scripts/test_enrollment_inventory.py
         python3 scripts/enrollment_inventory.py --check
     # Test fixture selection only; this is not tenant discovery or a config generator.
