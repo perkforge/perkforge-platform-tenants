@@ -4,7 +4,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 class EntryPoint(unittest.TestCase):
     def test_pinned_invocation_and_fail_closed(self):
         with tempfile.TemporaryDirectory() as td:
-            d=pathlib.Path(td); e=d/'enrollment'; p=d/'platform'; private=d/'private'
+            d=pathlib.Path(td); e=d/'enrollment'; p=d/'platform'; state_root=d/'private'; state_root.mkdir(mode=0o700); private=state_root/'portal'
             for v in (e,p,private): v.mkdir(mode=0o700)
             (e/'ansible').mkdir(); (e/'scripts').mkdir(); (e/'contracts').mkdir()
             for name in ('reconcile-tenant-identity.yaml','verify-release.yaml'):
@@ -34,12 +34,12 @@ if mode=='--apply':
             ph=commit(p)
             contract=json.loads((ROOT/'contracts/tenant-identity-v1.json').read_text()); contract['platformRevision']=ph
             (e/'contracts/tenant-identity-v1.json').write_text(json.dumps(contract)); eh=commit(e)
-            inputs=private/'inputs.json'; token=private/'token'; receipt=private/'receipt.json'; calls=private/'calls'
+            inputs=private/'inputs.json'; token=private/'token'; receipt=private/'gitlab-group.json'; calls=private/'calls'
             token.write_text('OFFLINE-ONLY'); token.chmod(0o600)
-            inp={'gitlab_group_context':'portal','gitlab_group_source_revision':eh,'gitlab_group_scope':'gitlab-enrollment-group-foundation-v1'}
+            inp={'gitlab_group_run':True,'gitlab_group_context':'portal','gitlab_group_source_revision':eh,'gitlab_group_scope':'gitlab-enrollment-group-foundation-v1'}
             def run(extra=None,envextra=None,check=False):
                 calls.write_text(''); inputs.write_text(json.dumps(inp)); inputs.chmod(0o600)
-                values={'tenant_identity_apply':True,'tenant_identity_context':'portal','tenant_identity_platform_checkout':str(p),'tenant_identity_inputs_file':str(inputs),'tenant_identity_token_file':str(token),'tenant_identity_receipt_file':str(receipt),'enrollment_tag':'v0.0.1'}
+                values={'tenant_identity_apply':True,'tenant_identity_context':'portal','tenant_identity_platform_checkout':str(p),'tenant_identity_inputs_file':str(inputs),'tenant_identity_token_file':str(token),'tenant_identity_receipt_file':str(receipt),'tenant_identity_state_root':str(state_root),'enrollment_tag':'v0.0.1'}
                 values.update(extra or {}); vf=private/'vars.json'; vf.write_text(json.dumps(values)); vf.chmod(0o600)
                 r=subprocess.run(['ansible-playbook','-i','localhost,',str(e/'ansible/reconcile-tenant-identity.yaml'),'-e','@'+str(vf)]+(['--check'] if check else []),env={**os.environ,'FIXTURE_CALLS':str(calls),'ANSIBLE_SHOW_CUSTOM_STATS':'true',**(envextra or {})},capture_output=True,text=True,timeout=90)
                 self.assertNotIn('OFFLINE-ONLY',r.stdout+r.stderr)
@@ -47,6 +47,7 @@ if mode=='--apply':
             for extra,check in [({'tenant_identity_apply':False},False),({},True)]:
                 r,c=run(extra,check=check); self.assertEqual(r.returncode,0,r.stdout+r.stderr); self.assertEqual(c,[])
             r,c=run(); self.assertEqual(r.returncode,0,r.stdout+r.stderr); self.assertEqual(c,['--validate','--apply']); self.assertIn('PendingIdentity',r.stdout); self.assertIn('ReadyGroup',r.stdout)
+            inp['gitlab_group_run']=False; r,c=run(); self.assertNotEqual(r.returncode,0); self.assertEqual(c,['--validate']); self.assertNotIn('\"group\": \"ReadyGroup\"',r.stdout); inp['gitlab_group_run']=True
             inp['gitlab_group_context']='other'; r,c=run(); self.assertNotEqual(r.returncode,0); self.assertEqual(c,['--validate'])
             inp['gitlab_group_context']='portal'; inp['gitlab_group_source_revision']='0'*40; r,c=run(); self.assertNotEqual(r.returncode,0); self.assertEqual(c,['--validate'])
             inp['gitlab_group_source_revision']=eh; r,c=run(envextra={'FIXTURE_FAIL':'1'}); self.assertNotEqual(r.returncode,0); self.assertNotIn('"group": "ReadyGroup"',r.stdout); self.assertIn('PartialFailure',r.stdout)

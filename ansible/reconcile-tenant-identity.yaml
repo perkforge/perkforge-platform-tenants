@@ -7,9 +7,10 @@
     tenant_identity_apply: false
     tenant_identity_context: UNCONFIGURED
     tenant_identity_platform_checkout: /UNCONFIGURED/platform
-    tenant_identity_inputs_file: /UNCONFIGURED/inputs.yaml
+    tenant_identity_inputs_file: /UNCONFIGURED/inputs.json
     tenant_identity_token_file: /UNCONFIGURED/token
     tenant_identity_receipt_file: /UNCONFIGURED/receipt.json
+    tenant_identity_state_root: /UNCONFIGURED/state
     enrollment_tag: UNCONFIGURED
   tasks:
   - ansible.builtin.debug:
@@ -32,6 +33,9 @@
         - tenant_identity_selection.contexts[tenant_identity_context].canonicalContext == 'big-bang-bootstrap/configuration/authorization/contexts/' + tenant_identity_context + '.yaml'
         - tenant_identity_selection.contexts[tenant_identity_context].gitlabGroupPath == 'tenants/' + tenant_identity_context
         - tenant_identity_platform_checkout | realpath == tenant_identity_platform_checkout
+        - tenant_identity_state_root is match('^/')
+        - tenant_identity_state_root | realpath == tenant_identity_state_root
+        - tenant_identity_receipt_file == tenant_identity_state_root + '/' + tenant_identity_context + '/gitlab-group.json'
     - ansible.builtin.command:
         argv: [git, -C, '{{ tenant_identity_platform_checkout }}', rev-parse, HEAD]
       register: tenant_platform_head
@@ -57,9 +61,10 @@
       no_log: true
       block:
       - ansible.builtin.set_fact:
-          tenant_identity_inputs: '{{ lookup("file", tenant_identity_inputs_file) | from_yaml }}'
+          tenant_identity_inputs: '{{ lookup("file", tenant_identity_inputs_file) | from_json }}'
       - ansible.builtin.assert:
           that:
+          - tenant_identity_inputs.gitlab_group_run is sameas true
           - tenant_identity_inputs.gitlab_group_context == tenant_identity_context
           - tenant_identity_inputs.gitlab_group_source_revision == portal_head.stdout
           - tenant_identity_inputs.gitlab_group_scope == 'gitlab-enrollment-group-foundation-v1'
