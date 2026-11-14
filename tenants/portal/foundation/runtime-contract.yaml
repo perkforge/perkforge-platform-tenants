@@ -1,4 +1,4 @@
-# Operator-owned allowlist: published portal source v0.4.0, not deployment enablement.
+# Operator-owned allowlist: published Portal image digest, not deployment enablement.
 apiVersion: v1
 kind: ConfigMap
 metadata: {name: portal-runtime-contract, namespace: tenant-portal}

@@ -22,9 +22,16 @@ spec:
        object.spec.chart.spec.sourceRef.kind == 'GitRepository' &&
        object.spec.chart.spec.sourceRef.name == 'tenant-portal' &&
        (!has(object.spec.chart.spec.sourceRef.namespace) || object.spec.chart.spec.sourceRef.namespace == 'tenant-portal-config') &&
-       object.spec.valuesFrom.size() == 4 &&
-       object.spec.valuesFrom.all(v, v.kind == 'ConfigMap' && v.valuesKey == 'values.yaml') &&
-       object.spec.valuesFrom.map(v, v.name) == ['portal-defaults', 'portal-environment', 'portal-profile', 'portal-cluster']
+       object.spec.valuesFrom.size() in [4, 5] &&
+       object.spec.valuesFrom.all(v, v.kind == 'ConfigMap' && !has(v.targetPath) &&
+         (!has(v.optional) || v.optional == false)) &&
+       object.spec.valuesFrom[0].name == 'portal-defaults' && object.spec.valuesFrom[0].valuesKey == 'values.yaml' &&
+       object.spec.valuesFrom[1].name == 'portal-environment' && object.spec.valuesFrom[1].valuesKey == 'values.yaml' &&
+       object.spec.valuesFrom[2].name == 'portal-profile' && object.spec.valuesFrom[2].valuesKey == 'values.yaml' &&
+       object.spec.valuesFrom[3].name == 'portal-cluster' && object.spec.valuesFrom[3].valuesKey == 'values.yaml' &&
+       (object.spec.valuesFrom.size() == 4 ||
+         (object.spec.valuesFrom[4].name == 'portal-cluster' &&
+          object.spec.valuesFrom[4].valuesKey == 'enrollment-inventory.values.yaml'))
     message: Portal releases retain the protected chart and named value sources; runtime admission checks rendered security settings.
 ---
 apiVersion: admissionregistration.k8s.io/v1
