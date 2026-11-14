@@ -9,7 +9,7 @@ patches:
   patch: |-
     - op: replace
       path: /spec/ref/tag
-      value: v2.3.3
+      value: v2.3.4
     - op: replace
       path: /spec/suspend
       value: false

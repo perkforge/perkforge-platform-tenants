@@ -3,4 +3,4 @@ apiVersion: v1
 kind: ConfigMap
 metadata: {name: portal-runtime-contract, namespace: tenant-portal}
 data:
-  image: ghcr.io/perkforge/perkforge-portal@sha256:9f295b4f9b0ecfe48c1e7ce3c28f321dab661357c4caa0f13140676264fb51b1
+  image: ghcr.io/perkforge/perkforge-portal@sha256:1aff18f27bb6a2354661ddf89664b686796a01387658d6f0ed134114786b02a8
