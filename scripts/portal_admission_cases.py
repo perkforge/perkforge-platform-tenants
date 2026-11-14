@@ -37,4 +37,26 @@ add('additional-volume',lambda x:x['volumes'].append({'name':'data','emptyDir':{
 add('extra-env',lambda x:x['containers'][0]['env'].append({'name':'NODE_TLS_REJECT_UNAUTHORIZED','value':'0'}))
 # Actual rendered published v1.0.0 (dcb6e3fc56961a977172bac3f2c493df2eb806e3).
 cases.append({'name':'published-v1.0.0-rejected','object':json.loads((ROOT/'scripts/fixtures/portal-v1.0.0-deployment.json').read_text()),'allowed':False})
+# Optional inventory remains inside exact named public-config boundary.
+def inventory_pod(pod):
+    pod['volumes'].append({'name':'enrollment-inventory','configMap':{'name':'portal-enrollment-inventory'}})
+    pod['containers'][0]['volumeMounts'].append({'name':'enrollment-inventory','mountPath':'/etc/portal/enrollment','readOnly':True})
+    pod['containers'][0]['env'].extend([
+        {'name':'ENROLLMENT_SOURCE','value':'gitops-configmap'},
+        {'name':'ENROLLMENT_SOURCE_COMMIT','value':'a'*40},
+        {'name':'ENROLLMENT_INVENTORY_SHA256','value':'b'*64},
+        {'name':'ENROLLMENT_SELECTOR','value':'local-nextcloud-portal'}])
+positive=deepcopy(base)
+inventory_pod(positive['spec']['template']['spec'])
+cases.append({'name':'exact-inventory-mounted','object':positive,'allowed':True})
+for label, change in [
+    ('wrong-cm',lambda x:x['volumes'][1]['configMap'].update(name='other')),
+    ('writable',lambda x:x['containers'][0]['volumeMounts'][1].update(readOnly=False)),
+    ('wrong-path',lambda x:x['containers'][0]['volumeMounts'][1].update(mountPath='/tmp')),
+    ('subpath',lambda x:x['containers'][0]['volumeMounts'][1].update(subPath='other')),
+    ('missing-pin',lambda x:x['containers'][0]['env'].pop(-3)),
+    ('bad-hash',lambda x:next(e for e in x['containers'][0]['env'] if e['name']=='ENROLLMENT_INVENTORY_SHA256').update(value='bad')),
+    ('network-mode',lambda x:next(e for e in x['containers'][0]['env'] if e['name']=='ENROLLMENT_SOURCE').update(value='github-public'))]:
+    obj=deepcopy(positive); change(obj['spec']['template']['spec'])
+    cases.append({'name':'inventory-'+label,'object':obj,'allowed':False})
 print(json.dumps({'policy':p,'params':params,'cases':cases}))

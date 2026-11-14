@@ -42,7 +42,8 @@ spec:
         quantity(c.resources.limits['memory']).compareTo(quantity('192Mi')) == 0 &&
         c.env.exists(e, e.name == 'NODE_EXTRA_CA_CERTS' && e.value == '/etc/portal/identity-ca/ca.crt') &&
         c.env.all(e, e.name in ['NODE_EXTRA_CA_CERTS', 'LISTEN_HOST', 'PORTAL_ORIGIN', 'TENANT_SOURCE',
-          'PORTAL_ACCESS_POLICY', 'OIDC_ISSUER', 'OIDC_CLIENT_ID', 'OIDC_AUDIENCE', 'OIDC_CLIENT_SECRET'] &&
+          'PORTAL_ACCESS_POLICY', 'OIDC_ISSUER', 'OIDC_CLIENT_ID', 'OIDC_AUDIENCE', 'OIDC_CLIENT_SECRET',
+          'ENROLLMENT_SOURCE', 'ENROLLMENT_SOURCE_COMMIT', 'ENROLLMENT_SELECTOR', 'ENROLLMENT_INVENTORY_SHA256'] &&
           c.env.filter(other, other.name == e.name).size() == 1) &&
         c.env.exists(e, e.name == 'PORTAL_ACCESS_POLICY' && e.value == 'platform-admins') &&
         c.env.exists(e, e.name == 'TENANT_SOURCE' && e.value == 'disabled') &&
@@ -54,11 +55,24 @@ spec:
           e.valueFrom.secretKeyRef.key == 'client-secret'))
     message: Portal image and server-side admin-only identity settings are operator-approved.
   - expression: >-
-      variables.pod.volumes.size() == 1 && variables.pod.volumes.all(v,
-        v.name == 'identity-ca' && has(v.configMap) && v.configMap.name == 'portal-identity-ca') &&
-      variables.pod.containers.all(c, c.volumeMounts.size() == 1 && c.volumeMounts.all(v,
-        v.name == 'identity-ca' && v.mountPath == '/etc/portal/identity-ca' && v.readOnly == true))
-    message: Only the public identity CA volume is available to portal workloads.
+      variables.pod.volumes.size() in [1, 2] &&
+      variables.pod.volumes.exists(v, v.name == 'identity-ca' && has(v.configMap) && v.configMap.name == 'portal-identity-ca') &&
+      variables.pod.volumes.all(v,
+        (v.name == 'identity-ca' && has(v.configMap) && v.configMap.name == 'portal-identity-ca') ||
+        (v.name == 'enrollment-inventory' && has(v.configMap) && v.configMap.name == 'portal-enrollment-inventory')) &&
+      variables.pod.containers.all(c, c.volumeMounts.size() == variables.pod.volumes.size() &&
+        c.volumeMounts.exists(v, v.name == 'identity-ca' && v.mountPath == '/etc/portal/identity-ca' && v.readOnly == true) &&
+        c.volumeMounts.all(v,
+          (v.name == 'identity-ca' && v.mountPath == '/etc/portal/identity-ca' && v.readOnly == true) ||
+          (v.name == 'enrollment-inventory' && v.mountPath == '/etc/portal/enrollment' && v.readOnly == true && !has(v.subPath) && !has(v.subPathExpr))) &&
+        (variables.pod.volumes.size() == 1 ?
+          !c.env.exists(e, e.name.startsWith('ENROLLMENT_')) :
+          c.env.exists(e, e.name == 'ENROLLMENT_SOURCE' && e.value == 'gitops-configmap') &&
+          c.env.exists(e, e.name == 'ENROLLMENT_SOURCE_COMMIT' && e.value.matches('^[a-f0-9]{40}$')) &&
+          c.env.exists(e, e.name == 'ENROLLMENT_INVENTORY_SHA256' && e.value.matches('^[a-f0-9]{64}$')) &&
+          c.env.exists(e, e.name == 'ENROLLMENT_SELECTOR' && e.value in ['local', 'dev', 'local-nextcloud', 'local-nextcloud-portal'])))
+    message: Portal mounts only its public CA and optional exact read-only GitOps inventory with pinned provenance.
+
 ---
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingAdmissionPolicyBinding
