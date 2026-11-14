@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.5.0](https://github.com/perkforge/perkforge-platform-tenants/compare/v2.4.0...v2.5.0) (2026-11-14)
+
+
+### Features
+
+* scope Portal inventory configmap and runtime admission ([#66](https://github.com/perkforge/perkforge-platform-tenants/issues/66)) ([b2cd66a](https://github.com/perkforge/perkforge-platform-tenants/commit/b2cd66a9f3ea20fd38792447eae019dbb82b9df8))
+* select published Portal inventory configuration ([#68](https://github.com/perkforge/perkforge-platform-tenants/issues/68)) ([014e81b](https://github.com/perkforge/perkforge-platform-tenants/commit/014e81b7831ab7803549c19589a51ab03d28ce7a))
+
 ## [2.4.0](https://github.com/perkforge/perkforge-platform-tenants/compare/v2.3.0...v2.4.0) (2026-11-14)
 
 
