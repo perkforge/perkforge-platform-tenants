@@ -1,0 +1,44 @@
+# Public trust only. No private CA/signing material or runtime secrets.
+apiVersion: v1
+kind: ConfigMap
+metadata: {name: portal-identity-ca, namespace: tenant-portal}
+data:
+  ca.crt: {{ lookup('file', portal_public_ca_file) | to_json }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata: {name: eso-openbao-ca, namespace: tenant-portal}
+data:
+  ca.crt: {{ lookup('file', portal_public_ca_file) | to_json }}
+---
+# Approved shared-ingress address also reaches other services there at L3/L4.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: {name: portal-issuer-https, namespace: tenant-portal}
+spec:
+  podSelector: {}
+  policyTypes: [Egress]
+  egress:
+  - to: [{ipBlock: {cidr: {{ (portal_issuer_ipv4 ~ '/32') | to_json }}}}]
+    ports: [{protocol: TCP, port: 443}]
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: portal
+  namespace: tenant-portal
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.tls: 'true'
+spec:
+  ingressClassName: traefik
+  tls:
+  - hosts: [{{ portal_hostname | to_json }}]
+    secretName: portal-local-tls
+  rules:
+  - host: {{ portal_hostname | to_json }}
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend: {service: {name: portal, port: {number: 3000}}}
