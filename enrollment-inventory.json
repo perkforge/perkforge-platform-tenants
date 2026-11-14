@@ -1,0 +1,89 @@
+{
+  "evidenceType": "declared-enrollment-selection",
+  "schemaVersion": 1,
+  "selections": {
+    "dev": [
+      {
+        "name": "tenant-portal",
+        "namespace": "tenant-example-portal",
+        "path": "./gitops/clusters/dev",
+        "source": {
+          "name": "tenant-portal",
+          "namespace": "tenant-example-portal",
+          "ref": {
+            "tag": "v2.0.0"
+          },
+          "suspended": true
+        },
+        "suspended": true,
+        "targetNamespace": "tenant-example-portal"
+      }
+    ],
+    "local": [
+      {
+        "name": "tenant-portal",
+        "namespace": "tenant-portal-config",
+        "path": "./gitops/clusters/local",
+        "source": {
+          "name": "tenant-portal",
+          "namespace": "tenant-portal-config",
+          "ref": {
+            "tag": "v2.0.0"
+          },
+          "suspended": true
+        },
+        "suspended": true,
+        "targetNamespace": "tenant-portal-config"
+      }
+    ],
+    "local-nextcloud": [
+      {
+        "name": "tenant-nextcloud",
+        "namespace": "tenant-home-nextcloud-config",
+        "path": "./gitops/clusters/local",
+        "source": {
+          "name": "tenant-nextcloud",
+          "namespace": "tenant-home-nextcloud-config",
+          "ref": {
+            "tag": "v1.1.3"
+          },
+          "suspended": false
+        },
+        "suspended": false,
+        "targetNamespace": "tenant-home-nextcloud-config"
+      }
+    ],
+    "local-nextcloud-portal": [
+      {
+        "name": "tenant-nextcloud",
+        "namespace": "tenant-home-nextcloud-config",
+        "path": "./gitops/clusters/local",
+        "source": {
+          "name": "tenant-nextcloud",
+          "namespace": "tenant-home-nextcloud-config",
+          "ref": {
+            "tag": "v1.1.3"
+          },
+          "suspended": false
+        },
+        "suspended": false,
+        "targetNamespace": "tenant-home-nextcloud-config"
+      },
+      {
+        "name": "tenant-portal",
+        "namespace": "tenant-portal-config",
+        "path": "./gitops/clusters/local",
+        "source": {
+          "name": "tenant-portal",
+          "namespace": "tenant-portal-config",
+          "ref": {
+            "tag": "v2.2.0"
+          },
+          "suspended": false
+        },
+        "suspended": false,
+        "targetNamespace": "tenant-portal-config"
+      }
+    ]
+  }
+}

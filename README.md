@@ -76,3 +76,19 @@ See [RELEASING.md](RELEASING.md) for reviewed release PRs, immutable-tag
 expectations, first-release ordering and the staged switch to tag-based refs.
 
 Selection annotations use `platform.perkforge.io/cluster`, `/environment` and `/profile`. This migration requires a compatible published portal configuration release, followed by an enrollment release and a separately reviewed platform pin advance. Never rewrite old tags or enable enrollment as part of metadata maintenance.
+
+## Derived enrollment inventory
+
+`enrollment-inventory.json` is a deterministic projection of the explicitly listed
+cluster selectors rendered with Kustomize. Regenerate it after selection changes
+with `python3 scripts/enrollment_inventory.py`; CI rejects stale output. Source
+YAML remains authoritative. This is not a manually maintained tenant registry, a
+provisioner, or automatic repository discovery. Consumers must read it at the
+reviewed immutable enrollment release and preserve the chosen selector.
+
+Entries describe declared application enrollment, not customer tenant identity,
+users, live installation, native authorization or health. Suspended false means
+reconciliation is requested in source, not that reconciliation succeeded. No
+secret references, rendered Secret content or runtime status are exported. Portal
+may show this alongside separate live evidence; it must never infer Ready or
+customer/user ownership from a folder, namespace or this artifact.
