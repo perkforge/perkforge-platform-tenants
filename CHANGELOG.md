@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.5.2](https://github.com/perkforge/perkforge-platform-tenants/compare/v2.5.1...v2.5.2) (2026-11-14)
+
+
+### Bug Fixes
+
+* select final authenticated architecture configuration ([#74](https://github.com/perkforge/perkforge-platform-tenants/issues/74)) ([e77bc7f](https://github.com/perkforge/perkforge-platform-tenants/commit/e77bc7f4eed9db5e549b8c618f52e7ae21e19a5a))
+* select published current identity Portal configuration ([#71](https://github.com/perkforge/perkforge-platform-tenants/issues/71)) ([f5dfa7b](https://github.com/perkforge/perkforge-platform-tenants/commit/f5dfa7b2377907587ec19f156d4e7564ec06cd5b))
+
 ## [2.5.1](https://github.com/perkforge/perkforge-platform-tenants/compare/v2.5.0...v2.5.1) (2026-11-14)
 
 
