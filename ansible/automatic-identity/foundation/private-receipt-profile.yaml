@@ -1,0 +1,23 @@
+# Planning input only, not a Kubernetes manifest or selected renderer input.
+schemaVersion: 1
+enabled: false
+purpose: fresh-retained-receipt-private-directory
+namespace: tenant-identity-writer
+runAsUser: 1001
+runAsGroup: 1001
+fsGroup: 1001
+rootMount: /volume
+privateDirectory: private
+privateMode: "0700"
+futureWriterMount: /receipts
+futureWriterSubPath: private
+automountServiceAccountToken: false
+readOnlyRootFilesystem: true
+allowPrivilegeEscalation: false
+dropCapabilities: [ALL]
+network: none
+requireFreshClaimUID: true
+requireNoOtherClaimConsumers: true
+requireHelperUIDCleanupAndDetach: true
+allowChown: false
+allowExistingPathAdoption: false

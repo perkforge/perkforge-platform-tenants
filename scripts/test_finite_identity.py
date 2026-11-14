@@ -9,8 +9,8 @@ class Tests(unittest.TestCase):
   for p in ('foundation','attest','memberships'):d['phaseInputs'][p]['identity']['identity_receipt_uid']='22222222-2222-4222-8222-222222222222'
   items=d['sourceItems'];raw={x['path']:b'fixture' for x in items if x['path']!='provenance.sha256'}
   manifest=''.join(hashlib.sha256(b).hexdigest()+'  '+p+'\n' for p,b in sorted(raw.items())).encode();sha=hashlib.sha256(manifest).hexdigest();raw['provenance.sha256']=manifest
-  data={x['key']:base64.b64encode(raw[x['path']]).decode() for x in items};d['sourceBundleSHA256']=sha;d['sourceBundleName']='identity-source-'+sha[:20]
-  d['sourceBundle']={'sha256':sha,'items':items,'configMaps':[{'apiVersion':'v1','kind':'ConfigMap','metadata':{'name':d['sourceBundleName'],'namespace':ns},'immutable':True,'binaryData':data} for ns in ('tenant-identity-writer','tenant-identity-attestor')]}
+  data={x['key']:raw[x['path']].decode('utf-8') for x in items};d['sourceBundleSHA256']=sha;d['sourceBundleName']='identity-source-'+sha[:20]
+  d['sourceBundle']={'sha256':sha,'items':items,'configMaps':[{'apiVersion':'v1','kind':'ConfigMap','metadata':{'name':d['sourceBundleName'],'namespace':ns},'immutable':True,'data':data} for ns in ('tenant-identity-writer','tenant-identity-attestor')]}
   return d
  def test_current_opt_in_root_is_empty(self):
   root=pathlib.Path(__file__).resolve().parents[1]
@@ -34,7 +34,7 @@ class Tests(unittest.TestCase):
    self.assertEqual(secrets,['isolated-attestor' if phase=='attest' else 'group-writer'])
    self.assertEqual(any(v['name']=='api' for v in pod['volumes']),phase=='attest')
  def test_changed_source_refuses_same_digest(self):
-  d=self.sample();d["sourceBundle"]["configMaps"][0]["binaryData"]["file-0"]=base64.b64encode(b"different").decode()
+  d=self.sample();d["sourceBundle"]["configMaps"][0]["data"]["file-0"]="different"
   with self.assertRaises(ValueError):render(d)
  def test_fail_closed(self):
   for key,value in [('foundationApproved',False),('image','bad'),('workerNode',''),('retryGeneration',True),('sourceBundleName','mutable')]:

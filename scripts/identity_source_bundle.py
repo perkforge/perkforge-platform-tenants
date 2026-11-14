@@ -20,9 +20,9 @@ def bundle(enrollment,er,platform,pr):
  ctx='big-bang-bootstrap/configuration/authorization/contexts/portal.yaml';data['platform/'+ctx]=source(platform,pr,ctx)
  data['revisions.json']=json.dumps({'enrollment':er,'platform':pr},sort_keys=True).encode()
  manifest=''.join(hashlib.sha256(b).hexdigest()+'  '+p+'\n' for p,b in sorted(data.items())).encode();sha=hashlib.sha256(manifest).hexdigest();data['provenance.sha256']=manifest
- keys={p:'file-'+str(i) for i,p in enumerate(sorted(data))};encoded={keys[p]:base64.b64encode(b).decode() for p,b in data.items()}
+ keys={p:'file-'+str(i) for i,p in enumerate(sorted(data))};encoded={keys[p]:b.decode('utf-8') for p,b in data.items()}
  if sum(len(x) for x in encoded.values())>786432:raise ValueError('bounded ConfigMap payload')
- cms=[{'apiVersion':'v1','kind':'ConfigMap','metadata':{'name':'identity-source-'+sha[:20],'namespace':ns},'immutable':True,'binaryData':encoded} for ns in ('tenant-identity-writer','tenant-identity-attestor')]
+ cms=[{'apiVersion':'v1','kind':'ConfigMap','metadata':{'name':'identity-source-'+sha[:20],'namespace':ns},'immutable':True,'data':encoded} for ns in ('tenant-identity-writer','tenant-identity-attestor')]
  return {'sha256':sha,'items':[{'key':keys[p],'path':p} for p in sorted(data)],'configMaps':cms}
 if __name__=='__main__':
  p=argparse.ArgumentParser();p.add_argument('--enrollment',type=pathlib.Path,default=ROOT);p.add_argument('--enrollment-revision',required=True);p.add_argument('--platform',type=pathlib.Path,required=True);p.add_argument('--platform-revision',required=True);p.add_argument('--output',type=pathlib.Path,required=True);a=p.parse_args()
