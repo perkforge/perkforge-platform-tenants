@@ -1,0 +1,100 @@
+# Explicit operator-run enrollment stage, not Portal self-service or a scheduler.
+- name: Reconcile selected tenant identity stages
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    tenant_identity_apply: false
+    tenant_identity_context: UNCONFIGURED
+    tenant_identity_platform_checkout: /UNCONFIGURED/platform
+    tenant_identity_inputs_file: /UNCONFIGURED/inputs.yaml
+    tenant_identity_token_file: /UNCONFIGURED/token
+    tenant_identity_receipt_file: /UNCONFIGURED/receipt.json
+    enrollment_tag: UNCONFIGURED
+  tasks:
+  - ansible.builtin.debug:
+      msg: 'Default/check mode is inert. Group foundation only; native user attestation and membership remain separately pending.'
+  - when: tenant_identity_apply | bool and not ansible_check_mode
+    block:
+    - name: Verify clean published enrollment before any adapter invocation
+      ansible.builtin.include_tasks: verify-release.yaml
+    - ansible.builtin.set_fact:
+        tenant_identity_selection: '{{ lookup("file", playbook_dir + "/../contracts/tenant-identity-v1.json") | from_json }}'
+    - ansible.builtin.assert:
+        that:
+        - tenant_identity_selection.schemaVersion == 1
+        - tenant_identity_selection.kind == 'explicit-tenant-identity-selection'
+        - tenant_identity_selection.platformRepository == 'perkforge/perkforge-platform'
+        - tenant_identity_selection.platformRevision is string
+        - tenant_identity_selection.platformRevision is match('^[0-9a-f]{40}$')
+        - tenant_identity_context is match('^[a-z][a-z0-9-]{0,30}$')
+        - tenant_identity_context in tenant_identity_selection.contexts
+        - tenant_identity_selection.contexts[tenant_identity_context].canonicalContext == 'big-bang-bootstrap/configuration/authorization/contexts/' + tenant_identity_context + '.yaml'
+        - tenant_identity_selection.contexts[tenant_identity_context].gitlabGroupPath == 'tenants/' + tenant_identity_context
+        - tenant_identity_platform_checkout | realpath == tenant_identity_platform_checkout
+    - ansible.builtin.command:
+        argv: [git, -C, '{{ tenant_identity_platform_checkout }}', rev-parse, HEAD]
+      register: tenant_platform_head
+      changed_when: false
+    - ansible.builtin.command:
+        argv: [git, -C, '{{ tenant_identity_platform_checkout }}', status, --porcelain]
+      register: tenant_platform_dirty
+      changed_when: false
+    - ansible.builtin.assert:
+        that:
+        - tenant_platform_head.stdout == tenant_identity_selection.platformRevision
+        - tenant_platform_dirty.stdout | length == 0
+    - name: Verify canonical context using pinned platform verifier
+      ansible.builtin.command:
+        argv: [python3, -B, '{{ tenant_identity_platform_checkout }}/big-bang-bootstrap/configuration/authorization/contexts/verify.py', '{{ tenant_identity_platform_checkout }}/{{ tenant_identity_selection.contexts[tenant_identity_context].canonicalContext }}']
+      changed_when: false
+    - name: Validate protected input paths using the pinned adapter before reading them
+      ansible.builtin.command:
+        argv: ['{{ tenant_identity_platform_checkout }}/big-bang-bootstrap/configuration/packages/gitlab/enrollment/run-groups.sh', --validate, '{{ tenant_identity_token_file }}', '{{ tenant_identity_receipt_file }}', '{{ tenant_identity_inputs_file }}']
+      changed_when: false
+      no_log: true
+    - name: Bind exact protected invocation to this reviewed enrollment revision
+      no_log: true
+      block:
+      - ansible.builtin.set_fact:
+          tenant_identity_inputs: '{{ lookup("file", tenant_identity_inputs_file) | from_yaml }}'
+      - ansible.builtin.assert:
+          that:
+          - tenant_identity_inputs.gitlab_group_context == tenant_identity_context
+          - tenant_identity_inputs.gitlab_group_source_revision == portal_head.stdout
+          - tenant_identity_inputs.gitlab_group_scope == 'gitlab-enrollment-group-foundation-v1'
+      - name: Run serialized pinned native group adapter
+        ansible.builtin.command:
+          argv: ['{{ tenant_identity_platform_checkout }}/big-bang-bootstrap/configuration/packages/gitlab/enrollment/run-groups.sh', --apply, '{{ tenant_identity_token_file }}', '{{ tenant_identity_receipt_file }}', '{{ tenant_identity_inputs_file }}']
+        changed_when: false
+      - ansible.builtin.set_fact:
+          tenant_group_receipt: '{{ lookup("file", tenant_identity_receipt_file) | from_json }}'
+      - ansible.builtin.assert:
+          that:
+          - tenant_group_receipt.context == tenant_identity_context
+          - tenant_group_receipt.source_revision == portal_head.stdout
+          - tenant_group_receipt.stage == 'group-ready'
+          - tenant_group_receipt.parent_id | int > 0
+          - tenant_group_receipt.group_id | int > 0
+    - name: Report stage evidence without claiming complete tenant onboarding
+      ansible.builtin.set_stats:
+        data:
+          tenant_identity_status:
+            context: '{{ tenant_identity_context }}'
+            enrollment_revision: '{{ portal_head.stdout }}'
+            group: ReadyGroup
+            membership: PendingIdentity
+            automatic_reconciliation: false
+        per_host: false
+    rescue:
+    - name: Report partial failure without replaying old Ready evidence
+      ansible.builtin.set_stats:
+        data:
+          tenant_identity_status:
+            group: Unverified
+            membership: Unverified
+            stage: PartialFailure
+            automatic_reconciliation: false
+        per_host: false
+    - ansible.builtin.fail:
+        msg: 'Tenant identity stage failed; preserve private evidence and retry only the reviewed failed stage. No complete onboarding claim.'

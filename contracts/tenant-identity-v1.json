@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "kind": "explicit-tenant-identity-selection",
+  "platformRepository": "perkforge/perkforge-platform",
+  "platformRevision": null,
+  "contexts": {
+    "portal": {
+      "canonicalContext": "big-bang-bootstrap/configuration/authorization/contexts/portal.yaml",
+      "gitlabGroupPath": "tenants/portal"
+    }
+  }
+}
