@@ -6,7 +6,7 @@ from urllib.parse import urlsplit,parse_qs,unquote
 P=pathlib.Path;uid='22222222-2222-4222-8222-222222222222'
 roles={'tenant-admin':'admins','tenant-developer':'developers','tenant-viewer':'viewers'}
 groups={r:f'00000000-0000-4000-8000-{i:012d}' for i,r in enumerate(roles,1)}
-state={'rv':1,'data':{},'desired':'','group':False,'groupWrites':0,'patches':0,'calls':0}
+state={'rv':1,'data':{},'desired':'','group':False,'groupWrites':0,'patches':0,'calls':0,'members':{},'membershipWrites':0}
 class H(BaseHTTPRequestHandler):
  def log_message(self,*a):pass
  def reply(self,n,v):self.send_response(n);self.send_header('Content-Type','application/json');self.end_headers();self.wfile.write(json.dumps(v).encode())
@@ -17,11 +17,17 @@ class H(BaseHTTPRequestHandler):
    if self.headers.get('Authorization')!='Bearer OFFLINE-KC-ACCESS':return self.reply(403,{})
    r=next((r for r,g in groups.items() if '/groups/'+g in p),None)
    if not r:return self.reply(403,{})
-   return self.reply(200,[] if p.endswith('/members') else {'id':groups[r],'path':'/tenants/portal/'+roles[r],'subGroupCount':0})
+   return self.reply(200,([{'id':'11111111-1111-4111-8111-111111111111','enabled':True}] if r=='tenant-developer' else []) if p.endswith('/members') else {'id':groups[r],'path':'/tenants/portal/'+roles[r],'subGroupCount':0})
   if p.startswith('/api/v4/'):
    token=self.headers.get('PRIVATE-TOKEN')
    if token not in ('OFFLINE-WRITER','OFFLINE-READER'):return self.reply(403,{})
-   if p.endswith('/personal_access_tokens/self'):return self.reply(200,{'active':True,'revoked':False,'scopes':['read_api'],'expires_at':'2099-01-01'})
+   if p.endswith('/personal_access_tokens/self'):return self.reply(200,{'id':80,'user_id':90,'active':True,'revoked':False,'scopes':['read_api'] if token=='OFFLINE-READER' else ['api'],'expires_at':'2099-01-01'})
+   if p=='/api/v4/user':return self.reply(200,{'id':90,'bot':True,'state':'active'})
+   if p=='/api/v4/groups/30/members/90':return self.reply(200,{'id':90,'access_level':50})
+   if p=='/api/v4/groups/30/access_tokens/80':return self.reply(200,{'id':80,'user_id':90,'access_level':50})
+   if p=='/api/v4/users':return self.reply(200,[{'id':21,'is_admin':False,'state':'active','identities':[{'provider':'openid_connect','extern_uid':'11111111-1111-4111-8111-111111111111'}]}])
+   if p=='/api/v4/users/21':return self.reply(200,{'id':21,'state':'active'})
+   if p in ('/api/v4/groups/31/members/21','/api/v4/groups/31/members/all/21'):return self.reply(200,{'id':21,'access_level':state['members'][21]}) if 21 in state['members'] else self.reply(404,{})
    if p.endswith('/version'):return self.reply(200,{'version':'19.4.2-ee'})
    if p in ('/api/v4/groups/30','/api/v4/groups/tenants'):return self.reply(200,{'id':30,'name':'tenants','path':'tenants','full_path':'tenants','visibility':'private','parent_id':None})
    if p in ('/api/v4/groups/31','/api/v4/groups/tenants/portal') and state['group']:return self.reply(200,{'id':31,'name':'portal','path':'portal','full_path':'tenants/portal','visibility':'private','parent_id':30,'request_access_enabled':False})
@@ -33,6 +39,8 @@ class H(BaseHTTPRequestHandler):
   if self.path=='/auth/realms/perkforge/protocol/openid-connect/token':
    assert parse_qs(b.decode())=={'grant_type':['client_credentials'],'client_id':['snapshot-reader'],'client_secret':['OFFLINE-KC-SECRET']}
    return self.reply(200,{'token_type':'Bearer','access_token':'OFFLINE-KC-ACCESS'})
+  if self.path=='/api/v4/groups/31/members' and self.headers.get('PRIVATE-TOKEN')=='OFFLINE-WRITER':
+   d=json.loads(b);assert d=={'user_id':21,'access_level':30};state['members'][21]=30;state['membershipWrites']+=1;return self.reply(201,{'id':21,'access_level':30})
   if self.path=='/api/v4/groups' and self.headers.get('PRIVATE-TOKEN')=='OFFLINE-WRITER':
    d=json.loads(b);assert d['parent_id']==30 and d['path']=='portal' and d['visibility']=='private';state['group']=True;state['groupWrites']+=1
    return self.reply(201,dict(d,id=31,full_path='tenants/portal'))
@@ -70,7 +78,8 @@ try:
  for name in ('foundation','attest','memberships'):
   if name=='memberships':P('/identity-evidence/receipt.json').write_text(state['data']['receipt.json'])
   p=phase(name);assert p.returncode==0,(name,p.stdout,p.stderr)
- assert state['groupWrites']==1 and state['patches']==1
+ assert state['groupWrites']==1 and state['patches']==1 and state['membershipWrites']==1
+ p=phase('memberships');assert p.returncode==0 and state['membershipWrites']==1
  p=phase('foundation');assert p.returncode==0 and state['groupWrites']==1
  # New foundation attempt fences an older queued attempt under stable context lock.
  newer=dict(d,identity_previous_invocation=d['identity_invocation'],identity_retry_generation=1);newer['identity_invocation']=invocation(newer)
@@ -80,5 +89,5 @@ try:
  before=state['calls'];p=phase('memberships',newer);assert p.returncode!=0 and state['calls']==before
  assert not list(P('/tmp').glob('phase-*'))
  r=resource.getrusage(resource.RUSAGE_CHILDREN)
- print(json.dumps({'result':'PASS','scope':'full launcher three phases, empty canonical roster; explicit retry/stale attempt and stale projection denials','wall_seconds':time.monotonic()-start,'cpu_user_seconds':r.ru_utime,'cpu_system_seconds':r.ru_stime,'largest_child_rss_kib':r.ru_maxrss}))
+ print(json.dumps({'result':'PASS','scope':'full launcher three phases, one synthetic canonical developer grant/idempotent repeat; explicit retry/stale attempt and stale projection denials','wall_seconds':time.monotonic()-start,'cpu_user_seconds':r.ru_utime,'cpu_system_seconds':r.ru_stime,'largest_child_rss_kib':r.ru_maxrss}))
 finally:srv.shutdown();srv.server_close()

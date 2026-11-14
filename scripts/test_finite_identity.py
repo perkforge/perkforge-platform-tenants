@@ -1,11 +1,16 @@
 #!/usr/bin/env python3
-import copy,unittest
+import base64,copy,hashlib,unittest
 from finite_identity import render,IMAGE,digest
 class Tests(unittest.TestCase):
  def sample(self):
   d={'schemaVersion':1,'context':'portal','enabled':True,'foundationApproved':True,'sourceName':'cluster-config','sourcePath':'./generated/identity/portal','enrollmentRevision':'a'*40,'platformRevision':'b'*40,'invocation':'c'*64,'retryGeneration':0,'image':IMAGE,'sourceItems':[{'key':'file-'+str(i),'path':x} for i,x in enumerate(['perkforge/bin/launch','perkforge/bin/run-phase.py','perkforge/bin/refresh-identity-evidence','revisions.json','provenance.sha256'])],'sourceBundleSHA256':'d'*64,'sourceBundleName':'identity-source-'+('d'*20),'workerNode':'synthetic-worker','receiptClaim':'identity-receipts','writerSecret':'group-writer','attestorSecret':'isolated-attestor','pullSecret':'private-registry','resources':{'requests':{'cpu':'100m','memory':'256Mi'},'limits':{'cpu':'500m','memory':'512Mi'}},'phaseInputs':{'foundation':{}}}
   for phase in ('foundation','attest','memberships'):d['phaseInputs'][phase]={'identity':{'identity_context':'portal','identity_invocation':d['invocation'],'identity_retry_generation':0,'identity_source_revision':d['enrollmentRevision'],'identity_platform_revision':d['platformRevision'],'identity_scope':'gitlab-identity-'+('attest' if phase=='foundation' else phase)+'-v1','identity_run':True}}
   d['phaseInputs']['foundation']['group']={}
+  for p in ('foundation','attest','memberships'):d['phaseInputs'][p]['identity']['identity_receipt_uid']='22222222-2222-4222-8222-222222222222'
+  items=d['sourceItems'];raw={x['path']:b'fixture' for x in items if x['path']!='provenance.sha256'}
+  manifest=''.join(hashlib.sha256(b).hexdigest()+'  '+p+'\n' for p,b in sorted(raw.items())).encode();sha=hashlib.sha256(manifest).hexdigest();raw['provenance.sha256']=manifest
+  data={x['key']:base64.b64encode(raw[x['path']]).decode() for x in items};d['sourceBundleSHA256']=sha;d['sourceBundleName']='identity-source-'+sha[:20]
+  d['sourceBundle']={'sha256':sha,'items':items,'configMaps':[{'apiVersion':'v1','kind':'ConfigMap','metadata':{'name':d['sourceBundleName'],'namespace':ns},'immutable':True,'binaryData':data} for ns in ('tenant-identity-writer','tenant-identity-attestor')]}
   return d
  def test_disabled(self):self.assertEqual(render({'schemaVersion':1,'context':'portal','enabled':False})['kustomization.yaml']['resources'],[])
  def test_identity_and_sequencing(self):
@@ -25,6 +30,9 @@ class Tests(unittest.TestCase):
    secrets=[v['secret']['secretName'] for v in pod['volumes'] if 'secret' in v]
    self.assertEqual(secrets,['isolated-attestor' if phase=='attest' else 'group-writer'])
    self.assertEqual(any(v['name']=='api' for v in pod['volumes']),phase=='attest')
+ def test_changed_source_refuses_same_digest(self):
+  d=self.sample();d["sourceBundle"]["configMaps"][0]["binaryData"]["file-0"]=base64.b64encode(b"different").decode()
+  with self.assertRaises(ValueError):render(d)
  def test_fail_closed(self):
   for key,value in [('foundationApproved',False),('image','bad'),('workerNode',''),('retryGeneration',True),('sourceBundleName','mutable')]:
    d=self.sample();d[key]=value

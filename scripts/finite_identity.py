@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Deterministic declared identity -> native finite Flux jobs. No API/credential access."""
-import argparse,hashlib,json,pathlib,re,sys
+import argparse,base64,hashlib,json,pathlib,re,sys
 import yaml
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 IMAGE='registry1.dso.mil/ironbank/opensource/ansible/ansible@sha256:3308322cc09f20a813c00e9087c166a3d97dbb7789c059f1020f3c0b092fdf02'
@@ -17,7 +17,7 @@ def unique(p):
  return d
 def render(d):
  if d=={'schemaVersion':1,'context':'portal','enabled':False}:return {'kustomization.yaml':{'apiVersion':'kustomize.config.k8s.io/v1beta1','kind':'Kustomization','resources':[]}}
- required={'schemaVersion','context','enabled','foundationApproved','sourceName','sourcePath','enrollmentRevision','platformRevision','invocation','retryGeneration','image','sourceBundleName','sourceBundleSHA256','sourceItems','workerNode','receiptClaim','writerSecret','attestorSecret','pullSecret','resources','phaseInputs'}
+ required={'schemaVersion','context','enabled','foundationApproved','sourceName','sourcePath','enrollmentRevision','platformRevision','invocation','retryGeneration','image','sourceBundleName','sourceBundleSHA256','sourceBundle','sourceItems','workerNode','receiptClaim','writerSecret','attestorSecret','pullSecret','resources','phaseInputs'}
  if set(d)!=required or d['schemaVersion']!=1 or d['context']!='portal' or d['enabled'] is not True or d['foundationApproved'] is not True:raise ValueError('explicit approved Portal declaration required')
  if d['image']!=IMAGE:raise ValueError('unverified image')
  for k in ('enrollmentRevision','platformRevision'):match(d[k],r'[0-9a-f]{40}')
@@ -33,6 +33,17 @@ def render(d):
   if '..' in item['path'].split('/') or item['path'] in seen:raise ValueError('source path')
   seen.add(item['path'])
  if not {'perkforge/bin/launch','perkforge/bin/run-phase.py','perkforge/bin/refresh-identity-evidence','revisions.json','provenance.sha256'}<=seen:raise ValueError('incomplete bundle')
+ bundle=d['sourceBundle']
+ if set(bundle)!={'sha256','items','configMaps'} or bundle['sha256']!=d['sourceBundleSHA256'] or bundle['items']!=items or len(bundle['configMaps'])!=2:raise ValueError('bundle contract')
+ for cm,namespace in zip(bundle['configMaps'],('tenant-identity-writer','tenant-identity-attestor')):
+  if set(cm)!={'apiVersion','kind','metadata','immutable','binaryData'} or cm['apiVersion']!='v1' or cm['kind']!='ConfigMap' or cm['immutable'] is not True or cm['metadata']!={'name':d['sourceBundleName'],'namespace':namespace}:raise ValueError('bundle scope')
+  if set(cm['binaryData'])!={x['key'] for x in items}:raise ValueError('bundle files')
+  decoded={x['path']:base64.b64decode(cm['binaryData'][x['key']],validate=True) for x in items}
+  if sum(map(len,decoded.values()))>524288:raise ValueError('bundle size')
+  manifest=decoded.pop('provenance.sha256')
+  expected=''.join(hashlib.sha256(b).hexdigest()+'  '+p+'\n' for p,b in sorted(decoded.items())).encode()
+  if manifest!=expected or hashlib.sha256(manifest).hexdigest()!=bundle['sha256']:raise ValueError('bundle digest')
+ if bundle['configMaps'][0]['binaryData']!=bundle['configMaps'][1]['binaryData']:raise ValueError('different phase code')
  match(d['workerNode'],r'[a-z0-9][a-z0-9.-]{0,62}');match(d['sourcePath'],r'\./[a-zA-Z0-9/_-]+')
  if type(d['retryGeneration']) is not int or not 0<=d['retryGeneration']<=1000000:raise ValueError('retry generation')
  r=d['resources']
@@ -65,10 +76,16 @@ def render(d):
   pod={'serviceAccountName':'identity-'+('attestor' if phase=='attest' else 'writer'),'automountServiceAccountToken':False,'nodeSelector':{'kubernetes.io/hostname':d['workerNode']},'restartPolicy':'Never','imagePullSecrets':[{'name':d['pullSecret']}],'securityContext':{'runAsNonRoot':True,'runAsUser':1001,'runAsGroup':1001,'fsGroup':1001,'seccompProfile':{'type':'RuntimeDefault'}},'containers':[{'name':'reconcile','image':IMAGE,'command':['/bin/bash','/opt/perkforge/bin/launch'],'args':['--phase',phase,'--invocation',d['invocation'],'--inputs-sha256',ih,'--bundle-sha256',d['sourceBundleSHA256']],'resources':r,'securityContext':{'allowPrivilegeEscalation':False,'readOnlyRootFilesystem':True,'capabilities':{'drop':['ALL']}},'volumeMounts':mounts}],'volumes':volumes}
   job={'apiVersion':'batch/v1','kind':'Job','metadata':{'name':name,'namespace':ns,'annotations':annotations},'spec':{'backoffLimit':0,'activeDeadlineSeconds':300,'completions':1,'parallelism':1,'template':{'metadata':{'annotations':annotations},'spec':pod}}}
   out[phase+'/job.yaml']=job;out[phase+'/inputs.yaml']={'apiVersion':'v1','kind':'ConfigMap','metadata':{'name':cm,'namespace':ns},'immutable':True,'data':{'inputs.json':raw}}
-  out[phase+'/kustomization.yaml']={'apiVersion':'kustomize.config.k8s.io/v1beta1','kind':'Kustomization','resources':['inputs.yaml','job.yaml']}
+  phase_resources=['inputs.yaml','job.yaml']
+  if phase!='memberships':
+   out[phase+'/source.yaml']=bundle['configMaps'][1 if phase=='attest' else 0];phase_resources.insert(0,'source.yaml')
+  out[phase+'/kustomization.yaml']={'apiVersion':'kustomize.config.k8s.io/v1beta1','kind':'Kustomization','resources':phase_resources}
   spec={'interval':'5m','timeout':'6m','path':d['sourcePath']+'/'+phase,'sourceRef':{'kind':'GitRepository','name':d['sourceName']},'serviceAccountName':'identity-'+phase+'-reconciler','prune':False,'force':False,'wait':True,'commonMetadata':{'annotations':annotations},'healthChecks':[{'apiVersion':'batch/v1','kind':'Job','name':name,'namespace':ns}]}
   if i:
    spec['dependsOn']=[{'name':'identity-portal-'+PHASES[i-1],'readyExpr':"dep.spec.commonMetadata.annotations['platform.perkforge.io/invocation'] == self.spec.commonMetadata.annotations['platform.perkforge.io/invocation'] && dep.spec.commonMetadata.annotations['platform.perkforge.io/attempt'] == self.spec.commonMetadata.annotations['platform.perkforge.io/attempt'] && dep.metadata.generation == dep.status.observedGeneration && dep.status.conditions.exists(e, e.type == 'Ready' && e.status == 'True')"}]
+  if phase=='attest':
+   ident=body['identity'];match(ident.get('identity_receipt_uid'),r'[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}')
+   out['receipt-intent.yaml']={'apiVersion':'v1','kind':'ConfigMap','metadata':{'name':'portal-identity-evidence','namespace':'tenant-identity-writer','uid':ident['identity_receipt_uid'],'annotations':{'perkforge.dev/desired-invocation':d['invocation']}}};refs.append('receipt-intent.yaml')
   f=phase+'-reconcile.yaml';refs.append(f);out[f]={'apiVersion':'kustomize.toolkit.fluxcd.io/v1','kind':'Kustomization','metadata':{'name':ks,'namespace':'flux-system'},'spec':spec}
  out['kustomization.yaml']={'apiVersion':'kustomize.config.k8s.io/v1beta1','kind':'Kustomization','resources':refs}
  return out
