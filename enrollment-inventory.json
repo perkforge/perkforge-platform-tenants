@@ -77,7 +77,7 @@
           "name": "tenant-portal",
           "namespace": "tenant-portal-config",
           "ref": {
-            "tag": "v2.3.0"
+            "tag": "v2.3.1"
           },
           "suspended": false
         },

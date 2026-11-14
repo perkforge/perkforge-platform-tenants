@@ -33,8 +33,8 @@ apply consumers before reviewing their targets. Verify actual synchronized paylo
 and TLS chain before activating the app. The renderer does not provision credentials,
 change Keycloak, apply resources, enable the source, or bypass approval gates.
 
-The active Portal selection uses published configuration v2.2.0 and its normal-published
-app v0.4.0 digest. Apply the matching platform-owned runtime-contract before source
+The active Portal selection uses published configuration v2.3.1 and its normal-published
+app v0.6.0 digest. Apply the matching platform-owned runtime-contract before source
 promotion. Platform-admin access requires only the exact signed platform-admin group,
 not tenant membership. CI renders the actual released active chart and rejects the
 old auth image; historical disabled fixtures and the default paused roots remain unchanged.
