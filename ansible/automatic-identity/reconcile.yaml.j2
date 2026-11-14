@@ -1,0 +1,14 @@
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: identity-{{ automatic_identity_context }}
+  namespace: flux-system
+spec:
+  interval: 5m
+  timeout: 6m
+  path: {{ automatic_identity_source_path | to_json }}
+  sourceRef: {kind: GitRepository, name: {{ automatic_identity_source_name }}}
+  serviceAccountName: {{ automatic_identity_reconciler_sa }}
+  prune: false
+  force: false
+  wait: true

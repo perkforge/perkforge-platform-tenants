@@ -1,0 +1,47 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: identity-{{ automatic_identity_context }}-{{ invocation[:16] }}
+  namespace: {{ automatic_identity_namespace }}
+  annotations:
+    platform.perkforge.io/enrollment-revision: {{ automatic_identity_enrollment_revision | to_json }}
+    platform.perkforge.io/platform-revision: {{ selection.platformRevision | to_json }}
+    platform.perkforge.io/invocation: {{ invocation | to_json }}
+spec:
+  completions: 1
+  parallelism: 1
+  backoffLimit: 0
+  activeDeadlineSeconds: 300
+  template:
+    metadata:
+      labels: {app.kubernetes.io/name: tenant-identity}
+    spec:
+      serviceAccountName: {{ automatic_identity_worker_sa }}
+      automountServiceAccountToken: false
+      restartPolicy: Never
+      imagePullSecrets: [{name: {{ automatic_identity_pull_secret }}}]
+      securityContext: {runAsNonRoot: true, runAsUser: 65532, runAsGroup: 65532, fsGroup: 65532, seccompProfile: {type: RuntimeDefault}}
+      containers:
+      - name: reconcile
+        image: {{ automatic_identity_image | to_json }}
+        imagePullPolicy: IfNotPresent
+        command: [/opt/perkforge/bin/reconcile-identity]
+        args: [--context, {{ automatic_identity_context | to_json }}, --enrollment-revision, {{ automatic_identity_enrollment_revision | to_json }}, --platform-revision, {{ selection.platformRevision | to_json }}, --invocation, {{ invocation | to_json }}, --inputs, /inputs/inputs.yaml, --credentials, /credentials, --receipts, /receipts]
+        securityContext: {allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: {drop: [ALL]}}
+        resources:
+          requests: {cpu: {{ automatic_identity_cpu_request | to_json }}, memory: {{ automatic_identity_memory_request | to_json }}}
+          limits: {cpu: {{ automatic_identity_cpu_limit | to_json }}, memory: {{ automatic_identity_memory_limit | to_json }}}
+        volumeMounts:
+        - {name: inputs, mountPath: /inputs, readOnly: true}
+        - {name: credentials, mountPath: /credentials, readOnly: true}
+        - {name: receipts, mountPath: /receipts}
+        - {name: tmp, mountPath: /tmp}
+      volumes:
+      - name: inputs
+        configMap: {name: {{ automatic_identity_inputs_configmap }}}
+      - name: credentials
+        secret: {secretName: {{ automatic_identity_credentials_secret }}, defaultMode: 288}
+      - name: receipts
+        persistentVolumeClaim: {claimName: {{ automatic_identity_receipt_claim }}}
+      - name: tmp
+        emptyDir: {sizeLimit: 64Mi}
