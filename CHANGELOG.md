@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.3.0](https://github.com/perkforge/perkforge-platform-tenants/compare/v2.2.1...v2.3.0) (2026-11-14)
+
+
+### Features
+
+* enroll published Portal identity explorer ([#62](https://github.com/perkforge/perkforge-platform-tenants/issues/62)) ([9baf7cc](https://github.com/perkforge/perkforge-platform-tenants/commit/9baf7cc90d8214def48a4f3bb6a51c60e8fab571))
+
 ## [2.2.1](https://github.com/perkforge/perkforge-platform-tenants/compare/v2.2.0...v2.2.1) (2026-11-14)
 
 
