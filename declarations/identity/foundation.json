@@ -56,7 +56,7 @@
   },
   "ownership": {
     "controlNamespace": "flux-system",
-    "foundationSHA256": "788e75e3e56e1fdcfbe7709ed7fbebcc8b80675b2b63952410d070e568268a74",
+    "foundationSHA256": "7a9b8e12167ef2ab03356ec993fbb08b1c95083e98168fdccc2954b732098754",
     "namePrefix": "identity-portal-foundation",
     "platformServiceAccount": "platform-reconciler",
     "runtimeNamespaces": [
