@@ -30,10 +30,12 @@ jobs:
         python3 - <<'PYTHON'
         import json, os, re
         d = json.load(open('declarations/identity/portal.json'))
+        provenance = json.load(open('scripts/vendor/identity_context.provenance.json'))
         enabled = d.get('enabled') is True
         if enabled:
             assert re.fullmatch('[0-9a-f]{40}', d['platformRevision'])
         with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+            f.write('context_revision=' + provenance['revision'] + '\n')
             f.write('enabled=' + str(enabled).lower() + '\n')
             if enabled: f.write('revision=' + d['platformRevision'] + '\n')
         PYTHON
@@ -45,6 +47,15 @@ jobs:
         path: .inputs/identity-platform
         fetch-depth: 0
         persist-credentials: false
+    - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+      with:
+        repository: perkforge/perkforge-platform
+        ref: ${{ steps.identity_source.outputs.context_revision }}
+        path: .inputs/identity-context-platform
+        fetch-depth: 0
+        persist-credentials: false
+    - name: Verify shared context ABI provenance
+      run: python3 scripts/verify_identity_context_vendor.py --platform .inputs/identity-context-platform
     - name: Verify finite identity source bytes
       run: python3 scripts/verify_identity_source.py --platform .inputs/identity-platform
     - name: Verify finite declared identity resources (disabled by default)
@@ -52,6 +63,7 @@ jobs:
         python3 scripts/test_finite_identity.py
         python3 scripts/test_identity_foundation.py
         python3 scripts/test_identity_target_profile.py
+        python3 scripts/test_identity_context_runtime.py
         python3 scripts/test_private_receipts.py
         python3 scripts/finite_identity.py --check
         kubectl kustomize clusters/local-identity-portal

@@ -97,5 +97,7 @@ explicit actual runtime preflight. No unrelated workload movement is authorized.
 
 Enabled source now requires a complete versioned `targetProfile`; see
 [adopter profile schema, examples, support matrix and ownership boundaries](ADOPTER-PROFILE.md).
-The current Portal context and reviewed image/security ABI remain intentionally
-fixed. Environment-profile tests are not proof of arbitrary tenant/provider support.
+The reviewed image/security ABI remains intentionally fixed. Context naming consumes
+[the shared contract](CONTEXT-CONTRACT.md); current live authority remains Portal-only.
+Environment/context source tests are not proof of arbitrary provider support or
+a deployed second tenant.

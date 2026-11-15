@@ -3,9 +3,9 @@
 import argparse,copy,ipaddress,json,pathlib,re
 import yaml
 from finite_identity import render,PHASES
+from identity_context_binding import selection
 from identity_target_profile import validate as target_profile
 OWNER={'platform.perkforge.io/owner':'tenant-identity-foundation-v1'}
-WRITER='tenant-identity-writer';ATTESTOR='tenant-identity-attestor'
 def obj(api,kind,name,namespace=None,**fields):
  m={'name':name,'labels':OWNER.copy()}
  if namespace:m['namespace']=namespace
@@ -57,7 +57,7 @@ def pod_checks(p,prefix='object.spec.template.spec'):
 def build(d,network,custody,initializer=None):
  generated=render(d)
  if not d.get('enabled'):return []
- profile=target_profile(d['targetProfile'])
+ profile=target_profile(d['targetProfile']);binding=selection(d);WRITER=binding['writer_namespace'];ATTESTOR=binding['attestor_namespace'];declaration=binding['declaration_reconciler'];evidence=binding['evidence_name']
  if set(network)!={'ingressHosts','apiHosts','apiBackendHosts','apiCA','traefikBackend'} or network['traefikBackend'] is not True:raise ValueError('explicit target endpoints required')
  if not isinstance(network['apiCA'],str) or not network['apiCA'].startswith('-----BEGIN CERTIFICATE-----'):raise ValueError('explicit public API CA')
  for k in ('ingressHosts','apiHosts','apiBackendHosts'):
@@ -73,12 +73,13 @@ def build(d,network,custody,initializer=None):
   if any(not re.fullmatch(r'[a-z][a-z0-9_-]{0,40}',v) for v in custody[k]['properties'].values()):raise ValueError('property')
  init=None
  if initializer is not None:
-  from private_receipts import plan
+  from private_receipts import plan,selected
   if (initializer['claim'],initializer['node'],initializer['pullSecret'])!=(d['receiptClaim'],d['workerNode'],d['pullSecret']):raise ValueError('initializer declaration mismatch')
+  if selected(initializer)!=binding:raise ValueError('initializer context mismatch')
   if initializer['storageProfile']!=profile['storage']:raise ValueError('initializer storage profile mismatch')
   init=plan(initializer)
  out=[]
- for ns,worker,reconciler in ((WRITER,'identity-group-worker','identity-group-reconciler'),(ATTESTOR,'identity-attestor','identity-attestor-reconciler')):
+ for ns,worker,reconciler in ((WRITER,'identity-group-worker',binding['group_reconciler']),(ATTESTOR,'identity-attestor',binding['attestor_reconciler'])):
   n=obj('v1','Namespace',ns);n['metadata']['labels'].update({'pod-security.kubernetes.io/enforce':'restricted','pod-security.kubernetes.io/enforce-version':'latest'});out += [n,sa(worker,ns),sa(reconciler,'flux-system')]
   phases=['foundation','memberships'] if ns==WRITER else ['attest'];jobs=[generated[p+'/job.yaml'] for p in phases];cms=[generated[p+'/inputs.yaml'] for p in phases]+[generated[phases[0]+'/source.yaml']]
   names=[j['metadata']['name'] for j in jobs];cmnames=[c['metadata']['name'] for c in cms]
@@ -108,7 +109,7 @@ def build(d,network,custody,initializer=None):
    for cm in (init['configMap'],init['inputs']):exact_cm(cm['metadata']['name'],cm['data'],True)
    name=init['gate']['metadata']['name'];names.append(name)
    checks.append('object.metadata.name != '+cel(name)+' || (request.userInfo.username == '+cel(initializer['operatorUser'])+' && !has(object.binaryData) && object.data.size() <= 1 && object.data.all(k, k == "approval.json" && object.data[k].size() <= 4096))')
-  if ns==WRITER:names.append('portal-identity-evidence')
+  if ns==WRITER:names.append(evidence)
   checks.insert(0,'object.metadata.name in '+cel(names))
   if any(len(x)>90000 for x in checks):raise ValueError('admission expression exceeds conservative source budget')
   out+=policy('identity-config-'+ns,'','v1','configmaps',ns,checks)
@@ -117,10 +118,10 @@ def build(d,network,custody,initializer=None):
   egress=[dns,{'to':[{'ipBlock':{'cidr':ip}} for ip in network['ingressHosts']],'ports':[{'protocol':'TCP','port':profile['ingress']['frontendPort']}]},{'to':[{'namespaceSelector':{'matchLabels':profile['ingress']['namespaceLabels']},'podSelector':{'matchLabels':profile['ingress']['podLabels']}}],'ports':[{'protocol':'TCP','port':profile['ingress']['backendPort']}]}]
   if ns==ATTESTOR:egress += [{'to':[{'ipBlock':{'cidr':ip}} for ip in network[key]],'ports':[{'protocol':'TCP','port':port}]} for key,port in [('apiHosts',profile['api']['servicePort']),('apiBackendHosts',profile['api']['backendPort'])]]
   out.append(obj('networking.k8s.io/v1','NetworkPolicy','identity-worker-egress',ns,spec={'podSelector':{'matchLabels':{'platform.perkforge.io/identity-phase':'true'}},'policyTypes':['Egress'],'egress':egress}))
- out.append(sa('identity-declaration-reconciler','flux-system'))
+ out.append(sa(declaration,'flux-system'))
  children=[generated[p+'-reconcile.yaml'] for p in PHASES]
- out += role('identity-declaration-reconciler','flux-system',[rule('kustomize.toolkit.fluxcd.io',['kustomizations'],['create']),rule('kustomize.toolkit.fluxcd.io',['kustomizations'],['get','patch','update'],[c['metadata']['name'] for c in children])],'identity-declaration-reconciler','flux-system')
- out += role('identity-receipt-intent',WRITER,[rule('',['configmaps'],['get','patch'],['portal-identity-evidence'])],'identity-declaration-reconciler','flux-system')
+ out += role(declaration,'flux-system',[rule('kustomize.toolkit.fluxcd.io',['kustomizations'],['create']),rule('kustomize.toolkit.fluxcd.io',['kustomizations'],['get','patch','update'],[c['metadata']['name'] for c in children])],declaration,'flux-system')
+ out += role('identity-receipt-intent',WRITER,[rule('',['configmaps'],['get','patch'],[evidence])],declaration,'flux-system')
  allowed=[]
  for child in children:
   q=child['spec'];checks=['object.metadata.name == '+cel(child['metadata']['name'])]
@@ -132,18 +133,20 @@ def build(d,network,custody,initializer=None):
   checks += (['object.spec.dependsOn.size() == 1','!has(object.spec.dependsOn[0].namespace)']+['object.spec.dependsOn[0].'+k+' == '+cel(v) for k,v in q['dependsOn'][0].items()]) if 'dependsOn' in q else ['!has(object.spec.dependsOn)']
   for key in ('kubeConfig','decryption','postBuild','patches','images','components','targetNamespace','namePrefix','nameSuffix','healthCheckExprs'):checks.append('!has(object.spec.'+key+')')
   allowed.append('('+' && '.join(checks)+')')
- declaration_user='system:serviceaccount:flux-system:identity-declaration-reconciler'
- out += policy('identity-declaration-scope','kustomize.toolkit.fluxcd.io','v1','kustomizations','flux-system',['request.userInfo.username != '+cel(declaration_user)+' || ('+' || '.join(allowed)+')'])
- out += role('identity-evidence-issuer',WRITER,[rule('',['configmaps'],['get','patch'],['portal-identity-evidence'])],'identity-attestor',ATTESTOR)
+ declaration_user='system:serviceaccount:flux-system:'+declaration
+ out += policy(binding['declaration_policy'],'kustomize.toolkit.fluxcd.io','v1','kustomizations','flux-system',['request.userInfo.username != '+cel(declaration_user)+' || ('+' || '.join(allowed)+')'])
+ out += role('identity-evidence-issuer',WRITER,[rule('',['configmaps'],['get','patch'],[evidence])],'identity-attestor',ATTESTOR)
  uid=d['phaseInputs']['attest']['identity']['identity_receipt_uid'];issuer='system:serviceaccount:'+ATTESTOR+':identity-attestor'
- out+=policy('identity-evidence-fields','','v1','configmaps',WRITER,["object.metadata.name != 'portal-identity-evidence' || (request.operation == 'UPDATE' && oldObject != null && object.metadata.uid == "+cel(uid)+" && oldObject.metadata.uid == "+cel(uid)+" && !has(object.binaryData) && (!has(object.immutable) || object.immutable == false) && ((request.userInfo.username == "+cel(issuer)+" && object.metadata.annotations == oldObject.metadata.annotations && object.metadata.labels == oldObject.metadata.labels && object.data.size() == 1 && 'receipt.json' in object.data && object.data['receipt.json'].size() <= 262144) || (request.userInfo.username == "+cel(declaration_user)+" && object.metadata.labels == oldObject.metadata.labels && has(object.data) == has(oldObject.data) && (!has(object.data) || object.data == oldObject.data) && object.metadata.annotations == {'perkforge.dev/desired-invocation': "+cel(d['invocation'])+"})))"])
+ out+=policy(binding['evidence_policy'],'','v1','configmaps',WRITER,["object.metadata.name != '"+evidence+"' || (request.operation == 'UPDATE' && oldObject != null && object.metadata.uid == "+cel(uid)+" && oldObject.metadata.uid == "+cel(uid)+" && !has(object.binaryData) && (!has(object.immutable) || object.immutable == false) && ((request.userInfo.username == "+cel(issuer)+" && object.metadata.annotations == oldObject.metadata.annotations && object.metadata.labels == oldObject.metadata.labels && object.data.size() == 1 && 'receipt.json' in object.data && object.data['receipt.json'].size() <= 262144) || (request.userInfo.username == "+cel(declaration_user)+" && object.metadata.labels == oldObject.metadata.labels && has(object.data) == has(oldObject.data) && (!has(object.data) || object.data == oldObject.data) && object.metadata.annotations == {'perkforge.dev/desired-invocation': "+cel(d['invocation'])+"})))"])
  for field in ('ownerReferences','finalizers'):
-  out[-2]['spec']['validations'].append({'expression':"object.metadata.name != 'portal-identity-evidence' || (oldObject != null && has(object.metadata."+field+") == has(oldObject.metadata."+field+") && (!has(object.metadata."+field+") || object.metadata."+field+" == oldObject.metadata."+field+"))",'message':'Evidence ownership metadata is immutable.','reason':'Forbidden'})
+  out[-2]['spec']['validations'].append({'expression':"object.metadata.name != '"+evidence+"' || (oldObject != null && has(object.metadata."+field+") == has(oldObject.metadata."+field+") && (!has(object.metadata."+field+") || object.metadata."+field+" == oldObject.metadata."+field+"))",'message':'Evidence ownership metadata is immutable.','reason':'Forbidden'})
  out.append(obj('v1','PersistentVolumeClaim',d['receiptClaim'],WRITER,spec={'accessModes':['ReadWriteOnce'],'storageClassName':profile['storage']['className'],'resources':{'requests':{'storage':profile['storage']['size']}}}))
  # Empty destination Secrets are CREATE-ONLY separate artifacts, never reapplied.
  for ns,name in ((WRITER,d['writerSecret']),(ATTESTOR,d['attestorSecret'])):out.append(obj('v1','Secret',name,ns,type='Opaque',data={}))
  for purpose,ns,target in (('writer',WRITER,d['writerSecret']),('reader',ATTESTOR,d['attestorSecret']),('keycloak',ATTESTOR,d['attestorSecret'])):
-  name='eso-identity-'+purpose;record=custody[purpose]
+  name=binding[{'writer':'writer_eso_role','reader':'reader_eso_role','keycloak':'eso_role'}[purpose]];record=custody[purpose]
+  expected_record=binding[{'writer':'gitlab_writer_record','reader':'gitlab_reader_record','keycloak':'record'}[purpose]]
+  if record['record']!=expected_record:raise ValueError('foreign context custody record')
   out += [sa(name,ns),obj('v1','ConfigMap','identity-openbao-ca',ns,immutable=True,data={'ca.crt':custody['publicCA']})]
   out+=role(name,ns,[rule('',['secrets'],['get','update','patch'],[target]),rule('',['serviceaccounts/token'],['create'],[name]),rule('',['configmaps'],['get'],['identity-openbao-ca']),rule('external-secrets.io',['externalsecrets'],['patch'],[name]),rule('external-secrets.io',['externalsecrets/status'],['update','patch'],[name]),rule('external-secrets.io',['secretstores/status'],['patch'],[name])],'external-secrets','external-secrets')
   out.append(obj('external-secrets.io/v1','SecretStore',name,ns,spec={'controller':'perkforge','provider':{'vault':{'server':custody['server'],'path':'platform','version':'v2','caProvider':{'type':'ConfigMap','name':'identity-openbao-ca','key':'ca.crt'},'auth':{'kubernetes':{'mountPath':'kubernetes-eso','role':name,'serviceAccountRef':{'name':name,'audiences':['openbao-eso']}}}}}}))
