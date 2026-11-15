@@ -17,13 +17,20 @@ class Activation(unittest.TestCase):
  def test_explicit_reviewed_foundation_hash(self):
   c=self.c;self.assertEqual(c['ownership']['foundationSHA256'],sha(build(self.d,c['network'],c['custody'],c['initializer'])))
  def test_A_B_differ_only_membership_scheduling_and_its_admission(self):
-  a=copy.deepcopy(self.d);a['membershipReleased']=False;b=copy.deepcopy(a);b['membershipReleased']=True
+  a=copy.deepcopy(self.d);a['membershipReleased']=False
+  if 'phasesSuspended' in a:a['phasesSuspended']=False
+  b=copy.deepcopy(a);b['membershipReleased']=True
   fa,fb=render(a),render(b)
   self.assertEqual(set(fa),set(fb));self.assertEqual([k for k in fa if fa[k]!=fb[k]],['memberships-reconcile.yaml'])
   self.assertTrue(fa['memberships-reconcile.yaml']['spec']['suspend']);self.assertFalse(fb['memberships-reconcile.yaml']['spec']['suspend'])
   c=self.c;oa=build(a,c['network'],c['custody'],c['initializer']);ob=build(b,c['network'],c['custody'],c['initializer'])
   changed=[(x['kind'],x['metadata']['name']) for x,y in zip(oa,ob) if x!=y]
   self.assertEqual(changed,[('ValidatingAdmissionPolicy','identity-declaration-scope')])
+ def test_selected_child_hold_is_exact(self):
+  if self.d.get('phasesSuspended') is True:
+   self.assertFalse(self.d['membershipReleased']);f=render(self.d)
+   for phase in ('foundation','attest','memberships'):self.assertIs(f[phase+'-reconcile.yaml']['spec']['suspend'],True)
+   with self.assertRaises(ValueError):render(dict(self.d,membershipReleased=True))
  def test_receipt_and_readers_remain_separate(self):
   f=render(self.d)
   for phase in ('foundation','attest','memberships'):
