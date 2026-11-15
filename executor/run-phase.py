@@ -41,7 +41,7 @@ def run(a):
  try:
   write(w/'phase-inputs.json',json.dumps(body['identity']).encode())
   d=contract.inputs(str(w/'phase-inputs.json'),'attest' if a.phase=='foundation' else a.phase)
-  revisions=json.loads(bounded('/opt/revisions.json',4096))
+  revisions=json.loads(projection('/opt','revisions.json',4096))
   if revisions!={'enrollment':d['identity_source_revision'],'platform':d['identity_platform_revision']} or d['identity_invocation']!=a.invocation:raise ValueError('source/attempt')
   if a.phase=='foundation':
    write(w/'group-inputs.json',json.dumps(body['group']).encode());g=guard.validate_inputs(str(w/'group-inputs.json'))
