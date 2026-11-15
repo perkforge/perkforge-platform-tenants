@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
 """Explicit isolated cached-image fixture; synthetic provider APIs only, no deployment."""
 import pathlib,tempfile,subprocess,sys,json,shutil,os,argparse
-parser=argparse.ArgumentParser();parser.add_argument('--run',action='store_true');parser.add_argument('--platform',type=pathlib.Path);parser.add_argument('--output',type=pathlib.Path);parser.add_argument('--supervised-source',type=pathlib.Path);parser.add_argument('--atomic-writer',action='store_true');args=parser.parse_args()
+parser=argparse.ArgumentParser();parser.add_argument('--run',action='store_true');parser.add_argument('--platform',type=pathlib.Path);parser.add_argument('--output',type=pathlib.Path);parser.add_argument('--supervised-source',type=pathlib.Path);parser.add_argument('--atomic-writer',action='store_true');parser.add_argument('--platform-revision',default='a8862222d1da8f1247ea865b137a0dc5a5e820ab');parser.add_argument('--partial-success-retry',action='store_true');args=parser.parse_args()
 if not args.run:print('INERT: explicit --run required; cached image only.');raise SystemExit(0)
 if not args.platform or not args.output:raise SystemExit('Explicit platform checkout and fresh output directory required.')
 R=pathlib.Path(__file__).resolve().parents[1];P=args.platform;sys.path.insert(0,str(R/'scripts'));from identity_source_bundle import bundle,PLATFORM,PREFIX,source
-rev='a8862222d1da8f1247ea865b137a0dc5a5e820ab';er=subprocess.check_output(['git','-C',str(R),'rev-parse','HEAD'],text=True).strip();root=args.output.resolve();root.mkdir(mode=0o700,exist_ok=False);pf=root/'platform-fixture';pf.mkdir()
+rev=args.platform_revision
+if not __import__('re').fullmatch('[0-9a-f]{40}',rev):raise SystemExit('Exact platform commit required')
+if args.partial_success_retry and not args.atomic_writer:raise SystemExit('Partial-success proof requires AtomicWriter layout')
+er=subprocess.check_output(['git','-C',str(R),'rev-parse','HEAD'],text=True).strip();root=args.output.resolve();root.mkdir(mode=0o700,exist_ok=False);pf=root/'platform-fixture';pf.mkdir()
 for path in [PREFIX+x for x in PLATFORM]+[PREFIX+'enrollment/identity_context.py']:
  f=pf/path;f.parent.mkdir(parents=True,exist_ok=True);f.write_bytes(source(P,rev,path))
 canonical='big-bang-bootstrap/configuration/authorization/contexts/portal.yaml';f=pf/canonical.replace('portal.yaml','atlas.yaml');f.parent.mkdir(parents=True);f.write_bytes(source(P,rev,canonical).replace(b'portal',b'atlas'))
@@ -23,6 +26,9 @@ else:
  (root/'api/token').write_text('OFFLINE-API');shutil.copyfile(root/'fixture/ca.crt',root/'api/ca.crt')
 t=(R/'scripts/test_native_finite_container.py').read_text().replace('tenant-identity-writer','tenant-identity-atlas-writer').replace('portal','atlas')
 t=t.replace("d['identity_invocation']=invocation(d)","import sys;sys.path.insert(0,'/opt/platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment');from identity_context import derive\nd['identity_context_digest']=derive('atlas')['digest']\nd['identity_invocation']=invocation(d)")
+if args.partial_success_retry:
+ from partial_success_native_fixture import transform
+ t=transform(t)
 if args.atomic_writer:
  def replace_once(text,old,new):
   if text.count(old)!=1:raise ValueError('AtomicWriter fixture seam drift')
