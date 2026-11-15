@@ -21,3 +21,19 @@ Private foundation/group receipts, failed Jobs, source-revision checks and nativ
 IDs are retained. No deletion, replay, authority change or live retry is performed
 by this source component. The new platform contract and released bundle must pass
 independent review and integration before selecting such inputs.
+
+## Cached maintained-image fixture
+
+`test_context_native_container.py --partial-success-retry --atomic-writer`
+requires an explicit platform checkout; `--platform-revision` accepts a full
+reviewed commit (legacy default remains unchanged). The scenario uses real local
+foundation receipts, exact synthetic GitLab user-lookup 403 with a dotted fake
+reader token, and explicit retry generation one/prior foundation/empty issuer.
+It checks foreign UID, stale desired invocation, no overwrite and idempotent
+membership. The image is cached-only, network-disabled, read-only-root and capped
+at 500m/512Mi with synthetic loopback TLS. No live credentials or provider calls.
+
+This proves same-artifact partial-success retry, not cross-artifact migration.
+The fixture's synthetic AtomicWriter versions are retained, so it does not prove
+credential-mount isolation or kubelet cleanup. Artifact migration, actual native
+managedFields preservation and provider acceptance remain separate gates.

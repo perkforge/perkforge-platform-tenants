@@ -5,7 +5,7 @@ def replace_once(text, old, new):
  return text.replace(old,new)
 
 def transform(text):
- text=replace_once(text,"   if p=='/api/v4/users':return", "   if p=='/api/v4/users' and state.get('deny_attestor'):return self.reply(403,{})\n   if p=='/api/v4/users':return")
+ text=replace_once(text,"   if p=='/api/v4/users':return", "   if p=='/api/v4/users' and state.get('deny_attestor'):state['denied_lookups']=state.get('denied_lookups',0)+1;return self.reply(403,{})\n   if p=='/api/v4/users':return")
  text=replace_once(text,"'uid':uid,'name'", "'uid':state.get('cm_uid',uid),'name'")
  start=text.index('start=time.monotonic()\ntry:')
  if text.count('start=time.monotonic()\ntry:')!=1:raise ValueError('partial-success scenario seam drift')
@@ -17,7 +17,7 @@ try:
  p=phase('foundation');assert p.returncode==0,(p.stdout,p.stderr)
  assert state['groupWrites']==1 and state['patches']==0 and state['data']=={}
  state['deny_attestor']=True
- p=phase('attest');assert p.returncode!=0
+ p=phase('attest');assert p.returncode!=0 and state['denied_lookups']==1
  assert state['data']=={} and state['patches']==0 and state['membershipWrites']==0
  state['deny_attestor']=False
  newer=dict(d,identity_previous_invocation=d['identity_invocation'],identity_previous_attestation_invocation='',identity_retry_generation=1)
