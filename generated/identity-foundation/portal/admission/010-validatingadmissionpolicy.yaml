@@ -7,6 +7,9 @@ metadata:
 spec:
   failurePolicy: Fail
   matchConstraints:
+    matchPolicy: Equivalent
+    namespaceSelector: {}
+    objectSelector: {}
     resourceRules:
     - apiGroups:
       - ''
@@ -16,6 +19,7 @@ spec:
       - CREATE
       resources:
       - pods
+      scope: '*'
   matchConditions:
   - name: exact-namespace
     expression: request.namespace == "tenant-identity-attestor"
