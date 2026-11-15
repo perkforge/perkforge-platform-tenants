@@ -11,12 +11,27 @@ class Profiles(unittest.TestCase):
  def test_pilot_exact_old_tree(self):
   # Reviewed PR90 c742d8d, synthetic fixture, complete object bytes (canonical JSON).
   rendered=render(F['D'])
+  # Assert the exact sequencing correction, then retain prior full-tree goldens.
+  current_ready="dep.spec.commonMetadata.annotations['platform.perkforge.io/invocation'] == self.spec.commonMetadata.annotations['platform.perkforge.io/invocation'] && dep.spec.commonMetadata.annotations['platform.perkforge.io/attempt'] == self.spec.commonMetadata.annotations['platform.perkforge.io/attempt'] && (!has(dep.spec.suspend) || dep.spec.suspend == false) && dep.metadata.generation == dep.status.observedGeneration && dep.status.conditions.exists(e, e.type == 'Ready' && e.status == 'True' && has(e.observedGeneration) && e.observedGeneration == dep.metadata.generation)"
+  prior_ready="dep.spec.commonMetadata.annotations['platform.perkforge.io/invocation'] == self.spec.commonMetadata.annotations['platform.perkforge.io/invocation'] && dep.spec.commonMetadata.annotations['platform.perkforge.io/attempt'] == self.spec.commonMetadata.annotations['platform.perkforge.io/attempt'] && dep.metadata.generation == dep.status.observedGeneration && dep.status.conditions.exists(e, e.type == 'Ready' && e.status == 'True')"
+  self.assertEqual(sha(rendered),'e73b95758cca657fab7d867fea4edc1b3f1bcea6d543ff4b8e420be7f889f3ff')
+  for phase in ('attest','memberships'):
+   dep=rendered[phase+'-reconcile.yaml']['spec']['dependsOn'][0]
+   self.assertEqual(dep['readyExpr'],current_ready);dep['readyExpr']=prior_ready
   self.assertEqual(sha(rendered),'77f13c73245d33ae2a92fafe3e17bc1b9b172cf0d8db462a22d9a1e4c653dc8f')
   # Assert and remove only the reviewed desired-label preservation delta.
   base={'platform.perkforge.io/owner':'tenant-identity-foundation-v1','app.kubernetes.io/managed-by':'perkforge-identity','perkforge.dev/context':'portal'}
   self.assertEqual(rendered['receipt-intent.yaml']['metadata'].pop('labels'),base)
   self.assertEqual(sha(rendered),'108e4f1162eb99fa3d614616c6dd2c618c013c72a030969b6a5f8e4fe4b19970')
   foundation=build(F['D'],F['network'],F['custody'],F['I'])
+  self.assertEqual(sha(foundation),'9ccf3a905d6c788b32a0331977ad1c642764f6113fd5fc5508627d970ecf8fce')
+  count=0
+  for obj in foundation:
+   if obj['kind']=='ValidatingAdmissionPolicy':
+    for v in obj['spec']['validations']:
+     count+=v['expression'].count(current_ready)
+     v['expression']=v['expression'].replace(current_ready,prior_ready)
+  self.assertEqual(count,2)
   self.assertEqual(sha(foundation),'596391c60b7b10797eac3d98af560e56bd31bc12d793b2a116528f9c381f03cd')
   # Normalize only the exact declaration maintenance branch to its reviewed
   # predecessor, retaining every earlier full-tree golden assertion below.

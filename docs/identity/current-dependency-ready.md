@@ -13,3 +13,12 @@ wrong attempts/invocations and false/unknown readiness. No controller feature fl
 authority, workload, receipt or provider input changes are part of this fix.
 Selected outputs and their exact admission templates must be regenerated together
 in a later reviewed source transition; this component alone changes no live state.
+
+The selected Portal source is regenerated together with its exact declaration
+admission and foundation digest. This is a scheduling-only correction for the
+completed retry-1 invocation: existing Job names, inputs, image, provider IDs,
+receipt bytes and credentials are unchanged. A coordinated platform source pin
+and foundation hash update is still required before native adoption. Do not
+create another onboarding attempt or replay completed Jobs merely to demonstrate
+this correction. Historical immutable H/A/B selections retain their original
+bytes; future generated stages use the corrected dependency fence.
