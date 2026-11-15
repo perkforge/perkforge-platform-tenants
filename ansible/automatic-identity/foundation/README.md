@@ -127,3 +127,14 @@ shows service10.43.0.1:443→192.168.1.101:6443; these are target inputs, not ha
 portable defaults. No wildcard subnet or new writer/helper API access. Native
 reachability remains an activation test; service metadata alone is not proof of
 network delivery. Source/target changes require a new reviewed plan.
+
+### Native Quantity schema compatibility
+
+RKE2 1.36 OpenAPI v3 represents resource quantities as a `oneOf` string/number
+union. Its asynchronous admission typechecker can omit quantity-bearing fields
+although admission-object server dry-runs succeed. Narrow `dyn` access handles
+only the resources map, emptyDir size and Pod runtime overhead. Exact resource
+budgets and size equality, and absent overhead, remain enforced. The native
+fixture checks both v2 string and live v3 union schemas plus changed budget,
+size and overhead denials. Verify actual policy observedGeneration and zero type
+warnings before creating its Deny binding; never enforce a warning as a workaround.
