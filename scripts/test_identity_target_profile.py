@@ -12,10 +12,22 @@ class Profiles(unittest.TestCase):
   # Reviewed PR90 c742d8d, synthetic fixture, complete object bytes (canonical JSON).
   self.assertEqual(sha(render(F['D'])),'108e4f1162eb99fa3d614616c6dd2c618c013c72a030969b6a5f8e4fe4b19970')
   foundation=build(F['D'],F['network'],F['custody'],F['I'])
-  self.assertEqual(sha(foundation),'0d47090d9e93120116d7ae36d1ad0d597de45833c4decee8db6c2441ee35eb03')
+  self.assertEqual(sha(foundation),'1ee707a03eeb3b016bedceda1232de5fcacfeef92c21d328ef116b416895c9d6')
   # Native SSA normalization adds only these exact API defaults; retain the
   # historical complete-tree assertion after removing that explicit delta.
   legacy=copy.deepcopy(foundation)
+  # Only the reviewed empty gate API representation changed since the prior pin.
+  old='object.data.size() <= 1 && object.data.all(k, k == "approval.json" && object.data[k].size() <= 4096)'
+  new='(!has(object.data) || ('+old+'))'
+  changed=0
+  for o in legacy:
+   if o['kind']=='ValidatingAdmissionPolicy':
+    for v in o['spec']['validations']:
+     if new in v['expression']:
+      self.assertEqual(v['expression'].count(new),1)
+      v['expression']=v['expression'].replace(new,old);changed+=1
+  self.assertEqual(changed,1)
+  self.assertEqual(sha(legacy),'0d47090d9e93120116d7ae36d1ad0d597de45833c4decee8db6c2441ee35eb03')
   for o in legacy:
    if o['kind']!='ValidatingAdmissionPolicy':continue
    m=o['spec']['matchConstraints']
