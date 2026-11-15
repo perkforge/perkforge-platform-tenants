@@ -33,7 +33,7 @@ def validate(p):
 def attempt_input(d):
  # Explicit legacy-equivalent profile preserves already reviewed pilot names.
  # Every other validated profile participates in attempt identity.
- p=validate(d['targetProfile']);out={k:v for k,v in d.items() if k!='membershipReleased'}
+ p=validate(d['targetProfile']);out={k:v for k,v in d.items() if k not in ('membershipReleased','phasesSuspended')}
  if legacy_profile(p):out.pop('targetProfile')
  return out
 def initializer_identity(i):

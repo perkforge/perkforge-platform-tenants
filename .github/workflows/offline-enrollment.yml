@@ -61,6 +61,7 @@ jobs:
     - name: Verify finite declared identity resources (disabled by default)
       run: |
         python3 scripts/test_finite_identity.py
+        python3 scripts/test_identity_child_pause.py
         python3 scripts/test_identity_foundation.py
         python3 scripts/test_identity_gitops_ownership.py
         python3 scripts/test_render_identity_foundation.py
