@@ -92,7 +92,7 @@ remains the eight-role design; changed role count or delegated authority fails c
 The two reconciler Roles retain fixed six-rule authority. Their exact phase sets
 are frozen from the reviewed rendered foundation: foundation+memberships in writer,
 and attest in attestor. Only Job/input names may change to the same context/phase
-prefix plus 16 lowercase hexadecimal characters; input names must equal the Job
+prefix (the shared renderer’s 46-character readable-stem bound) plus 16 lowercase hexadecimal characters; input names must equal the Job
 name plus `-inputs`. The writer's two phases must share that attempt suffix. Each
 Role permits exactly one `identity-source-` name with 20 lowercase hexadecimal
 characters. No extra names, foreign prefixes, wildcards, verbs, resources or

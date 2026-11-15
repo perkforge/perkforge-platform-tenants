@@ -34,3 +34,8 @@ func TestIdentityGitopsOwnership(t *testing.T){
  for _,tc:=range f.Dependencies{t.Run("dependency-"+tc.Name,func(t *testing.T){v,_,err:=compiled.Program.ContextEval(context.Background(),map[string]any{"object":tc.Dep,"oldObject":tc.Self});allowed:=err==nil && v.Value()==true;if allowed!=tc.Allowed{t.Fatalf("allowed=%v expected=%v err=%v",allowed,tc.Allowed,err)}})}
 
 }
+
+func TestIdentityGitopsOwnershipMaximumContext(t *testing.T) {
+ t.Setenv("IDENTITY_CONTEXT_FIXTURE", "abcdefghijklmnopqrstuvwxyzabcde")
+ TestIdentityGitopsOwnership(t)
+}

@@ -32,7 +32,7 @@ for o in future:
   elif mutation=='extra-cm':cms.append(cms[0])
   elif mutation=='wildcard':js[0]='*'
   elif mutation=='foreign-context':js[0]='foreign-'+js[0];cms[0]=js[0]+'-inputs'
-  elif mutation=='wrong-phase':js[0]=js[0].replace('foundation','attest').replace('attest','memberships');cms[0]=js[0]+'-inputs'
+  elif mutation=='wrong-phase':js[0]=js[0][:-17]+'x-'+js[0][-16:];cms[0]=js[0]+'-inputs'
   elif mutation=='short-hash':js[0]=js[0][:-1];cms[0]=js[0]+'-inputs'
   elif mutation=='uppercase-hash':js[0]=js[0][:-16]+'A'*16;cms[0]=js[0]+'-inputs'
   elif mutation=='bad-input':cms[0]+='x'
