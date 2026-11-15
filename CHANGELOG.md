@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.7.1](https://github.com/perkforge/perkforge-platform-tenants/compare/v2.7.0...v2.7.1) (2026-11-15)
+
+
+### Bug Fixes
+
+* **identity:** bound native admission and exact API backend scope ([cadad42](https://github.com/perkforge/perkforge-platform-tenants/commit/cadad42d9bc81160d114a393058b6530777e010b))
+* **identity:** bound native admission and exact API backend scope ([006db63](https://github.com/perkforge/perkforge-platform-tenants/commit/006db63a651885ba940e8bb570c6088862d16ee4))
+
 ## [2.7.0](https://github.com/perkforge/perkforge-platform-tenants/compare/v2.6.0...v2.7.0) (2026-11-15)
 
 
