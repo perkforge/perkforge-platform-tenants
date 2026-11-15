@@ -1,5 +1,20 @@
 # Changelog
 
+## [2.8.0](https://github.com/perkforge/perkforge-platform-tenants/compare/v2.7.1...v2.8.0) (2026-11-15)
+
+
+### Features
+
+* **identity:** consume shared context ABI across enrollment runtime ([#93](https://github.com/perkforge/perkforge-platform-tenants/issues/93)) ([62a9131](https://github.com/perkforge/perkforge-platform-tenants/commit/62a91312376a23c3df2cb37f78ea6db401055d34))
+* **identity:** explicit adopter environment profile ([#91](https://github.com/perkforge/perkforge-platform-tenants/issues/91)) ([e0b974f](https://github.com/perkforge/perkforge-platform-tenants/commit/e0b974fa8e746b639f65541ee2b07bea6dd3ed33))
+* **identity:** guarded foundation GitOps ownership plan ([#92](https://github.com/perkforge/perkforge-platform-tenants/issues/92)) ([2fb3b9d](https://github.com/perkforge/perkforge-platform-tenants/commit/2fb3b9d7e838aee942afdc1d211c321f6b0bbb79))
+* **identity:** hold membership until issuer SSA acceptance ([#90](https://github.com/perkforge/perkforge-platform-tenants/issues/90)) ([a954c46](https://github.com/perkforge/perkforge-platform-tenants/commit/a954c4650cab1ed0bf09752ad208d7cb72676efb))
+
+
+### Bug Fixes
+
+* **identity:** preserve exact quantity guards with native v3 schema ([#87](https://github.com/perkforge/perkforge-platform-tenants/issues/87)) ([69654b4](https://github.com/perkforge/perkforge-platform-tenants/commit/69654b4170220b433e7c36f9f665f40de9fef38c))
+
 ## [2.7.1](https://github.com/perkforge/perkforge-platform-tenants/compare/v2.7.0...v2.7.1) (2026-11-15)
 
 
