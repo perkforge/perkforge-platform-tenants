@@ -22,6 +22,8 @@ if os.environ.get('IDENTITY_SELECTION_FIXTURE_DIR'):
  selected=json.loads((root/'declarations/identity/foundation.json').read_text())
  if D.get('enabled') is not True or selected.get('enabled') is not True:raise ValueError('enabled selected fixture required')
  network,custody,I=selected['network'],selected['custody'],selected['initializer']
+if os.environ.get('IDENTITY_RUNTIME_PROFILE_FIXTURE'):
+ D['runtimeProfile']=os.environ['IDENTITY_RUNTIME_PROFILE_FIXTURE']
 from identity_context_binding import selection
 B=selection(D)
 policies=[o for o in build(D,network,custody,I) if o['kind']=='ValidatingAdmissionPolicy'];g=render(D);cases=[]
@@ -31,12 +33,13 @@ for phase in ('foundation','attest','memberships'):
   bad=copy.deepcopy(j);mutate(bad['spec']['template']['spec']);cases.append({'Name':phase+'-'+name,'Policy':policy,'Object':bad,'Allowed':False})
 for phase in ('foundation','attest','memberships'):
  j=g[phase+'/job.yaml']
- for label,mutate in [('request-budget',lambda p:p['containers'][0]['resources']['requests'].update(cpu='200m')),('limit-budget',lambda p:p['containers'][0]['resources']['limits'].update(memory='1024Mi')),('tmp-limit',lambda p:next(v for v in p['volumes'] if v['name']=='tmp')['emptyDir'].update(sizeLimit='256Mi')),('overhead',lambda p:p.update(overhead={'cpu':'1m'}))]:
+ for label,mutate in [('request-budget',lambda p:p['containers'][0]['resources']['requests'].update(cpu='200m')),('limit-budget',lambda p:p['containers'][0]['resources']['limits'].update(memory='1024Mi')),('tmp-limit',lambda p:next(v for v in p['volumes'] if v['name']=='tmp')['emptyDir'].update(sizeLimit='256Mi')),('overhead',lambda p:p.update(overhead={'cpu':'1m'})),('pod-resources',lambda p:p.update(resources={'requests':{'cpu':'1m'},'limits':{'memory':'1Gi'}}))]:
   bad=copy.deepcopy(j);mutate(bad['spec']['template']['spec']);cases.append({'Name':phase+'-'+label,'Policy':'identity-jobs-'+j['metadata']['namespace'],'Object':bad,'Allowed':False})
 for phase in ('foundation','attest','memberships'):
  j=g[phase+'/job.yaml'];p={'apiVersion':'v1','kind':'Pod','metadata':{'namespace':j['metadata']['namespace'],'name':j['metadata']['name']+'-abcde','generateName':j['metadata']['name']+'-','ownerReferences':[{'apiVersion':'batch/v1','kind':'Job','name':j['metadata']['name'],'uid':D['phaseInputs']['attest']['identity']['identity_receipt_uid'],'controller':True}],'annotations':j['spec']['template']['metadata']['annotations']},'spec':copy.deepcopy(j['spec']['template']['spec'])}
  p['spec']['schedulerName']='default-scheduler';p['spec']['priority']=0;p['spec']['containers'][0].update(terminationMessagePath='/dev/termination-log',terminationMessagePolicy='File');p['spec']['tolerations']=[{'key':k,'operator':'Exists','effect':'NoExecute','tolerationSeconds':300} for k in ('node.kubernetes.io/not-ready','node.kubernetes.io/unreachable')]
  cases.append({'Name':phase+'-controller-pod','Policy':'identity-pods-'+j['metadata']['namespace'],'Object':p,'Allowed':True})
+ bad=copy.deepcopy(p);bad['spec']['resources']={'requests':{'cpu':'1m'},'limits':{'memory':'1Gi'}};cases.append({'Name':phase+'-pod-level-resources','Policy':'identity-pods-'+j['metadata']['namespace'],'Object':bad,'Allowed':False})
  bad=copy.deepcopy(p);bad['spec']['containers'].append(copy.deepcopy(bad['spec']['containers'][0]));cases.append({'Name':phase+'-injected-sidecar','Policy':'identity-pods-'+j['metadata']['namespace'],'Object':bad,'Allowed':False})
 for phase in ('foundation','attest'):
  c=g[phase+'/source.yaml'];pn='identity-config-'+c['metadata']['namespace'];cases.append({'Name':phase+'-code','Policy':pn,'Object':c,'Allowed':True})
@@ -49,16 +52,64 @@ for phase in ('foundation','attest','memberships'):
   bad=copy.deepcopy(k);mutation(bad['spec']);cases.append({'Name':phase+'-declaration-'+label,'Policy':B['declaration_policy'],'Object':bad,'Username':user,'Allowed':False})
 bad=copy.deepcopy(g['memberships-reconcile.yaml']);bad['spec']['suspend']=not bad['spec']['suspend']
 cases.append({'Name':'membership-gate-before-policy-update','Policy':B['declaration_policy'],'Object':bad,'Username':'system:serviceaccount:flux-system:'+B['declaration_reconciler'],'Allowed':False})
-old={'apiVersion':'v1','kind':'ConfigMap','metadata':{'uid':D['phaseInputs']['attest']['identity']['identity_receipt_uid'],'name':B['evidence_name'],'namespace':B['writer_namespace'],'labels':{'app.kubernetes.io/managed-by':'perkforge-identity','perkforge.dev/context':D['context']},'annotations':{'perkforge.dev/desired-invocation':'old'}},'data':{'receipt.json':'old'}}
+old={'apiVersion':'v1','kind':'ConfigMap','metadata':{'uid':D['phaseInputs']['attest']['identity']['identity_receipt_uid'],'name':B['evidence_name'],'namespace':B['writer_namespace'],'labels':{'app.kubernetes.io/managed-by':'perkforge-identity','perkforge.dev/context':D['context'],'platform.perkforge.io/owner':'tenant-identity-foundation-v1'},'annotations':{'perkforge.dev/desired-invocation':'old'}},'data':{'receipt.json':'old'}}
 issuer='system:serviceaccount:'+B['attestor_namespace']+':identity-attestor';intent='system:serviceaccount:flux-system:'+B['declaration_reconciler']
 new=copy.deepcopy(old);new['data']['receipt.json']='new'
 cases.append({'Name':'issuer-data-only','Policy':B['evidence_policy'],'Object':new,'OldObject':old,'Operation':'UPDATE','Username':issuer,'Allowed':True})
 for label,mutation in [('uid',lambda o:o['metadata'].update(uid='33333333-3333-4333-8333-333333333333')),('intent',lambda o:o['metadata']['annotations'].update({'perkforge.dev/desired-invocation':'foreign'})),('owner',lambda o:o['metadata'].update(finalizers=['foreign'])),('extra',lambda o:o['data'].update(extra='foreign'))]:
  bad=copy.deepcopy(new);mutation(bad);cases.append({'Name':'issuer-'+label,'Policy':B['evidence_policy'],'Object':bad,'OldObject':old,'Operation':'UPDATE','Username':issuer,'Allowed':False})
 new=copy.deepcopy(old);new['metadata']['annotations']={'perkforge.dev/desired-invocation':D['invocation']}
+new['metadata']['labels'].update({'kustomize.toolkit.fluxcd.io/name':B['phase_prefix'],'kustomize.toolkit.fluxcd.io/namespace':'flux-system'})
 cases.append({'Name':'intent-preserves-issuer','Policy':B['evidence_policy'],'Object':new,'OldObject':old,'Operation':'UPDATE','Username':intent,'Allowed':True})
+tracked=copy.deepcopy(old);tracked['metadata']['labels']=copy.deepcopy(new['metadata']['labels'])
+cases.append({'Name':'intent-same-flux-owner','Policy':B['evidence_policy'],'Object':new,'OldObject':tracked,'Operation':'UPDATE','Username':intent,'Allowed':True})
+for label,target,key,value in [('foreign-old','old','kustomize.toolkit.fluxcd.io/name','foreign'),('foreign-new','new','kustomize.toolkit.fluxcd.io/name','foreign'),('foreign-ns','new','kustomize.toolkit.fluxcd.io/namespace','foreign'),('bootstrap-owner','new','platform.perkforge.io/owner','foreign'),('bootstrap-context','new','perkforge.dev/context','foreign'),('extra','new','extra','foreign'),('old-extra','old','extra','foreign')]:
+ prior=copy.deepcopy(old);bad=copy.deepcopy(new);(prior if target=='old' else bad)['metadata']['labels'][key]=value
+ cases.append({'Name':'intent-label-'+label,'Policy':B['evidence_policy'],'Object':bad,'OldObject':prior,'Operation':'UPDATE','Username':intent,'Allowed':False})
+for label in ('kustomize.toolkit.fluxcd.io/name','kustomize.toolkit.fluxcd.io/namespace','platform.perkforge.io/owner'):
+ bad=copy.deepcopy(new);bad['metadata']['labels'].pop(label)
+ cases.append({'Name':'intent-label-missing-'+label,'Policy':B['evidence_policy'],'Object':bad,'OldObject':tracked,'Operation':'UPDATE','Username':intent,'Allowed':False})
+for who in (issuer,'foreign'):
+ cases.append({'Name':'adoption-wrong-caller-'+who,'Policy':B['evidence_policy'],'Object':new,'OldObject':old,'Operation':'UPDATE','Username':who,'Allowed':False})
+for field in ('ownerReferences','finalizers'):
+ bad=copy.deepcopy(new);bad['metadata'][field]=[{'apiVersion':'v1','kind':'ConfigMap','name':'foreign','uid':'11111111-1111-4111-8111-111111111111'}] if field=='ownerReferences' else ['foreign']
+ cases.append({'Name':'intent-forbidden-'+field,'Policy':B['evidence_policy'],'Object':bad,'OldObject':old,'Operation':'UPDATE','Username':intent,'Allowed':False})
 bad=copy.deepcopy(new);bad['data']={};cases.append({'Name':'intent-cannot-erase','Policy':B['evidence_policy'],'Object':bad,'OldObject':old,'Operation':'UPDATE','Username':intent,'Allowed':False})
 cases.append({'Name':'missing-evidence-no-adoption','Policy':B['evidence_policy'],'Object':new,'Operation':'CREATE','Username':intent,'Allowed':False})
+if D.get('runtimeProfile'):
+ for phase in ('foundation','attest','memberships'):
+  job=g[phase+'/job.yaml'];pol='identity-jobs-'+job['metadata']['namespace']
+  for label,mutation in [
+   ('missing',lambda p:p.pop('initContainers')),
+   ('extra',lambda p:p['initContainers'].append(copy.deepcopy(p['initContainers'][0]))),
+   ('command',lambda p:p['initContainers'][0].update(command=['false'])),
+   ('secret-mount',lambda p:p['initContainers'][0]['volumeMounts'].append({'name':'credentials','mountPath':'/credentials'})),
+   ('subpath',lambda p:p['initContainers'][0]['volumeMounts'][0].update(subPath='foreign')),
+   ('resources',lambda p:p['initContainers'][0]['resources']['limits'].update(cpu='999m')),
+   ('sidecar',lambda p:p['initContainers'][0].update(restartPolicy='Always')),
+   ('env',lambda p:p['initContainers'][0].update(env=[{'name':'FOREIGN','value':'x'}])),
+   ('privileged',lambda p:p['initContainers'][0]['securityContext'].update(privileged=True)),
+   ('unsupervised',lambda p:p['containers'][0].update(command=['/bin/bash','/opt/perkforge/bin/launch']))]:
+   bad=copy.deepcopy(job);mutation(bad['spec']['template']['spec'])
+   cases.append({'Name':phase+'-init-'+label,'Policy':pol,'Object':bad,'Allowed':False})
+  defaulted=copy.deepcopy(job);init=defaulted['spec']['template']['spec']['initContainers'][0];init.pop('args');init.update(terminationMessagePath='/dev/termination-log',terminationMessagePolicy='File',imagePullPolicy='IfNotPresent')
+  cases.append({'Name':phase+'-init-defaulted','Policy':pol,'Object':defaulted,'Allowed':True})
+if D.get('runtimeProfile'):
+ from identity_kubelet_preflight import build as preflight
+ h=preflight(D,I);pol='identity-pods-'+B['writer_namespace']
+ cases.append({'Name':'kubelet-preflight','Policy':pol,'Object':h,'Username':I['operatorUser'],'Allowed':True})
+ cases.append({'Name':'kubelet-preflight-wrong-caller','Policy':pol,'Object':h,'Username':intent,'Allowed':False})
+ for label,mutation in [
+  ('image',lambda o:o['spec']['containers'][0].update(image='foreign')),
+  ('mount',lambda o:o['spec']['containers'][0]['volumeMounts'].append({'name':'secret','mountPath':'/secret'})),
+  ('volume',lambda o:o['spec']['volumes'].append({'name':'secret','secret':{'secretName':'group-writer'}})),
+  ('sidecar',lambda o:o['spec']['containers'].append(copy.deepcopy(o['spec']['containers'][0]))),
+  ('resource',lambda o:o['spec']['containers'][0]['resources']['limits'].update(cpu='900m')),
+  ('network-label',lambda o:o['metadata']['labels'].update({'platform.perkforge.io/identity-phase':'true'})),
+  ('api-token',lambda o:o['spec'].update(automountServiceAccountToken=True)),
+  ('command',lambda o:o['spec']['containers'][0].update(command=['false'])),
+  ('node',lambda o:o['spec'].update(nodeName='foreign'))]:
+  bad=copy.deepcopy(h);mutation(bad);cases.append({'Name':'kubelet-preflight-'+label,'Policy':pol,'Object':bad,'Username':I['operatorUser'],'Allowed':False})
 from private_receipts import plan
 H=plan(I)
 cases.append({'Name':'private-init','Policy':'identity-pods-'+B['writer_namespace'],'Object':H['pod'],'Allowed':True})

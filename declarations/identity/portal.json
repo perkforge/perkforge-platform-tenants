@@ -115,6 +115,7 @@
     }
   },
   "retryGeneration": 0,
+  "runtimeProfile": "private-tmp-supervised-v1",
   "schemaVersion": 1,
   "sourceBundle": {
     "configMaps": [

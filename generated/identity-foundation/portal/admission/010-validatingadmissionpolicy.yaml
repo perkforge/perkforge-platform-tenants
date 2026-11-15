@@ -30,13 +30,52 @@ spec:
       && (!has(object.spec.hostNetwork) || object.spec.hostNetwork == false) && (!has(object.spec.hostPID)
       || object.spec.hostPID == false) && (!has(object.spec.hostIPC) || object.spec.hostIPC
       == false) && (!has(object.spec.shareProcessNamespace) || object.spec.shareProcessNamespace
-      == false) && !has(object.spec.nodeName) && !has(object.spec.initContainers)
-      && !has(object.spec.ephemeralContainers) && !has(object.spec.hostAliases) &&
-      !has(object.spec.dnsConfig) && !has(object.spec.runtimeClassName) && !has(object.spec.affinity)
-      && !has(object.spec.topologySpreadConstraints) && !has(object.spec.resourceClaims)
-      && !has(object.spec.os) && !has(dyn(object.spec).overhead) && object.spec.containers[0].name
-      == "reconcile" && object.spec.containers[0].image == "registry1.dso.mil/ironbank/opensource/ansible/ansible@sha256:3308322cc09f20a813c00e9087c166a3d97dbb7789c059f1020f3c0b092fdf02"
-      && object.spec.containers[0].command == ["/bin/bash","/opt/perkforge/bin/launch"]
+      == false) && !has(object.spec.nodeName) && !has(object.spec.ephemeralContainers)
+      && !has(object.spec.hostAliases) && !has(object.spec.dnsConfig) && !has(object.spec.runtimeClassName)
+      && !has(object.spec.affinity) && !has(object.spec.topologySpreadConstraints)
+      && !has(object.spec.resourceClaims) && !has(object.spec.os) && object.spec.initContainers.size()
+      == 1 && object.spec.initContainers[0].name == "private-tmp" && object.spec.initContainers[0].image
+      == "registry1.dso.mil/ironbank/opensource/ansible/ansible@sha256:3308322cc09f20a813c00e9087c166a3d97dbb7789c059f1020f3c0b092fdf02"
+      && object.spec.initContainers[0].command == ["/home/python/python-env/bin/python3","-c","import
+      os,stat\nos.umask(0o077)\nf=os.open('/work',os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW)\ns=os.fstat(f)\nif
+      s.st_uid!=0 or s.st_gid!=1001 or stat.S_IMODE(s.st_mode)!=0o2777 or os.listdir(f):\n
+      raise SystemExit('UnsafeTemporaryRoot')\nos.mkdir('private',0o700,dir_fd=f)\ncreated=os.stat('private',dir_fd=f,follow_symlinks=False)\nc=os.open('private',os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW,dir_fd=f)\ns=os.fstat(c)\nif
+      (s.st_dev,s.st_ino)!=(created.st_dev,created.st_ino) or s.st_uid!=1001 or s.st_gid!=1001
+      or stat.S_IMODE(s.st_mode) not in (0o700,0o2700) or os.listdir(c):\n raise SystemExit('UnsafeCreatedTemporaryDirectory')\n#
+      Only this invocation's exclusively created child; never repair an existing path.\nos.fchmod(c,0o700)\ns=os.fstat(c)\nif
+      s.st_uid!=1001 or s.st_gid!=1001 or stat.S_IMODE(s.st_mode)!=0o700 or os.listdir(c):\n
+      raise SystemExit('UnsafePrivateTemporaryDirectory')\nos.close(c);os.close(f)\n"]
+      && (!has(object.spec.initContainers[0].args) || object.spec.initContainers[0].args.size()
+      == 0) && !has(object.spec.initContainers[0].env) && !has(object.spec.initContainers[0].envFrom)
+      && !has(object.spec.initContainers[0].lifecycle) && !has(object.spec.initContainers[0].livenessProbe)
+      && !has(object.spec.initContainers[0].readinessProbe) && !has(object.spec.initContainers[0].startupProbe)
+      && !has(object.spec.initContainers[0].ports) && !has(object.spec.initContainers[0].workingDir)
+      && !has(object.spec.initContainers[0].volumeDevices) && !has(object.spec.initContainers[0].restartPolicy)
+      && !has(object.spec.initContainers[0].restartPolicyRules) && (!has(object.spec.initContainers[0].terminationMessagePath)
+      || object.spec.initContainers[0].terminationMessagePath == "/dev/termination-log")
+      && (!has(object.spec.initContainers[0].terminationMessagePolicy) || object.spec.initContainers[0].terminationMessagePolicy
+      == "File") && (!has(object.spec.initContainers[0].stdin) || object.spec.initContainers[0].stdin
+      == false) && (!has(object.spec.initContainers[0].stdinOnce) || object.spec.initContainers[0].stdinOnce
+      == false) && (!has(object.spec.initContainers[0].tty) || object.spec.initContainers[0].tty
+      == false) && !has(object.spec.initContainers[0].securityContext.runAsUser) &&
+      !has(object.spec.initContainers[0].securityContext.runAsGroup) && !has(object.spec.initContainers[0].securityContext.runAsNonRoot)
+      && !has(object.spec.initContainers[0].securityContext.seccompProfile) && !has(object.spec.initContainers[0].securityContext.seLinuxOptions)
+      && !has(object.spec.initContainers[0].securityContext.appArmorProfile) && !has(object.spec.initContainers[0].securityContext.procMount)
+      && object.spec.initContainers[0].securityContext.allowPrivilegeEscalation ==
+      false && object.spec.initContainers[0].securityContext.readOnlyRootFilesystem
+      == true && object.spec.initContainers[0].securityContext.capabilities.drop ==
+      ["ALL"] && (!has(object.spec.initContainers[0].securityContext.capabilities.add)
+      || object.spec.initContainers[0].securityContext.capabilities.add.size() ==
+      0) && (!has(object.spec.initContainers[0].securityContext.privileged) || object.spec.initContainers[0].securityContext.privileged
+      == false) && dyn(object.spec.initContainers[0].resources).requests == {"cpu":"100m","memory":"256Mi"}
+      && dyn(object.spec.initContainers[0].resources).limits == {"cpu":"500m","memory":"512Mi"}
+      && object.spec.initContainers[0].volumeMounts.size() == 1 && object.spec.initContainers[0].volumeMounts[0].name
+      == "tmp" && object.spec.initContainers[0].volumeMounts[0].mountPath == "/work"
+      && !has(object.spec.initContainers[0].volumeMounts[0].subPath) && !has(object.spec.initContainers[0].volumeMounts[0].subPathExpr)
+      && !has(object.spec.initContainers[0].volumeMounts[0].mountPropagation) && !has(dyn(object.spec).overhead)
+      && !has(dyn(object.spec).resources) && object.spec.containers[0].name == "reconcile"
+      && object.spec.containers[0].image == "registry1.dso.mil/ironbank/opensource/ansible/ansible@sha256:3308322cc09f20a813c00e9087c166a3d97dbb7789c059f1020f3c0b092fdf02"
+      && object.spec.containers[0].command == ["/usr/bin/timeout","--signal=TERM","--kill-after=10s","270s","/bin/bash","/opt/perkforge/bin/launch"]
       && object.spec.containers[0].args == ["--phase","attest","--invocation","5d92796ed2fcc186e8a770a13f69916eed814ed1d0bd6e9eb1fa67e61e84bca4","--inputs-sha256","0f1060dad8494bbbcc166506c89b94cf32276d1aeec49a6f5a63c18d35faca50","--bundle-sha256","43bad232454e5fb0698b417270dfbd329efa64cef34862c98af97dba0a311aaa"]
       && !has(object.spec.containers[0].env) && !has(object.spec.containers[0].envFrom)
       && !has(object.spec.containers[0].lifecycle) && !has(object.spec.containers[0].livenessProbe)
@@ -124,7 +163,7 @@ spec:
       == "provenance.sha256" && object.spec.volumes[0].configMap.items[26].key ==
       "file-26" && object.spec.volumes[0].configMap.items[26].path == "revisions.json"
       && object.spec.volumes[1].name == "inputs" && object.spec.volumes[1].configMap.name
-      == "identity-portal-attest-45382250184caa3d-inputs" && object.spec.volumes[2].name
+      == "identity-portal-attest-b9c6ab787d54ba27-inputs" && object.spec.volumes[2].name
       == "credentials" && object.spec.volumes[2].secret.secretName == "isolated-attestor"
       && object.spec.volumes[2].secret.defaultMode == 288 && object.spec.volumes[3].name
       == "tmp" && dyn(object.spec.volumes[3].emptyDir).sizeLimit == "128Mi" && object.spec.volumes[4].name
@@ -147,7 +186,7 @@ spec:
       && !has(object.spec.containers[0].volumeMounts[2].subPath) && !has(object.spec.containers[0].volumeMounts[2].subPathExpr)
       && !has(object.spec.containers[0].volumeMounts[2].mountPropagation) && object.spec.containers[0].volumeMounts[3].name
       == "tmp" && object.spec.containers[0].volumeMounts[3].mountPath == "/tmp" &&
-      !has(object.spec.containers[0].volumeMounts[3].subPath) && !has(object.spec.containers[0].volumeMounts[3].subPathExpr)
+      object.spec.containers[0].volumeMounts[3].subPath == "private" && !has(object.spec.containers[0].volumeMounts[3].subPathExpr)
       && !has(object.spec.containers[0].volumeMounts[3].mountPropagation) && object.spec.containers[0].volumeMounts[4].name
       == "api" && object.spec.containers[0].volumeMounts[4].mountPath == "/identity-api"
       && object.spec.containers[0].volumeMounts[4].readOnly == true && !has(object.spec.containers[0].volumeMounts[4].subPath)
@@ -157,8 +196,8 @@ spec:
       && t.operator == 'Exists' && t.effect == 'NoExecute' && t.tolerationSeconds
       == 300))) && object.metadata.ownerReferences.size() == 1 && object.metadata.ownerReferences[0].apiVersion
       == "batch/v1" && object.metadata.ownerReferences[0].kind == "Job" && object.metadata.ownerReferences[0].controller
-      == true && object.metadata.ownerReferences[0].name == "identity-portal-attest-45382250184caa3d"
-      && object.metadata.generateName == "identity-portal-attest-45382250184caa3d-"
-      && object.metadata.annotations == {"platform.perkforge.io/invocation":"5d92796ed2fcc186e8a770a13f69916eed814ed1d0bd6e9eb1fa67e61e84bca4","platform.perkforge.io/attempt":"45382250184caa3d280b5dfb25898fa10fbc919fd547dbbaa65213b95b94f6b3"})
+      == true && object.metadata.ownerReferences[0].name == "identity-portal-attest-b9c6ab787d54ba27"
+      && object.metadata.generateName == "identity-portal-attest-b9c6ab787d54ba27-"
+      && object.metadata.annotations == {"platform.perkforge.io/invocation":"5d92796ed2fcc186e8a770a13f69916eed814ed1d0bd6e9eb1fa67e61e84bca4","platform.perkforge.io/attempt":"b9c6ab787d54ba270c582d321ce2afb6874293adfb0c40aa3983554fa6bc72ff"})
     message: Identity foundation boundary refused an unreviewed mutation.
     reason: Forbidden

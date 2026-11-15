@@ -12,10 +12,30 @@ class Profiles(unittest.TestCase):
   # Reviewed PR90 c742d8d, synthetic fixture, complete object bytes (canonical JSON).
   self.assertEqual(sha(render(F['D'])),'108e4f1162eb99fa3d614616c6dd2c618c013c72a030969b6a5f8e4fe4b19970')
   foundation=build(F['D'],F['network'],F['custody'],F['I'])
-  self.assertEqual(sha(foundation),'1ee707a03eeb3b016bedceda1232de5fcacfeef92c21d328ef116b416895c9d6')
+  self.assertEqual(sha(foundation),'f75a32e5944a02d1b7569fa7aaa3add3492df2c6b13c37cdc29fbb1c92a61987')
   # Native SSA normalization adds only these exact API defaults; retain the
   # historical complete-tree assertion after removing that explicit delta.
   legacy=copy.deepcopy(foundation)
+  # Explicitly deny new Pod-level budgets; retain prior complete-tree checks.
+  count=0
+  for o in legacy:
+   if o['kind']!='ValidatingAdmissionPolicy':continue
+   for validation in o['spec']['validations']:
+    for prefix in ('object.spec.template.spec','object.spec'):
+     term=' && !has(dyn('+prefix+').resources)'
+     count+=validation['expression'].count(term)
+     validation['expression']=validation['expression'].replace(term,'')
+  self.assertEqual(count,7)
+  self.assertEqual(sha(legacy),'79d213170c987fe1fd92bb87a5cfd4973321d7d41e254af9866c5a56607aafb0')
+  # Exact reviewed declaration-only Flux tracking-label delta; retain prior tree.
+  base={'platform.perkforge.io/owner':'tenant-identity-foundation-v1','app.kubernetes.io/managed-by':'perkforge-identity','perkforge.dev/context':'portal'}
+  tracked={**base,'kustomize.toolkit.fluxcd.io/name':'identity-portal','kustomize.toolkit.fluxcd.io/namespace':'flux-system'}
+  enc=lambda x:json.dumps(x,separators=(',',':'))
+  adoption='(oldObject.metadata.labels == '+enc(base)+' || oldObject.metadata.labels == '+enc(tracked)+') && object.metadata.labels == '+enc(tracked)
+  policy=next(o for o in legacy if o['kind']=='ValidatingAdmissionPolicy' and o['metadata']['name']=='identity-evidence-fields')
+  expression=policy['spec']['validations'][0]['expression'];self.assertEqual(expression.count(adoption),1)
+  policy['spec']['validations'][0]['expression']=expression.replace(adoption,'object.metadata.labels == oldObject.metadata.labels')
+  self.assertEqual(sha(legacy),'1ee707a03eeb3b016bedceda1232de5fcacfeef92c21d328ef116b416895c9d6')
   # Only the reviewed empty gate API representation changed since the prior pin.
   old='object.data.size() <= 1 && object.data.all(k, k == "approval.json" && object.data[k].size() <= 4096)'
   new='(!has(object.data) || ('+old+'))'

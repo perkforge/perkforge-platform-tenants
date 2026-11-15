@@ -25,8 +25,14 @@ def pod_checks(p,prefix='object.spec.template.spec'):
  x=prefix;c=x+'.containers[0]';v=p['containers'][0]
  checks=[x+'.containers.size() == 1',x+'.serviceAccountName == '+cel(p['serviceAccountName']),x+'.automountServiceAccountToken == false',x+'.restartPolicy == "Never"',x+'.nodeSelector == '+cel(p['nodeSelector'])]
  for k in ('hostNetwork','hostPID','hostIPC','shareProcessNamespace'):checks.append('(!has('+x+'.'+k+') || '+x+'.'+k+' == false)')
- for k in ('nodeName','initContainers','ephemeralContainers','hostAliases','dnsConfig','runtimeClassName','affinity','tolerations','topologySpreadConstraints','resourceClaims','os'):checks.append('!has('+x+'.'+k+')')
+ for k in ('nodeName','initContainers','ephemeralContainers','hostAliases','dnsConfig','runtimeClassName','affinity','tolerations','topologySpreadConstraints','resourceClaims','os'):
+  if k!='initContainers' or k not in p:checks.append('!has('+x+'.'+k+')')
+ if 'initContainers' in p:
+  if len(p['initContainers'])!=1:raise ValueError('single fixed init container')
+  q=copy.deepcopy(p);q['containers']=q.pop('initContainers')
+  checks += [z.replace(x+'.containers',x+'.initContainers') for z in pod_checks(q,prefix) if x+'.containers' in z]
  checks.append('!has(dyn('+x+').overhead)')
+ checks.append('!has(dyn('+x+').resources)')
  for k in ('name','image','command'):checks.append(c+'.'+k+' == '+cel(v[k]))
  checks.append('(!has('+c+'.args) || '+c+'.args.size() == 0)' if v['args']==[] else c+'.args == '+cel(v['args']))
  for k in ('env','envFrom','lifecycle','livenessProbe','readinessProbe','startupProbe','ports','workingDir','volumeDevices','restartPolicy','restartPolicyRules'):checks.append('!has('+c+'.'+k+')')
@@ -94,6 +100,11 @@ def build(d,network,custody,initializer=None):
    pod_clauses.append('('+' && '.join(checks)+')')
   if init and ns==WRITER:
    h=init['pod'];checks=pod_checks(h['spec'],'object.spec');checks=[x for x in checks if x!='!has(object.spec.tolerations)'];checks += ['object.metadata.name == '+cel(h['metadata']['name']),'object.metadata.annotations == '+cel(h['metadata']['annotations']),'object.metadata.labels == '+cel(h['metadata']['labels']),'!has(object.metadata.ownerReferences)','object.spec.activeDeadlineSeconds == 300','(!has(object.spec.tolerations) || (object.spec.tolerations.size() <= 2 && object.spec.tolerations.all(t, t.key in ["node.kubernetes.io/not-ready","node.kubernetes.io/unreachable"] && t.operator == "Exists" && t.effect == "NoExecute" && t.tolerationSeconds == 300)))'];pod_clauses.append('('+' && '.join(checks)+')')
+  if init and ns==WRITER and d.get('runtimeProfile')=='private-tmp-supervised-v1':
+   from identity_kubelet_preflight import build as preflight
+   h=preflight(d,initializer);checks=pod_checks(h['spec'],'object.spec');checks=[x for x in checks if x!='!has(object.spec.tolerations)']
+   checks += ['request.userInfo.username == '+cel(initializer['operatorUser']),'object.metadata.name == '+cel(h['metadata']['name']),'object.metadata.annotations == '+cel(h['metadata']['annotations']),'object.metadata.labels == '+cel(h['metadata']['labels']),'!has(object.metadata.ownerReferences)','!has(object.metadata.finalizers)','!has(object.metadata.generateName)','object.spec.activeDeadlineSeconds == 300','(!has(object.spec.tolerations) || (object.spec.tolerations.size() <= 2 && object.spec.tolerations.all(t, t.key in ["node.kubernetes.io/not-ready","node.kubernetes.io/unreachable"] && t.operator == "Exists" && t.effect == "NoExecute" && t.tolerationSeconds == 300)))']
+   pod_clauses.append('('+' && '.join(checks)+')')
   out+=policy('identity-pods-'+ns,'','v1','pods',ns,[' || '.join(pod_clauses)],operations=('CREATE',))
   # One bounded implication per exact name/key, never one giant OR literal.
   # Exact key sets preserve full-map equality; unknown object names remain denied.
@@ -136,8 +147,11 @@ def build(d,network,custody,initializer=None):
  declaration_user='system:serviceaccount:flux-system:'+declaration
  out += policy(binding['declaration_policy'],'kustomize.toolkit.fluxcd.io','v1','kustomizations','flux-system',['request.userInfo.username != '+cel(declaration_user)+' || ('+' || '.join(allowed)+')'])
  out += role('identity-evidence-issuer',WRITER,[rule('',['configmaps'],['get','patch'],[evidence])],'identity-attestor',ATTESTOR)
+ base_labels={**OWNER,'app.kubernetes.io/managed-by':'perkforge-identity','perkforge.dev/context':d['context']}
+ tracked_labels={**base_labels,'kustomize.toolkit.fluxcd.io/name':binding['phase_prefix'],'kustomize.toolkit.fluxcd.io/namespace':'flux-system'}
+ label_adoption='(oldObject.metadata.labels == '+cel(base_labels)+' || oldObject.metadata.labels == '+cel(tracked_labels)+') && object.metadata.labels == '+cel(tracked_labels)
  uid=d['phaseInputs']['attest']['identity']['identity_receipt_uid'];issuer='system:serviceaccount:'+ATTESTOR+':identity-attestor'
- out+=policy(binding['evidence_policy'],'','v1','configmaps',WRITER,["object.metadata.name != '"+evidence+"' || (request.operation == 'UPDATE' && oldObject != null && object.metadata.uid == "+cel(uid)+" && oldObject.metadata.uid == "+cel(uid)+" && !has(object.binaryData) && (!has(object.immutable) || object.immutable == false) && ((request.userInfo.username == "+cel(issuer)+" && object.metadata.annotations == oldObject.metadata.annotations && object.metadata.labels == oldObject.metadata.labels && object.data.size() == 1 && 'receipt.json' in object.data && object.data['receipt.json'].size() <= 262144) || (request.userInfo.username == "+cel(declaration_user)+" && object.metadata.labels == oldObject.metadata.labels && has(object.data) == has(oldObject.data) && (!has(object.data) || object.data == oldObject.data) && object.metadata.annotations == {'perkforge.dev/desired-invocation': "+cel(d['invocation'])+"})))"])
+ out+=policy(binding['evidence_policy'],'','v1','configmaps',WRITER,["object.metadata.name != '"+evidence+"' || (request.operation == 'UPDATE' && oldObject != null && object.metadata.uid == "+cel(uid)+" && oldObject.metadata.uid == "+cel(uid)+" && !has(object.binaryData) && (!has(object.immutable) || object.immutable == false) && ((request.userInfo.username == "+cel(issuer)+" && object.metadata.annotations == oldObject.metadata.annotations && object.metadata.labels == oldObject.metadata.labels && object.data.size() == 1 && 'receipt.json' in object.data && object.data['receipt.json'].size() <= 262144) || (request.userInfo.username == "+cel(declaration_user)+" && "+label_adoption+" && has(object.data) == has(oldObject.data) && (!has(object.data) || object.data == oldObject.data) && object.metadata.annotations == {'perkforge.dev/desired-invocation': "+cel(d['invocation'])+"})))"])
  for field in ('ownerReferences','finalizers'):
   out[-2]['spec']['validations'].append({'expression':"object.metadata.name != '"+evidence+"' || (oldObject != null && has(object.metadata."+field+") == has(oldObject.metadata."+field+") && (!has(object.metadata."+field+") || object.metadata."+field+" == oldObject.metadata."+field+"))",'message':'Evidence ownership metadata is immutable.','reason':'Forbidden'})
  out.append(obj('v1','PersistentVolumeClaim',d['receiptClaim'],WRITER,spec={'accessModes':['ReadWriteOnce'],'storageClassName':profile['storage']['className'],'resources':{'requests':{'storage':profile['storage']['size']}}}))
