@@ -9,7 +9,7 @@ class Activation(unittest.TestCase):
  def setUp(self):
   self.d=json.loads((ROOT/'declarations/identity/portal.json').read_text());self.c=json.loads((ROOT/'declarations/identity/foundation.json').read_text())
  def test_release_pins_and_explicit_scope(self):
-  self.assertEqual(self.d['enrollmentRevision'],'5621e9b05bd94566c1bfdc6bcf8b75b0404e8ff0');self.assertEqual(self.d['platformRevision'],'b904017158100944a81129899e8fc64a3ed976b8')
+  self.assertEqual(self.d['enrollmentRevision'],'4b027b7a50ebf477a36746b88d0f034cc6a7d454');self.assertEqual(self.d['platformRevision'],'b904017158100944a81129899e8fc64a3ed976b8')
   self.assertEqual(self.d['context'],'portal');self.assertEqual(self.d['image'],IMAGE);self.assertEqual(self.d['sourceName'],'tenant-enrollments')
   self.assertEqual(self.d['resources'],{'requests':{'cpu':'100m','memory':'256Mi'},'limits':{'cpu':'500m','memory':'512Mi'}})
   self.assertEqual(self.d['phaseInputs']['foundation']['group']['gitlab_group_expected_parent_id'],7)

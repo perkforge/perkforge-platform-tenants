@@ -17,7 +17,7 @@ spec:
   wait: true
   commonMetadata:
     annotations:
-      platform.perkforge.io/foundation-sha256: 655ec3623b60d13f23f0e917ef1facdca45206d24916f7635e1b4a6ce3dea5db
+      platform.perkforge.io/foundation-sha256: 4a2ce4e06b3f5fef2038e21a718ecc270b6b7e92cb7728af724d3e328a39198f
   dependsOn:
   - name: identity-portal-foundation-admission
     readyExpr: dep.spec.commonMetadata.annotations['platform.perkforge.io/foundation-sha256']
