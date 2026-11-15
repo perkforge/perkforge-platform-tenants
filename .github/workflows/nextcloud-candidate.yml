@@ -108,5 +108,6 @@ jobs:
     - name: Check candidate contracts and native CEL with no cluster access
       run: |
         python3 -m unittest discover -s tests -p 'test_*.py' -v
+        go test -C tests/flux-health -count=1 -v .
         cd tests/nextcloud-cel
         go test -count=1 -v .
