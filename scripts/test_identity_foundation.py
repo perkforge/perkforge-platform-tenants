@@ -21,6 +21,14 @@ class Foundation(unittest.TestCase):
   self.assertEqual(sum(x['kind']=='ValidatingAdmissionPolicy' for x in o),8)
   self.assertTrue(all(x['spec']['failurePolicy']=='Fail' for x in o if x['kind']=='ValidatingAdmissionPolicy'))
   self.assertTrue(all(x['spec']['validationActions']==['Deny'] for x in o if x['kind']=='ValidatingAdmissionPolicyBinding'))
+ def test_native_atomic_match_defaults_explicit(self):
+  for o in self.objects():
+   if o['kind']!='ValidatingAdmissionPolicy':continue
+   m=o['spec']['matchConstraints']
+   self.assertEqual(set(m),{'matchPolicy','namespaceSelector','objectSelector','resourceRules'})
+   self.assertEqual(m['matchPolicy'],'Equivalent');self.assertEqual(m['namespaceSelector'],{});self.assertEqual(m['objectSelector'],{})
+   self.assertTrue(all(r['scope']=='*' for r in m['resourceRules']))
+   self.assertTrue(o['spec']['matchConditions']) # Namespace/name fencing remains independent.
  def test_no_broad_network_or_unknown_record(self):
   for n in ({**F['network'],'ingressHosts':['0.0.0.0/0']},{**F['network'],'apiHosts':['192.0.2.0/24']},{**F['network'],'traefikBackend':False},{**F['network'],'apiBackendHosts':['0.0.0.0/0']}):
    with self.assertRaises(ValueError):build(F['D'],n,F['custody'])

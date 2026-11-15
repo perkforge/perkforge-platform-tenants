@@ -19,7 +19,7 @@ def rule(group,resources,verbs,names=None):
  return d
 def cel(v):return json.dumps(v,separators=(',',':'))
 def policy(name,group,version,resource,ns,validations,operations=('CREATE','UPDATE')):
- p=obj('admissionregistration.k8s.io/v1','ValidatingAdmissionPolicy',name,spec={'failurePolicy':'Fail','matchConstraints':{'resourceRules':[{'apiGroups':[group],'apiVersions':[version],'operations':list(operations),'resources':[resource]}]},'matchConditions':[{'name':'exact-namespace','expression':'request.namespace == '+cel(ns)}],'validations':[{'expression':x,'message':'Identity foundation boundary refused an unreviewed mutation.','reason':'Forbidden'} for x in validations]})
+ p=obj('admissionregistration.k8s.io/v1','ValidatingAdmissionPolicy',name,spec={'failurePolicy':'Fail','matchConstraints':{'matchPolicy':'Equivalent','namespaceSelector':{},'objectSelector':{},'resourceRules':[{'apiGroups':[group],'apiVersions':[version],'operations':list(operations),'resources':[resource],'scope':'*'}]},'matchConditions':[{'name':'exact-namespace','expression':'request.namespace == '+cel(ns)}],'validations':[{'expression':x,'message':'Identity foundation boundary refused an unreviewed mutation.','reason':'Forbidden'} for x in validations]})
  return [p,obj('admissionregistration.k8s.io/v1','ValidatingAdmissionPolicyBinding',name,spec={'policyName':name,'validationActions':['Deny']})]
 def pod_checks(p,prefix='object.spec.template.spec'):
  x=prefix;c=x+'.containers[0]';v=p['containers'][0]

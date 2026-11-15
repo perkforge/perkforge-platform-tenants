@@ -11,7 +11,18 @@ class Profiles(unittest.TestCase):
  def test_pilot_exact_old_tree(self):
   # Reviewed PR90 c742d8d, synthetic fixture, complete object bytes (canonical JSON).
   self.assertEqual(sha(render(F['D'])),'108e4f1162eb99fa3d614616c6dd2c618c013c72a030969b6a5f8e4fe4b19970')
-  self.assertEqual(sha(build(F['D'],F['network'],F['custody'],F['I'])),'4bf1e03b405b43ef30da018dae81ffae5aead2e0027e0d5a964b9053a5978dd7')
+  foundation=build(F['D'],F['network'],F['custody'],F['I'])
+  self.assertEqual(sha(foundation),'0d47090d9e93120116d7ae36d1ad0d597de45833c4decee8db6c2441ee35eb03')
+  # Native SSA normalization adds only these exact API defaults; retain the
+  # historical complete-tree assertion after removing that explicit delta.
+  legacy=copy.deepcopy(foundation)
+  for o in legacy:
+   if o['kind']!='ValidatingAdmissionPolicy':continue
+   m=o['spec']['matchConstraints']
+   self.assertEqual(m.pop('matchPolicy'),'Equivalent')
+   self.assertEqual(m.pop('namespaceSelector'),{});self.assertEqual(m.pop('objectSelector'),{})
+   for r in m['resourceRules']:self.assertEqual(r.pop('scope'),'*')
+  self.assertEqual(sha(legacy),'4bf1e03b405b43ef30da018dae81ffae5aead2e0027e0d5a964b9053a5978dd7')
   self.assertEqual(sha(plan(F['I'])),'b401f30b6e34028cb6f48837a22edad682282fc72c228b92f148f27946b612dc')
  def test_alternate_environment(self):
   d=copy.deepcopy(F['D']);d['targetProfile']=ALT;i=copy.deepcopy(F['I']);i['storageProfile']=ALT['storage'];g=render(d);o=build(d,F['network'],F['custody'],i)

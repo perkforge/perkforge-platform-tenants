@@ -7,6 +7,9 @@ metadata:
 spec:
   failurePolicy: Fail
   matchConstraints:
+    matchPolicy: Equivalent
+    namespaceSelector: {}
+    objectSelector: {}
     resourceRules:
     - apiGroups:
       - kustomize.toolkit.fluxcd.io
@@ -17,6 +20,7 @@ spec:
       - UPDATE
       resources:
       - kustomizations
+      scope: '*'
   matchConditions:
   - name: exact-namespace
     expression: request.namespace == "flux-system"
