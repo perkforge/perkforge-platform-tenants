@@ -77,8 +77,7 @@ root or apply command. A reviewed future activation must:
    selecting Jobs. No root/chmod/PSA relaxation is implicit. A possible safer
    initialization is a restricted UID1001 helper creating an owned0700 child on the
    fresh fsGroup-writable claim, then fixed subPath mounting only that private child.
-   The default-off profile proposal below defines the boundary; no executable helper
-   or initialization is authorized or selected by this change.
+   The default-off implementation below remains unselected and unapproved for execution.
 7. Select reviewed source only after native SSA and server-default tests below pass.
 
 ## Stable receipt native SSA test design
@@ -104,26 +103,8 @@ requires reviewed new policy/source before selecting that attempt. Cleanup of ol
 completed Jobs requires source retirement plus explicit owner action; controller
 roles intentionally cannot delete/replay them.
 
-## Default-off private receipt initialization profile proposal
+## Default-off private receipt initialization
 
-`private-receipt-profile.yaml` is deliberately not a Kubernetes object and is not
-consumed by the renderer. A future reviewed helper would mount the exact fresh
-claim at `/volume`, as UID/GID1001 with fsGroup1001, no API token, network access,
-capabilities or writable root. It creates only `/volume/private` with mode0700,
-using exclusive creation and no symlink traversal. The helper must fail if that
-path already exists, any unknown contents exist, the claim/PV UID differs, or
-another Pod mounts the claim. A real empty filesystem-created `lost+found` may
-be allowed only after bounded readable/no-symlink/empty verification, never
-recursive permission repair. It writes and reads back only its own bounded marker,
-verifies owner1001 and mode0700, then removes that marker. No chmod/chown of volume
-root, existing files or unrelated children is permitted.
-
-Success requires helper Pod UID-guarded cleanup, absent PVC consumers and actual
-CSI detach/readback. Failure retains the claim and reports the exact boundary;
-there is no deletion/recreation fallback. Later writer Jobs would mount only fixed
-`subPath: private` at `/receipts`; the existing strict ancestry checks must pass
-inside the actual image before any provider credentials are delivered. Current
-finite Job/admission source has **not** been changed to that mount, so this proposal
-cannot silently activate it. A separately reviewed exact profile change and native
-permission/storage preflight are required. Resource values remain the declaration's
-explicit provisional budget, not a claim that current worker capacity fits.
+The executable source and fixed Job subPath integration are documented in
+[PRIVATE-RECEIPTS.md](PRIVATE-RECEIPTS.md). The profile remains disabled; no live
+initialization, admission, custody or scheduling approval is implied.

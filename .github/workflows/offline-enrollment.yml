@@ -51,6 +51,7 @@ jobs:
       run: |
         python3 scripts/test_finite_identity.py
         python3 scripts/test_identity_foundation.py
+        python3 scripts/test_private_receipts.py
         python3 scripts/finite_identity.py --check
         kubectl kustomize clusters/local-identity-portal
     # Test fixture selection only; this is not tenant discovery or a config generator.
