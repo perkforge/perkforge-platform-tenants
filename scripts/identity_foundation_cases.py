@@ -45,7 +45,9 @@ cases.append({'Name':'missing-evidence-no-adoption','Policy':'identity-evidence-
 from private_receipts import plan
 H=plan(I)
 cases.append({'Name':'private-init','Policy':'identity-pods-tenant-identity-writer','Object':H['pod'],'Allowed':True})
-for field,value in [('command',['false']),('image','foreign')]:
+defaulted=copy.deepcopy(H['pod']);defaulted['spec']['containers'][0].pop('args')
+cases.append({'Name':'private-init-omitted-empty-args','Policy':'identity-pods-tenant-identity-writer','Object':defaulted,'Allowed':True})
+for field,value in [('command',['false']),('image','foreign'),('args',['foreign'])]:
  bad=copy.deepcopy(H['pod']);bad['spec']['containers'][0][field]=value;cases.append({'Name':'private-init-'+field,'Policy':'identity-pods-tenant-identity-writer','Object':bad,'Allowed':False})
 for key in ('configMap','inputs','gate'):
  cases.append({'Name':'private-init-'+key,'Policy':'identity-config-tenant-identity-writer','Object':H[key],'Username':I['operatorUser'],'Allowed':True})
