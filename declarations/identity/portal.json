@@ -7,7 +7,7 @@
   "foundationApproved": true,
   "image": "registry1.dso.mil/ironbank/opensource/ansible/ansible@sha256:3308322cc09f20a813c00e9087c166a3d97dbb7789c059f1020f3c0b092fdf02",
   "invocation": "3d08188c5f24e69af33ee7e38f05bfbdb3bd3ff3d66a1d794488bb140c030c9c",
-  "membershipReleased": false,
+  "membershipReleased": true,
   "phaseInputs": {
     "attest": {
       "identity": {

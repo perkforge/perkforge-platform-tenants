@@ -64,7 +64,7 @@ spec:
       == "5m" && object.spec.timeout == "6m" && object.spec.path == "./generated/identity/portal/memberships"
       && object.spec.serviceAccountName == "identity-group-reconciler" && object.spec.prune
       == false && object.spec.force == false && object.spec.wait == true && object.spec.suspend
-      == true && object.spec.commonMetadata.annotations == {"platform.perkforge.io/invocation":"3d08188c5f24e69af33ee7e38f05bfbdb3bd3ff3d66a1d794488bb140c030c9c","platform.perkforge.io/attempt":"54819c8b56bfc3e8e1e19b306cb445f9ca56f526a59f1f4aa684679359245e6d"}
+      == false && object.spec.commonMetadata.annotations == {"platform.perkforge.io/invocation":"3d08188c5f24e69af33ee7e38f05bfbdb3bd3ff3d66a1d794488bb140c030c9c","platform.perkforge.io/attempt":"54819c8b56bfc3e8e1e19b306cb445f9ca56f526a59f1f4aa684679359245e6d"}
       && !has(object.spec.commonMetadata.labels) && object.spec.healthChecks.size()
       == 1 && object.spec.healthChecks[0].apiVersion == "batch/v1" && object.spec.healthChecks[0].kind
       == "Job" && object.spec.healthChecks[0].name == "identity-portal-memberships-54819c8b56bfc3e8"
