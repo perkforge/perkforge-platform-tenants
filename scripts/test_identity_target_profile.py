@@ -10,8 +10,27 @@ def sha(x):return hashlib.sha256(json.dumps(x,sort_keys=True,separators=(',',':'
 class Profiles(unittest.TestCase):
  def test_pilot_exact_old_tree(self):
   # Reviewed PR90 c742d8d, synthetic fixture, complete object bytes (canonical JSON).
-  self.assertEqual(sha(render(F['D'])),'108e4f1162eb99fa3d614616c6dd2c618c013c72a030969b6a5f8e4fe4b19970')
+  rendered=render(F['D'])
+  self.assertEqual(sha(rendered),'77f13c73245d33ae2a92fafe3e17bc1b9b172cf0d8db462a22d9a1e4c653dc8f')
+  # Assert and remove only the reviewed desired-label preservation delta.
+  base={'platform.perkforge.io/owner':'tenant-identity-foundation-v1','app.kubernetes.io/managed-by':'perkforge-identity','perkforge.dev/context':'portal'}
+  self.assertEqual(rendered['receipt-intent.yaml']['metadata'].pop('labels'),base)
+  self.assertEqual(sha(rendered),'108e4f1162eb99fa3d614616c6dd2c618c013c72a030969b6a5f8e4fe4b19970')
   foundation=build(F['D'],F['network'],F['custody'],F['I'])
+  self.assertEqual(sha(foundation),'596391c60b7b10797eac3d98af560e56bd31bc12d793b2a116528f9c381f03cd')
+  # Normalize only the exact declaration maintenance branch to its reviewed
+  # predecessor, retaining every earlier full-tree golden assertion below.
+  enc=lambda x:json.dumps(x,separators=(',',':'))
+  tracked={**base,'kustomize.toolkit.fluxcd.io/name':'identity-portal','kustomize.toolkit.fluxcd.io/namespace':'flux-system'}
+  adoption='(oldObject.metadata.labels == '+enc(base)+' || oldObject.metadata.labels == '+enc(tracked)+') && object.metadata.labels == '+enc(tracked)
+  maintenance='(oldObject.metadata.labels == '+enc(base)+' || oldObject.metadata.labels == '+enc(tracked)+') && object.metadata.labels == oldObject.metadata.labels && has(object.metadata.annotations) == has(oldObject.metadata.annotations) && (!has(object.metadata.annotations) || object.metadata.annotations == oldObject.metadata.annotations)'
+  annotation="object.metadata.annotations == {'perkforge.dev/desired-invocation': "+enc(F['D']['invocation'])+"}"
+  data='has(object.data) == has(oldObject.data) && (!has(object.data) || object.data == oldObject.data)'
+  current='(('+adoption+' && '+annotation+') || ('+maintenance+')) && '+data
+  prior=adoption+' && '+data+' && '+annotation
+  policy=next(o for o in foundation if o['kind']=='ValidatingAdmissionPolicy' and o['metadata']['name']=='identity-evidence-fields')
+  expression=policy['spec']['validations'][0]['expression'];self.assertEqual(expression.count(current),1)
+  policy['spec']['validations'][0]['expression']=expression.replace(current,prior)
   self.assertEqual(sha(foundation),'f75a32e5944a02d1b7569fa7aaa3add3492df2c6b13c37cdc29fbb1c92a61987')
   # Native SSA normalization adds only these exact API defaults; retain the
   # historical complete-tree assertion after removing that explicit delta.

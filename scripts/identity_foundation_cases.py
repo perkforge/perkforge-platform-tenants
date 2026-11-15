@@ -110,6 +110,28 @@ if D.get('runtimeProfile'):
   ('command',lambda o:o['spec']['containers'][0].update(command=['false'])),
   ('node',lambda o:o['spec'].update(nodeName='foreign'))]:
   bad=copy.deepcopy(h);mutation(bad);cases.append({'Name':'kubelet-preflight-'+label,'Policy':pol,'Object':bad,'Username':I['operatorUser'],'Allowed':False})
+for tracked_mode in (False,True):
+ for annotations in (None,{}, {'perkforge.dev/desired-invocation':D['invocation']}):
+  prior=copy.deepcopy(old)
+  if tracked_mode:prior['metadata']['labels']=copy.deepcopy(tracked['metadata']['labels'])
+  if annotations is None:prior['metadata'].pop('annotations',None)
+  else:prior['metadata']['annotations']=annotations
+  result=copy.deepcopy(prior)
+  result['metadata']['managedFields']=[{'manager':'kustomize-controller','operation':'Apply','apiVersion':'v1','fieldsType':'FieldsV1','fieldsV1':{'f:metadata':{'f:labels':{}}}}]
+  name='maintenance-'+str(tracked_mode)+'-'+str(annotations)
+  cases.append({'Name':name,'Policy':B['evidence_policy'],'Object':result,'OldObject':prior,'Operation':'UPDATE','Username':intent,'Allowed':True})
+  for label,mutate in [('receipt',lambda o:o['data'].update({'receipt.json':'changed'})),('annotation',lambda o:o['metadata'].update(annotations={'foreign':'x'})),('owner',lambda o:o['metadata']['labels'].update({'kustomize.toolkit.fluxcd.io/name':'foreign'})),('finalizer',lambda o:o['metadata'].update(finalizers=['foreign'])),('binary',lambda o:o.update(binaryData={'x':'eA=='}))]:
+   bad=copy.deepcopy(result);mutate(bad);cases.append({'Name':name+'-'+label,'Policy':B['evidence_policy'],'Object':bad,'OldObject':prior,'Operation':'UPDATE','Username':intent,'Allowed':False})
+  cases.append({'Name':name+'-wrong-caller','Policy':B['evidence_policy'],'Object':result,'OldObject':prior,'Operation':'UPDATE','Username':'foreign','Allowed':False})
+# Even if historical managedFields misattribute receipt ownership, an SSA
+# omission/removal must be refused; no field-manager ownership implies write rights.
+for manager in ('kubectl-create','kustomize-controller','identity-attestor'):
+ prior=copy.deepcopy(tracked);prior['metadata']['managedFields']=[{'manager':manager,'operation':'Apply','apiVersion':'v1','fieldsType':'FieldsV1','fieldsV1':{'f:data':{'f:receipt.json':{}}}}]
+ for absent in (False,True):
+  bad=copy.deepcopy(prior)
+  if absent:bad.pop('data')
+  else:bad['data']={}
+  cases.append({'Name':'ssa-omission-denied-'+manager+'-'+str(absent),'Policy':B['evidence_policy'],'Object':bad,'OldObject':prior,'Operation':'UPDATE','Username':intent,'Allowed':False})
 from private_receipts import plan
 H=plan(I)
 cases.append({'Name':'private-init','Policy':'identity-pods-'+B['writer_namespace'],'Object':H['pod'],'Allowed':True})

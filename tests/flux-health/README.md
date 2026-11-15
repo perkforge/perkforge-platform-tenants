@@ -25,3 +25,24 @@ context and idempotent repetition. Admission separately refuses foreign owners,
 extra/missing labels, issuer adoption, receipt mutation and ownership metadata
 changes. This is an offline transform/admission proof, not a live SSA field-owner
 or nonempty-receipt preservation result.
+
+The cleanup sequence fixture calls the pinned `ResourceManager.Apply` through
+an intercepted, offline client: native manager dry-run, JSONPatch managedFields
+cleanup, then apply. Only the API server's merge is simulated, not claimed native
+SSA proof. It asserts cleanup changes only managedFields, retaining exact old
+bootstrap labels, annotations, UID and empty/nonempty receipt bytes. Admission
+fixtures separately allow only declaration-actor maintenance of those unchanged
+protected fields with known bootstrap or tracked labels; owner retargeting,
+tracking removal, data/annotation changes and foreign callers remain denied.
+
+Important limits: the intercepted client does not implement structured-merge-diff
+field ownership. Desired receipt intent now explicitly contains all three
+bootstrap labels so cleanup-migrated ownership cannot omit them. `Force:false`
+controls immutable-resource recreation, not SSA ForceOwnership. Cleanup can
+persist before later apply failure and uses JSONPatch without an RV condition;
+this is not a cross-object transaction. Admission preserves receipt bytes on
+every declaration request, including omission attempts regardless of manager.
+The live gate must inspect actual post-publication managedFields (do not assume
+the fixture's issuer manager name), verify receipt data is not owned by a
+cleanup-matched/controller Apply manager, and compare actual nonempty receipt
+before/after the real Flux path. Empty-receipt success cannot substitute for it.
