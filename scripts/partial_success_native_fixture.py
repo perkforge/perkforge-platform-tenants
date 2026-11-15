@@ -5,11 +5,11 @@ def replace_once(text, old, new):
  return text.replace(old,new)
 
 def transform(text):
- text=replace_once(text,"  if p.startswith('/auth/admin/'):\n", "  if p.startswith('/auth/admin/'):\n   if state.get('deny_attestor'):return self.reply(403,{})\n")
+ text=replace_once(text,"   if p=='/api/v4/users':return", "   if p=='/api/v4/users' and state.get('deny_attestor'):return self.reply(403,{})\n   if p=='/api/v4/users':return")
  text=replace_once(text,"'uid':uid,'name'", "'uid':state.get('cm_uid',uid),'name'")
  start=text.index('start=time.monotonic()\ntry:')
  if text.count('start=time.monotonic()\ntry:')!=1:raise ValueError('partial-success scenario seam drift')
- return text[:start]+SCENARIO
+ return (text[:start]+SCENARIO).replace('OFFLINE-READER','OFFLINE.READER')
 
 SCENARIO='''start=time.monotonic()
 try:
