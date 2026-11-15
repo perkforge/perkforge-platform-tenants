@@ -1,4 +1,4 @@
-import contextlib,copy,hashlib,io,json,pathlib,runpy,unittest
+import contextlib,copy,hashlib,io,json,pathlib,runpy,unittest,tempfile
 from identity_target_profile import PILOT,validate,legacy_profile
 from finite_identity import render
 from identity_foundation import build
@@ -32,6 +32,10 @@ class Profiles(unittest.TestCase):
    self.assertNotEqual(render(d)['foundation/job.yaml']['metadata']['name'],original,(k,f))
  def test_legacy_identity_is_pinned(self):
   self.assertTrue(legacy_profile(PILOT));p=copy.deepcopy(PILOT);p['dns']['port']=5353;self.assertFalse(legacy_profile(p))
+  with tempfile.TemporaryDirectory() as tmp:
+   root=pathlib.Path(tmp);(root/'scripts').mkdir();(root/'profiles/identity').mkdir(parents=True)
+   module=root/'scripts/identity_target_profile.py';module.write_text(pathlib.Path(__file__).with_name('identity_target_profile.py').read_text());(root/'profiles/identity/portal-rke2-longhorn.json').write_text(json.dumps(p))
+   with self.assertRaisesRegex(ValueError,'legacy profile example changed'):runpy.run_path(str(module))
  def test_fail_closed(self):
   bad=[{},dict(PILOT,extra=True),dict(PILOT,schemaVersion=True),dict(PILOT,apiAudience='*')]
   for field,value in [('provider','generic'),('size','0Gi'),('size','100Gi'),('className','*')]:p=copy.deepcopy(PILOT);p['storage'][field]=value;bad.append(p)
