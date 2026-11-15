@@ -23,7 +23,32 @@ class Ownership(unittest.TestCase):
   kinds=[o['kind'] for files in p['stages'].values() for o in files.values()]
   for kind in ['Secret','PersistentVolumeClaim','Namespace','Pod','Job']:self.assertNotIn(kind,kinds)
   self.assertFalse(p['reconciliations'][0]['spec']['prune']);self.assertFalse(p['reconciliations'][0]['spec']['force'])
-  self.assertIn('healthCheckExprs',p['reconciliations'][0]['spec']);self.assertEqual(p['reconciliations'][1]['spec']['dependsOn'],[{'name':'identity-foundation-admission'}])
+  self.assertIn('healthCheckExprs',p['reconciliations'][0]['spec']);self.assertEqual(p['reconciliations'][1]['spec']['dependsOn'][0]['name'],'identity-foundation-admission')
+ def test_retry_changes_names_not_root_authority(self):
+  a,c=sample();d=copy.deepcopy(F['D']);d['retryGeneration']+=1
+  for body in d['phaseInputs'].values():body['identity']['identity_retry_generation']=d['retryGeneration']
+  b=foundation(d,F['network'],F['custody']);new={**c,'foundationSHA256':sha(b)}
+  p=build(a,c);q=build(b,new)
+  self.assertEqual(p['bootstrapGuards'],q['bootstrapGuards']);self.assertEqual(p['bootstrapGrants'],q['bootstrapGrants'])
+  self.assertNotEqual(p['stages'],q['stages'])
+  for plan,cfg in [(p,c),(q,new)]:
+   x,y=plan['reconciliations'];self.assertEqual(x['spec']['commonMetadata'],y['spec']['commonMetadata'])
+   self.assertEqual(x['spec']['commonMetadata']['annotations']['platform.perkforge.io/foundation-sha256'],cfg['foundationSHA256'])
+   expr=y['spec']['dependsOn'][0]['readyExpr'];self.assertIn('dep.status.observedGeneration',expr);self.assertIn("e.status == 'True'",expr)
+ def test_oversize_admission_name_refused(self):
+  a,c=sample();next(o for o in a if o['kind']=='ValidatingAdmissionPolicy')['metadata']['name']='a'*254;c['foundationSHA256']=sha(a)
+  with self.assertRaises(ValueError):build(a,c)
+ def test_malformed_retry_contract_refused(self):
+  for mode in ('verb','foreign-phase','mixed-attempt','input-link','source','extra'):
+   a,c=sample();role=next(o for o in a if o['kind']=='Role' and o['metadata']['namespace']==B['writer_namespace'] and o['rules'][0]['resources']==['jobs'])
+   if mode=='verb':role['rules'][1]['verbs'].append('update')
+   elif mode=='foreign-phase':role['rules'][1]['resourceNames'][0]='foreign-foundation-'+'a'*16
+   elif mode=='mixed-attempt':role['rules'][1]['resourceNames'][0]=role['rules'][1]['resourceNames'][0][:-16]+'a'*16
+   elif mode=='input-link':role['rules'][5]['resourceNames'][0]='foreign-inputs'
+   elif mode=='source':role['rules'][5]['resourceNames'][-1]='foreign-source-'+'a'*20
+   else:role['rules'][1]['resourceNames'].append('extra')
+   c['foundationSHA256']=sha(a)
+   with self.assertRaises(ValueError):build(a,c)
  def test_stage_kustomize_builds_and_no_existing_root_changes(self):
   objects,c=sample();p=build(objects,c)
   with tempfile.TemporaryDirectory() as tmp:
@@ -41,17 +66,15 @@ class Ownership(unittest.TestCase):
   bad=copy.deepcopy(objects);next(o for o in bad if o['kind']=='Role')['rules'][0]['verbs'].append('escalate');c['foundationSHA256']=sha(bad)
   with self.assertRaises(ValueError):build(bad,c)
  def test_bootstrap_authority_collision_denied(self):
-  objects,c=sample();r=next(o for o in objects if o['kind']=='Role');old=r['metadata']['name'];ns=r['metadata']['namespace'];r['metadata']['name']=c['namePrefix']+'-owner'
+  objects,c=sample();r=next(o for o in objects if o['kind']=='Role' and o['metadata']['name'].startswith('eso-'));old=r['metadata']['name'];ns=r['metadata']['namespace'];r['metadata']['name']=c['namePrefix']+'-owner'
   b=next(o for o in objects if o['kind']=='RoleBinding' and o['metadata']['namespace']==ns and o['roleRef']['name']==old);b['metadata']['name']=r['metadata']['name'];b['roleRef']['name']=r['metadata']['name']
   c['foundationSHA256']=sha(objects)
   with self.assertRaisesRegex(ValueError,'disjoint'):build(objects,c)
  def test_independent_context_namespace_selection(self):
-  objects,c=sample();replacement={B['writer_namespace']:'sample-identity-writer',B['attestor_namespace']:'sample-identity-attestor'}
-  # Rendered object handoff, not a second tenant-name implementation.
-  encoded=json.dumps(objects)
-  for old,new in replacement.items():encoded=encoded.replace(old,new)
-  objects=json.loads(encoded)
-  c['runtimeNamespaces']=list(replacement.values());c['namePrefix']='sample-identity';c['foundationSHA256']=sha(objects);p=build(objects,c)
+  from identity_context_fixture import alternate
+  d,i,custody=alternate(F['D'],F['I'],F['custody'],'atlas')
+  objects=foundation(d,F['network'],custody);_,c=sample();binding=context_selection(d)
+  c['runtimeNamespaces']=[binding['writer_namespace'],binding['attestor_namespace']];c['namePrefix']='atlas-identity';c['foundationSHA256']=sha(objects);p=build(objects,c)
   self.assertEqual({o['metadata']['namespace'] for o in p['bootstrapGrants'] if o['kind']=='Role'},set(c['runtimeNamespaces']+['flux-system']))
-  self.assertTrue(all(o['metadata']['name'].startswith('sample-identity-') for o in p['bootstrapGuards']+p['bootstrapGrants']))
+  self.assertTrue(all(o['metadata']['name'].startswith('atlas-identity-') for o in p['bootstrapGuards']+p['bootstrapGrants']))
 if __name__=='__main__':unittest.main()

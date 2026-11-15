@@ -5,6 +5,7 @@ import (
  "os"
  "os/exec"
  "testing"
+ "strings"
  admissionv1 "k8s.io/api/admissionregistration/v1"
  "k8s.io/apimachinery/pkg/api/meta"
  "k8s.io/apimachinery/pkg/runtime/schema"
@@ -15,7 +16,7 @@ import (
 )
 func TestIdentityGitopsOwnership(t *testing.T){
  raw,err:=exec.Command("python3","../../scripts/identity_gitops_cases.py").CombinedOutput();if err!=nil{t.Fatalf("%s %v",raw,err)}
- var f struct{Policies []admissionv1.ValidatingAdmissionPolicy;Cases []struct{Name,Policy string;Object map[string]any;Allowed bool}}
+ var f struct{Policies []admissionv1.ValidatingAdmissionPolicy;Cases []struct{Name,Policy string;Object map[string]any;Allowed bool};DependencyExpression string;Dependencies []struct{Name string;Dep,Self map[string]any;Allowed bool}}
  if err=json.Unmarshal(raw,&f);err!=nil{t.Fatal(err)}
  b,err:=os.ReadFile(os.Getenv("NEXTCLOUD_OPENAPI"));if err!=nil{t.Fatal(err)}
  var schemas struct{Definitions fixtureSchemas};if err=json.Unmarshal(b,&schemas);err!=nil{t.Fatal(err)}
@@ -27,4 +28,14 @@ func TestIdentityGitopsOwnership(t *testing.T){
   for _,v:=range p.Spec.Validations{r:=compiler.CompileCELExpression(expression{v.Expression,false},admissioncel.OptionalVariableDeclarations{},environment.NewExpressions);if r.Error!=nil{t.Fatal(r.Error)};value,_,err:=r.Program.ContextEval(context.Background(),map[string]any{"object":tc.Object,"oldObject":nil,"request":map[string]any{"operation":"UPDATE","userInfo":map[string]any{"username":"system:serviceaccount:flux-system:platform-reconciler"}},"namespaceObject":nil});if err!=nil || value.Value()!=true{allowed=false}}
   if allowed!=tc.Allowed{t.Fatalf("allowed=%v expected=%v",allowed,tc.Allowed)}
  })}
+ // Use the same CEL compiler with dep/self bound to dynamic object variables.
+ expr:=strings.ReplaceAll(strings.ReplaceAll(f.DependencyExpression,"dep.","object."),"self.","oldObject.")
+ compiled:=compiler.CompileCELExpression(expression{expr,false},admissioncel.OptionalVariableDeclarations{},environment.NewExpressions);if compiled.Error!=nil{t.Fatal(compiled.Error)}
+ for _,tc:=range f.Dependencies{t.Run("dependency-"+tc.Name,func(t *testing.T){v,_,err:=compiled.Program.ContextEval(context.Background(),map[string]any{"object":tc.Dep,"oldObject":tc.Self});allowed:=err==nil && v.Value()==true;if allowed!=tc.Allowed{t.Fatalf("allowed=%v expected=%v err=%v",allowed,tc.Allowed,err)}})}
+
+}
+
+func TestIdentityGitopsOwnershipMaximumContext(t *testing.T) {
+ t.Setenv("IDENTITY_CONTEXT_FIXTURE", "abcdefghijklmnopqrstuvwxyzabcde")
+ TestIdentityGitopsOwnership(t)
 }

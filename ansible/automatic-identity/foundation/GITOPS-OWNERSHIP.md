@@ -48,10 +48,10 @@ installation; the exception is a prerequisite, not an inferred universal fact.
 
 Named escalation is **not harmless**: absent the root-owned guards it permits any
 rules in those names and binding could redirect recipients. The guards enforce
-exact rule lists, exact roleRefs and exact service-account subjects, and reject
+fixed rule lists, exact roleRefs and exact service-account subjects, and reject
 GC ownerReferences/finalizers. Install and type-check/bind them as root **before**
 the ownership grants. The generated grant names and the two guard policies are
-not themselves included in platform write permissions. New desired rule templates
+not themselves included in platform write permissions. New authority templates
 need a separately reviewed root guard update before reconciliation can change them.
 
 This is not isolation from malicious trusted platform Git. The platform still
@@ -86,3 +86,37 @@ untrusted or prevent all abuse of its other already-approved capabilities.
 For an alternate context, pass its already-rendered exact object list and selected
 namespaces. Tests prove that handoff, not a new tenant naming ABI. Initial scope
 remains the eight-role design; changed role count or delegated authority fails closed.
+
+## Bounded retry-name authority (separate live approval required)
+
+The two reconciler Roles retain fixed six-rule authority. Their exact phase sets
+are frozen from the reviewed rendered foundation: foundation+memberships in writer,
+and attest in attestor. Only Job/input names may change to the same context/phase
+prefix (the shared renderer’s 46-character readable-stem bound) plus 16 lowercase hexadecimal characters; input names must equal the Job
+name plus `-inputs`. The writer's two phases must share that attempt suffix. Each
+Role permits exactly one `identity-source-` name with 20 lowercase hexadecimal
+characters. No extra names, foreign prefixes, wildcards, verbs, resources or
+subjects are permitted. All other six Roles and all eight bindings remain literal.
+
+This is an expansion from one attempt's object names to future names inside that
+fixed shape, not a claim of unchanged object-name authority. Root must explicitly
+approve and install the changed guards. Once installed, ordinary retry/source-name
+changes no longer need another root guard edit, provided authority and context
+shape remain unchanged. Exact workload/ConfigMap admission must still reconcile
+first. Those policies are controlled by trusted platform source; the structural
+RBAC guard does not independently approve future executable content. It does not
+atomically compare attempts across separate Role objects; the generated current
+foundation and ordered reconciliation coordinate that state.
+
+Both foundation Kustomizations carry the current foundation SHA in their spec's
+commonMetadata annotations. Controls requires admission's matching SHA, current
+observedGeneration and Ready=True, preventing an old Ready status from satisfying
+a new source expectation. This is sequencing, not an atomic multi-resource
+transaction. Existing jobs/receipts are not deleted and no retry is auto-triggered.
+The five-minute evidence lifetime and explicit membership-release gate remain.
+
+Offline tests evaluate future retry Roles against the original guards, deny
+foreign/mixed/extra names and permission drift, and evaluate stale hash/generation
+and non-Ready dependency cases. Actual GitOps reconciliation, field ownership and
+live denial acceptance remain separate gates; source tests alone do not establish
+that generic retries are operational.
