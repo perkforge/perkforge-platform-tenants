@@ -30,7 +30,7 @@ spec:
       == "5m" && object.spec.timeout == "6m" && object.spec.path == "./generated/identity/portal/foundation"
       && object.spec.serviceAccountName == "identity-group-reconciler" && object.spec.prune
       == false && object.spec.force == false && object.spec.wait == true && object.spec.suspend
-      == true && object.spec.commonMetadata.annotations == {"platform.perkforge.io/invocation":"89fa3d6348444b25ede774bebe27287c083b5932d4ea192b4dc5826a7e6191c5","platform.perkforge.io/attempt":"74a1fd77a43038f577050abc6df5e601b2f6f5e87147de9e855925194120a78c"}
+      == false && object.spec.commonMetadata.annotations == {"platform.perkforge.io/invocation":"89fa3d6348444b25ede774bebe27287c083b5932d4ea192b4dc5826a7e6191c5","platform.perkforge.io/attempt":"74a1fd77a43038f577050abc6df5e601b2f6f5e87147de9e855925194120a78c"}
       && !has(object.spec.commonMetadata.labels) && object.spec.healthChecks.size()
       == 1 && object.spec.healthChecks[0].apiVersion == "batch/v1" && object.spec.healthChecks[0].kind
       == "Job" && object.spec.healthChecks[0].name == "identity-portal-foundation-74a1fd77a43038f5"
@@ -44,7 +44,7 @@ spec:
       == "5m" && object.spec.timeout == "6m" && object.spec.path == "./generated/identity/portal/attest"
       && object.spec.serviceAccountName == "identity-attestor-reconciler" && object.spec.prune
       == false && object.spec.force == false && object.spec.wait == true && object.spec.suspend
-      == true && object.spec.commonMetadata.annotations == {"platform.perkforge.io/invocation":"89fa3d6348444b25ede774bebe27287c083b5932d4ea192b4dc5826a7e6191c5","platform.perkforge.io/attempt":"74a1fd77a43038f577050abc6df5e601b2f6f5e87147de9e855925194120a78c"}
+      == false && object.spec.commonMetadata.annotations == {"platform.perkforge.io/invocation":"89fa3d6348444b25ede774bebe27287c083b5932d4ea192b4dc5826a7e6191c5","platform.perkforge.io/attempt":"74a1fd77a43038f577050abc6df5e601b2f6f5e87147de9e855925194120a78c"}
       && !has(object.spec.commonMetadata.labels) && object.spec.healthChecks.size()
       == 1 && object.spec.healthChecks[0].apiVersion == "batch/v1" && object.spec.healthChecks[0].kind
       == "Job" && object.spec.healthChecks[0].name == "identity-portal-attest-74a1fd77a43038f5"

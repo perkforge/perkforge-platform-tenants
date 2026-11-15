@@ -23,4 +23,4 @@ spec:
     kind: Job
     name: identity-portal-foundation-74a1fd77a43038f5
     namespace: tenant-identity-writer
-  suspend: true
+  suspend: false

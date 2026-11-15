@@ -457,5 +457,5 @@
   },
   "workerNode": "worker-2",
   "writerSecret": "group-writer",
-  "phasesSuspended": true
+  "phasesSuspended": false
 }
