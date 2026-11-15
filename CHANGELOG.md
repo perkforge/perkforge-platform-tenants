@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.7.0](https://github.com/perkforge/perkforge-platform-tenants/compare/v2.6.0...v2.7.0) (2026-11-15)
+
+
+### Features
+
+* **identity:** prepare guarded private receipt initialization ([9c53e24](https://github.com/perkforge/perkforge-platform-tenants/commit/9c53e245938344e67a3f0449c7baaec8dc3c0921))
+* **identity:** prepare guarded private receipt initialization ([5bd055d](https://github.com/perkforge/perkforge-platform-tenants/commit/5bd055d6e07934a08e0bd50b98b6b9e9698e885c))
+
 ## [2.6.0](https://github.com/perkforge/perkforge-platform-tenants/compare/v2.5.3...v2.6.0) (2026-11-14)
 
 
