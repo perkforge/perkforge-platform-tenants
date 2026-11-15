@@ -105,7 +105,7 @@
       }
     }
   },
-  "phasesSuspended": true,
+  "phasesSuspended": false,
   "platformRevision": "95ef0f103a89fe71b7e5aff93d0f3dd2ce31947c",
   "pullSecret": "private-registry",
   "receiptClaim": "identity-receipts",
