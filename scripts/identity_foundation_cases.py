@@ -93,6 +93,22 @@ if D.get('runtimeProfile'):
    cases.append({'Name':phase+'-init-'+label,'Policy':pol,'Object':bad,'Allowed':False})
   defaulted=copy.deepcopy(job);init=defaulted['spec']['template']['spec']['initContainers'][0];init.pop('args');init.update(terminationMessagePath='/dev/termination-log',terminationMessagePolicy='File',imagePullPolicy='IfNotPresent')
   cases.append({'Name':phase+'-init-defaulted','Policy':pol,'Object':defaulted,'Allowed':True})
+if D.get('runtimeProfile'):
+ from identity_kubelet_preflight import build as preflight
+ h=preflight(D,I);pol='identity-pods-'+B['writer_namespace']
+ cases.append({'Name':'kubelet-preflight','Policy':pol,'Object':h,'Username':I['operatorUser'],'Allowed':True})
+ cases.append({'Name':'kubelet-preflight-wrong-caller','Policy':pol,'Object':h,'Username':intent,'Allowed':False})
+ for label,mutation in [
+  ('image',lambda o:o['spec']['containers'][0].update(image='foreign')),
+  ('mount',lambda o:o['spec']['containers'][0]['volumeMounts'].append({'name':'secret','mountPath':'/secret'})),
+  ('volume',lambda o:o['spec']['volumes'].append({'name':'secret','secret':{'secretName':'group-writer'}})),
+  ('sidecar',lambda o:o['spec']['containers'].append(copy.deepcopy(o['spec']['containers'][0]))),
+  ('resource',lambda o:o['spec']['containers'][0]['resources']['limits'].update(cpu='900m')),
+  ('network-label',lambda o:o['metadata']['labels'].update({'platform.perkforge.io/identity-phase':'true'})),
+  ('api-token',lambda o:o['spec'].update(automountServiceAccountToken=True)),
+  ('command',lambda o:o['spec']['containers'][0].update(command=['false'])),
+  ('node',lambda o:o['spec'].update(nodeName='foreign'))]:
+  bad=copy.deepcopy(h);mutation(bad);cases.append({'Name':'kubelet-preflight-'+label,'Policy':pol,'Object':bad,'Username':I['operatorUser'],'Allowed':False})
 from private_receipts import plan
 H=plan(I)
 cases.append({'Name':'private-init','Policy':'identity-pods-'+B['writer_namespace'],'Object':H['pod'],'Allowed':True})
