@@ -21,6 +21,6 @@ spec:
   healthCheckExprs:
   - apiVersion: admissionregistration.k8s.io/v1
     kind: ValidatingAdmissionPolicy
-    current: has(status) && has(status.observedGeneration) && status.observedGeneration
-      == metadata.generation && has(status.typeChecking) && (!has(status.typeChecking.expressionWarnings)
+    current: has(status.observedGeneration) && status.observedGeneration == metadata.generation
+      && has(status.typeChecking) && (!has(status.typeChecking.expressionWarnings)
       || status.typeChecking.expressionWarnings.size() == 0)
