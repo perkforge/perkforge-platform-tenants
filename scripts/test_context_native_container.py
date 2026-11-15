@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Explicit isolated cached-image fixture; synthetic provider APIs only, no deployment."""
 import pathlib,tempfile,subprocess,sys,json,shutil,os,argparse
-parser=argparse.ArgumentParser();parser.add_argument('--run',action='store_true');parser.add_argument('--platform',type=pathlib.Path);parser.add_argument('--output',type=pathlib.Path);parser.add_argument('--supervised-source',type=pathlib.Path);args=parser.parse_args()
+parser=argparse.ArgumentParser();parser.add_argument('--run',action='store_true');parser.add_argument('--platform',type=pathlib.Path);parser.add_argument('--output',type=pathlib.Path);parser.add_argument('--supervised-source',type=pathlib.Path);parser.add_argument('--atomic-writer',action='store_true');args=parser.parse_args()
 if not args.run:print('INERT: explicit --run required; cached image only.');raise SystemExit(0)
 if not args.platform or not args.output:raise SystemExit('Explicit platform checkout and fresh output directory required.')
 R=pathlib.Path(__file__).resolve().parents[1];P=args.platform;sys.path.insert(0,str(R/'scripts'));from identity_source_bundle import bundle,PLATFORM,PREFIX,source
@@ -11,12 +11,25 @@ for path in [PREFIX+x for x in PLATFORM]+[PREFIX+'enrollment/identity_context.py
 canonical='big-bang-bootstrap/configuration/authorization/contexts/portal.yaml';f=pf/canonical.replace('portal.yaml','atlas.yaml');f.parent.mkdir(parents=True);f.write_bytes(source(P,rev,canonical).replace(b'portal',b'atlas'))
 subprocess.run(['git','init','-q',str(pf)],check=True);subprocess.run(['git','-C',str(pf),'add','.'],check=True);subprocess.run(['git','-C',str(pf),'-c','user.name=Fixture','-c','user.email=fixture@example.invalid','commit','-qm','synthetic atlas canonical policy plus exact reviewed adapters'],check=True);pr=subprocess.check_output(['git','-C',str(pf),'rev-parse','HEAD'],text=True).strip();b=bundle(R,er,pf,pr,'atlas')
 for n in ('opt','fixture','credentials','api','inputs','evidence','receipts'):(root/n).mkdir(mode=0o700)
-for item in b['items']:
- f=root/'opt'/item['path'];f.parent.mkdir(parents=True,exist_ok=True);f.write_text(b['configMaps'][0]['data'][item['key']]);f.chmod(0o755)
+if args.atomic_writer:
+ from atomic_writer_fixture import publish
+ publish(root/'opt',{item['path']:b['configMaps'][0]['data'][item['key']] for item in b['items']})
+else:
+ for item in b['items']:
+  f=root/'opt'/item['path'];f.parent.mkdir(parents=True,exist_ok=True);f.write_text(b['configMaps'][0]['data'][item['key']]);f.chmod(0o755)
 subprocess.run(['openssl','req','-x509','-newkey','rsa:2048','-nodes','-days','1','-keyout',str(root/'fixture/key'),'-out',str(root/'fixture/ca.crt'),'-subj','/CN=localhost','-addext','subjectAltName=DNS:localhost'],check=True,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
-(root/'api/token').write_text('OFFLINE-API');shutil.copyfile(root/'fixture/ca.crt',root/'api/ca.crt')
+if args.atomic_writer:publish(root/'api',{'token':'OFFLINE-API','ca.crt':(root/'fixture/ca.crt').read_bytes()})
+else:
+ (root/'api/token').write_text('OFFLINE-API');shutil.copyfile(root/'fixture/ca.crt',root/'api/ca.crt')
 t=(R/'scripts/test_native_finite_container.py').read_text().replace('tenant-identity-writer','tenant-identity-atlas-writer').replace('portal','atlas')
 t=t.replace("d['identity_invocation']=invocation(d)","import sys;sys.path.insert(0,'/opt/platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment');from identity_context import derive\nd['identity_context_digest']=derive('atlas')['digest']\nd['identity_invocation']=invocation(d)")
+if args.atomic_writer:
+ helper=(R/'scripts/atomic_writer_fixture.py').read_text()
+ t=helper+'\n'+t
+ t=t.replace(" for f in P('/credentials').iterdir():f.unlink()",'')
+ t=t.replace(" for n,b in creds.items():(P('/credentials')/n).write_text(b)\n (P('/credentials')/'lab-ca.crt').write_bytes(P('/fixture/ca.crt').read_bytes())", " publish('/credentials',dict(creds,**{'lab-ca.crt':P('/fixture/ca.crt').read_bytes()}))")
+ t=t.replace("P('/inputs/inputs.json').write_bytes(raw)","publish('/inputs',{'inputs.json':raw})")
+ t=t.replace("P('/identity-evidence/receipt.json').write_text(state['data']['receipt.json'])","publish('/identity-evidence',{'receipt.json':state['data']['receipt.json']})")
 if args.supervised_source:
  spec=__import__('importlib.util',fromlist=['']).spec_from_file_location('runtime_profile',args.supervised_source/'scripts/finite_identity.py');runtime=__import__('importlib.util',fromlist=['']).module_from_spec(spec);spec.loader.exec_module(runtime)
  needle="cmd=['bash','/opt/perkforge/bin/launch',"
