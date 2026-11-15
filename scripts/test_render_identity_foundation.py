@@ -15,7 +15,7 @@ class Source(unittest.TestCase):
   for o in files.values():self.assertNotIn(o['kind'],('Secret','Namespace','PersistentVolumeClaim','Pod','Job','ClusterRole','ClusterRoleBinding'))
   self.assertEqual((files,b),render(F['D'],self.config()))
  def test_mismatch_refused(self):
-  for key,value in [('runtimeNamespaces',['foreign','other']),('sourceName','foreign'),('sourcePath','./foreign'),('foundationSHA256','0'*64)]:
+  for key,value in [('runtimeNamespaces',['foreign','other']),('sourceName','foreign'),('sourceNamespace','foreign'),('sourcePath','./foreign'),('foundationSHA256','0'*64)]:
    c=self.config();c['ownership'][key]=value
    with self.assertRaises(ValueError):render(F['D'],c)
  def test_disabled_unknowns_refused(self):
@@ -26,7 +26,7 @@ class Source(unittest.TestCase):
    (p/'portal.json').write_text(json.dumps({'schemaVersion':1,'context':'portal','enabled':False}))
    (p/'foundation.json').write_text(json.dumps({'schemaVersion':1,'enabled':False}))
    materialize(r);materialize(r,True)
-   (r/'generated/identity-foundation/portal/foreign.yaml').write_text('{}')
+   (r/'generated/identity-foundation/portal/foreign.yml').write_text('{}')
    with self.assertRaises(ValueError):materialize(r,True)
    with self.assertRaises(ValueError):materialize(r)
 if __name__=='__main__':unittest.main()

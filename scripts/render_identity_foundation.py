@@ -17,7 +17,7 @@ def render(d,c):
     if set(c)!=keys or type(c['schemaVersion']) is not int or c['schemaVersion']!=1 or c['enabled'] is not True or d.get('enabled') is not True:
         raise ValueError('explicit enabled foundation and declaration required')
     b=selection(d);s=c['ownership']
-    if s.get('runtimeNamespaces')!=[b['writer_namespace'],b['attestor_namespace']] or s.get('controlNamespace')!='flux-system' or s.get('sourceName')!=d['sourceName'] or s.get('sourcePath')!='./generated/identity-foundation/portal':
+    if s.get('runtimeNamespaces')!=[b['writer_namespace'],b['attestor_namespace']] or s.get('controlNamespace')!='flux-system' or s.get('sourceNamespace')!='flux-system' or s.get('sourceName')!=d['sourceName'] or s.get('sourcePath')!='./generated/identity-foundation/portal':
         raise ValueError('foundation must bind the selected context and source')
     objects=foundation(d,c['network'],c['custody'],c['initializer'])
     plan=ownership(objects,s) # Explicit reviewed foundation hash remains mandatory.
@@ -38,7 +38,7 @@ def materialize(root,check=False):
     dest=root/'generated/identity-foundation/portal'
     report=root/'bootstrap/identity-foundation/portal-plan.json'
     text=json.dumps(bootstrap,sort_keys=True,indent=2)+'\n'
-    actual={str(p.relative_to(dest)):p.read_text() for p in dest.rglob('*.yaml')}
+    actual={str(p.relative_to(dest)):p.read_text() for p in dest.rglob('*') if p.is_file()}
     if check:
         if actual!=expected or not report.exists() or report.read_text()!=text:
             raise ValueError('stale foundation output; render and review source diff')
