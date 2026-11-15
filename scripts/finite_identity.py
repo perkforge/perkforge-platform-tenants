@@ -128,7 +128,7 @@ def render(d):
    spec['dependsOn']=[{'name':binding['phase_prefix']+'-'+PHASES[i-1],'readyExpr':"dep.spec.commonMetadata.annotations['platform.perkforge.io/invocation'] == self.spec.commonMetadata.annotations['platform.perkforge.io/invocation'] && dep.spec.commonMetadata.annotations['platform.perkforge.io/attempt'] == self.spec.commonMetadata.annotations['platform.perkforge.io/attempt'] && dep.metadata.generation == dep.status.observedGeneration && dep.status.conditions.exists(e, e.type == 'Ready' && e.status == 'True')"}]
   if phase=='attest':
    ident=body['identity'];match(ident.get('identity_receipt_uid'),r'[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}')
-   out['receipt-intent.yaml']={'apiVersion':'v1','kind':'ConfigMap','metadata':{'name':binding['evidence_name'],'namespace':binding['writer_namespace'],'uid':ident['identity_receipt_uid'],'annotations':{'perkforge.dev/desired-invocation':d['invocation']}}};refs.append('receipt-intent.yaml')
+   out['receipt-intent.yaml']={'apiVersion':'v1','kind':'ConfigMap','metadata':{'name':binding['evidence_name'],'namespace':binding['writer_namespace'],'uid':ident['identity_receipt_uid'],'labels':{'app.kubernetes.io/managed-by':'perkforge-identity','perkforge.dev/context':d['context'],'platform.perkforge.io/owner':'tenant-identity-foundation-v1'},'annotations':{'perkforge.dev/desired-invocation':d['invocation']}}};refs.append('receipt-intent.yaml')
   f=phase+'-reconcile.yaml';refs.append(f);out[f]={'apiVersion':'kustomize.toolkit.fluxcd.io/v1','kind':'Kustomization','metadata':{'name':ks,'namespace':'flux-system'},'spec':spec}
  out['kustomization.yaml']={'apiVersion':'kustomize.config.k8s.io/v1beta1','kind':'Kustomization','resources':refs}
  return out

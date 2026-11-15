@@ -37,6 +37,20 @@ func TestIdentityEvidenceOwnerLabels(t *testing.T) {
 				expected := &unstructured.Unstructured{Object: tc.Object}
 				actual := expected.DeepCopy()
 				actual.SetLabels((&unstructured.Unstructured{Object: tc.OldObject}).GetLabels())
+				payloadCmd := exec.Command("python3", "-c", `import sys,json;sys.path.insert(0,'../../scripts');from test_finite_identity import Tests;from finite_identity import render;print(json.dumps(render(Tests().sample())['receipt-intent.yaml']))`)
+				payloadRaw, payloadErr := payloadCmd.CombinedOutput()
+				if payloadErr != nil {
+					t.Fatalf("payload: %v %s", payloadErr, payloadRaw)
+				}
+				var payload map[string]any
+				if err = json.Unmarshal(payloadRaw, &payload); err != nil {
+					t.Fatal(err)
+				}
+				payloadLabels := (&unstructured.Unstructured{Object: payload}).GetLabels()
+				if payloadLabels["platform.perkforge.io/owner"] != "tenant-identity-foundation-v1" || payloadLabels["app.kubernetes.io/managed-by"] != "perkforge-identity" || payloadLabels["perkforge.dev/context"] != "portal" || len(payloadLabels) != 3 {
+					t.Fatal("desired payload must explicitly preserve bootstrap labels")
+				}
+
 				manager := ssa.NewResourceManager(nil, nil, ssa.Owner{Group: "kustomize.toolkit.fluxcd.io", Field: "kustomize-controller"})
 				manager.SetOwnerLabels([]*unstructured.Unstructured{actual}, expected.GetLabels()["kustomize.toolkit.fluxcd.io/name"], "flux-system")
 				if !reflect.DeepEqual(actual.Object, expected.Object) {
