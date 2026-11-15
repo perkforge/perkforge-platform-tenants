@@ -4,5 +4,9 @@ metadata:
   name: portal-identity-evidence
   namespace: tenant-identity-writer
   uid: 522e96ed-77e1-4dc9-b57c-e8281c761928
+  labels:
+    app.kubernetes.io/managed-by: perkforge-identity
+    perkforge.dev/context: portal
+    platform.perkforge.io/owner: tenant-identity-foundation-v1
   annotations:
     perkforge.dev/desired-invocation: 5d92796ed2fcc186e8a770a13f69916eed814ed1d0bd6e9eb1fa67e61e84bca4
