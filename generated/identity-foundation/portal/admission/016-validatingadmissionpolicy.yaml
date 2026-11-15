@@ -55,14 +55,16 @@ spec:
       "identity-portal-foundation" && object.spec.dependsOn[0].readyExpr == "dep.spec.commonMetadata.annotations['platform.perkforge.io/invocation']
       == self.spec.commonMetadata.annotations['platform.perkforge.io/invocation']
       && dep.spec.commonMetadata.annotations['platform.perkforge.io/attempt'] == self.spec.commonMetadata.annotations['platform.perkforge.io/attempt']
-      && dep.metadata.generation == dep.status.observedGeneration && dep.status.conditions.exists(e,
-      e.type == 'Ready' && e.status == 'True')" && !has(object.spec.kubeConfig) &&
-      !has(object.spec.decryption) && !has(object.spec.postBuild) && !has(object.spec.patches)
-      && !has(object.spec.images) && !has(object.spec.components) && !has(object.spec.targetNamespace)
-      && !has(object.spec.namePrefix) && !has(object.spec.nameSuffix) && !has(object.spec.healthCheckExprs))
-      || (object.metadata.name == "identity-portal-memberships" && object.spec.interval
-      == "5m" && object.spec.timeout == "6m" && object.spec.path == "./generated/identity/portal/memberships"
-      && object.spec.serviceAccountName == "identity-group-reconciler" && object.spec.prune
+      && (!has(dep.spec.suspend) || dep.spec.suspend == false) && dep.metadata.generation
+      == dep.status.observedGeneration && dep.status.conditions.exists(e, e.type ==
+      'Ready' && e.status == 'True' && has(e.observedGeneration) && e.observedGeneration
+      == dep.metadata.generation)" && !has(object.spec.kubeConfig) && !has(object.spec.decryption)
+      && !has(object.spec.postBuild) && !has(object.spec.patches) && !has(object.spec.images)
+      && !has(object.spec.components) && !has(object.spec.targetNamespace) && !has(object.spec.namePrefix)
+      && !has(object.spec.nameSuffix) && !has(object.spec.healthCheckExprs)) || (object.metadata.name
+      == "identity-portal-memberships" && object.spec.interval == "5m" && object.spec.timeout
+      == "6m" && object.spec.path == "./generated/identity/portal/memberships" &&
+      object.spec.serviceAccountName == "identity-group-reconciler" && object.spec.prune
       == false && object.spec.force == false && object.spec.wait == true && object.spec.suspend
       == false && object.spec.commonMetadata.annotations == {"platform.perkforge.io/invocation":"3d08188c5f24e69af33ee7e38f05bfbdb3bd3ff3d66a1d794488bb140c030c9c","platform.perkforge.io/attempt":"54819c8b56bfc3e8e1e19b306cb445f9ca56f526a59f1f4aa684679359245e6d"}
       && !has(object.spec.commonMetadata.labels) && object.spec.healthChecks.size()
@@ -75,10 +77,12 @@ spec:
       "identity-portal-attest" && object.spec.dependsOn[0].readyExpr == "dep.spec.commonMetadata.annotations['platform.perkforge.io/invocation']
       == self.spec.commonMetadata.annotations['platform.perkforge.io/invocation']
       && dep.spec.commonMetadata.annotations['platform.perkforge.io/attempt'] == self.spec.commonMetadata.annotations['platform.perkforge.io/attempt']
-      && dep.metadata.generation == dep.status.observedGeneration && dep.status.conditions.exists(e,
-      e.type == 'Ready' && e.status == 'True')" && !has(object.spec.kubeConfig) &&
-      !has(object.spec.decryption) && !has(object.spec.postBuild) && !has(object.spec.patches)
-      && !has(object.spec.images) && !has(object.spec.components) && !has(object.spec.targetNamespace)
-      && !has(object.spec.namePrefix) && !has(object.spec.nameSuffix) && !has(object.spec.healthCheckExprs)))
+      && (!has(dep.spec.suspend) || dep.spec.suspend == false) && dep.metadata.generation
+      == dep.status.observedGeneration && dep.status.conditions.exists(e, e.type ==
+      'Ready' && e.status == 'True' && has(e.observedGeneration) && e.observedGeneration
+      == dep.metadata.generation)" && !has(object.spec.kubeConfig) && !has(object.spec.decryption)
+      && !has(object.spec.postBuild) && !has(object.spec.patches) && !has(object.spec.images)
+      && !has(object.spec.components) && !has(object.spec.targetNamespace) && !has(object.spec.namePrefix)
+      && !has(object.spec.nameSuffix) && !has(object.spec.healthCheckExprs)))
     message: Identity foundation boundary refused an unreviewed mutation.
     reason: Forbidden
