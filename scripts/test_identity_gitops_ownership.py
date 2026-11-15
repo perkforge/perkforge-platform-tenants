@@ -23,7 +23,29 @@ class Ownership(unittest.TestCase):
   kinds=[o['kind'] for files in p['stages'].values() for o in files.values()]
   for kind in ['Secret','PersistentVolumeClaim','Namespace','Pod','Job']:self.assertNotIn(kind,kinds)
   self.assertFalse(p['reconciliations'][0]['spec']['prune']);self.assertFalse(p['reconciliations'][0]['spec']['force'])
-  self.assertIn('healthCheckExprs',p['reconciliations'][0]['spec']);self.assertEqual(p['reconciliations'][1]['spec']['dependsOn'],[{'name':'identity-foundation-admission'}])
+  self.assertIn('healthCheckExprs',p['reconciliations'][0]['spec']);self.assertEqual(p['reconciliations'][1]['spec']['dependsOn'][0]['name'],'identity-foundation-admission')
+ def test_retry_changes_names_not_root_authority(self):
+  a,c=sample();d=copy.deepcopy(F['D']);d['retryGeneration']+=1
+  for body in d['phaseInputs'].values():body['identity']['identity_retry_generation']=d['retryGeneration']
+  b=foundation(d,F['network'],F['custody']);new={**c,'foundationSHA256':sha(b)}
+  p=build(a,c);q=build(b,new)
+  self.assertEqual(p['bootstrapGuards'],q['bootstrapGuards']);self.assertEqual(p['bootstrapGrants'],q['bootstrapGrants'])
+  self.assertNotEqual(p['stages'],q['stages'])
+  for plan,cfg in [(p,c),(q,new)]:
+   x,y=plan['reconciliations'];self.assertEqual(x['spec']['commonMetadata'],y['spec']['commonMetadata'])
+   self.assertEqual(x['spec']['commonMetadata']['annotations']['platform.perkforge.io/foundation-sha256'],cfg['foundationSHA256'])
+   expr=y['spec']['dependsOn'][0]['readyExpr'];self.assertIn('dep.status.observedGeneration',expr);self.assertIn("e.status == 'True'",expr)
+ def test_malformed_retry_contract_refused(self):
+  for mode in ('verb','foreign-phase','mixed-attempt','input-link','source','extra'):
+   a,c=sample();role=next(o for o in a if o['kind']=='Role' and o['metadata']['namespace']==B['writer_namespace'] and o['rules'][0]['resources']==['jobs'])
+   if mode=='verb':role['rules'][1]['verbs'].append('update')
+   elif mode=='foreign-phase':role['rules'][1]['resourceNames'][0]='foreign-foundation-'+'a'*16
+   elif mode=='mixed-attempt':role['rules'][1]['resourceNames'][0]=role['rules'][1]['resourceNames'][0][:-16]+'a'*16
+   elif mode=='input-link':role['rules'][5]['resourceNames'][0]='foreign-inputs'
+   elif mode=='source':role['rules'][5]['resourceNames'][-1]='foreign-source-'+'a'*20
+   else:role['rules'][1]['resourceNames'].append('extra')
+   c['foundationSHA256']=sha(a)
+   with self.assertRaises(ValueError):build(a,c)
  def test_stage_kustomize_builds_and_no_existing_root_changes(self):
   objects,c=sample();p=build(objects,c)
   with tempfile.TemporaryDirectory() as tmp:
