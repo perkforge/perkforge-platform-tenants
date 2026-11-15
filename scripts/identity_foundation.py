@@ -32,6 +32,7 @@ def pod_checks(p,prefix='object.spec.template.spec'):
   q=copy.deepcopy(p);q['containers']=q.pop('initContainers')
   checks += [z.replace(x+'.containers',x+'.initContainers') for z in pod_checks(q,prefix) if x+'.containers' in z]
  checks.append('!has(dyn('+x+').overhead)')
+ checks.append('!has(dyn('+x+').resources)')
  for k in ('name','image','command'):checks.append(c+'.'+k+' == '+cel(v[k]))
  checks.append('(!has('+c+'.args) || '+c+'.args.size() == 0)' if v['args']==[] else c+'.args == '+cel(v['args']))
  for k in ('env','envFrom','lifecycle','livenessProbe','readinessProbe','startupProbe','ports','workingDir','volumeDevices','restartPolicy','restartPolicyRules'):checks.append('!has('+c+'.'+k+')')
