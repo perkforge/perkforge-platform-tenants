@@ -64,6 +64,11 @@ for byte compatibility. Claim/PV/volume UIDs, owner, exact storage profile, no o
 consumers, held gate, healthy two-replica Longhorn/Retain and detach checks are unchanged.
 No old namespace, receipt or claim is adopted when switching context.
 
+Job names retain a readable prefix bounded to46characters plus a hyphen and16hex
+characters of the full attempt digest, which binds the entire context. Existing
+Portal names are unchanged; maximum-length/shared-prefix contexts are regression
+tested with the native Kubernetes label validator.
+
 Retry, membership-held release, receipt freshness, single-writer locks and cleanup
 follow ADOPTER-PROFILE.md and MAINTAINED-RUNTIME.md. A new digest changes the attempt;
 no conversion of old live receipts or automatic migration is performed.
@@ -76,9 +81,16 @@ ownership and pinned canonical-file bundling. Native CEL/OpenAPI cases run for t
 alternate context as well as Portal. These source tests are **not** actual provider
 provisioning, a second tenant deployment or live authorization proof.
 
-The maintained-image full three-phase fixture previously exercised the legacy Portal
-path. A new context's final published bundle must pass full launcher/provider mocks
-before runtime acceptance; no new-context live-readiness claim is made here. Shared
+The cached maintained-image full three-phase fixture also passed for synthetic atlas
+under500m CPU/512Mi memory, network-none, nonroot1001/read-only root/dropALL:
+foundation, isolated attestation, one developer grant, idempotent repeats, explicit
+newer-attempt fencing and stale projection denial. Wall125.93s, child CPU62.82s,
+largest child RSS62652KiB (not aggregate container peak). Only synthetic loopback
+providers/credentials were used; this is not live tenant or three-subject capacity
+acceptance. Reproduce with `scripts/test_context_native_container.py --run
+--platform <pinned-platform-checkout> --output <fresh-private-directory>`; it is inert
+without --run, never pulls, and generates only test TLS. Final published source pins
+and native admission/CSI/provider readiness still need runtime acceptance. Shared
 ABI/provider source, issuer custody, ongoing foundation GitOps ownership and exact
 runtime consent remain separately reviewed gates. No creator grants are introduced
 by this enrollment source change.

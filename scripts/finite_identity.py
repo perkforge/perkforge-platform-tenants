@@ -18,7 +18,7 @@ def unique(p):
   d[k]=v
  return d
 def render(d):
- if isinstance(d,dict) and set(d)=={'schemaVersion','context','enabled'} and d['schemaVersion']==1 and d['enabled'] is False:
+ if isinstance(d,dict) and set(d) in ({'schemaVersion','context','enabled'},{'schemaVersion','context','enabled','contextDigest'}) and type(d['schemaVersion']) is int and d['schemaVersion']==1 and d['enabled'] is False:
   selection(d);return {'kustomization.yaml':{'apiVersion':'kustomize.config.k8s.io/v1beta1','kind':'Kustomization','resources':[]}}
  required={'targetProfile','schemaVersion','context','enabled','foundationApproved','membershipReleased','sourceName','sourcePath','enrollmentRevision','platformRevision','invocation','retryGeneration','image','sourceBundleName','sourceBundleSHA256','sourceBundle','sourceItems','workerNode','receiptClaim','writerSecret','attestorSecret','pullSecret','resources','phaseInputs'}
  if 'contextDigest' in d:required.add('contextDigest')
@@ -65,7 +65,7 @@ def render(d):
  attempt=digest(attempt_input(d)); out={}; refs=[]
  for i,phase in enumerate(PHASES):
   ns=binding['attestor_namespace'] if phase=='attest' else binding['writer_namespace']
-  name=binding['phase_prefix']+'-'+phase+'-'+attempt[:16]; ks=binding['phase_prefix']+'-'+phase
+  name=(binding['phase_prefix']+'-'+phase)[:46]+'-'+attempt[:16]; ks=binding['phase_prefix']+'-'+phase
   body=d['phaseInputs'][phase]
   if not isinstance(body,dict) or set(body)!=({'identity','group'} if phase=='foundation' else {'identity'}):raise ValueError('literal input wrapper')
   if phase=='foundation' and body['group'] and body['group'].get('gitlab_group_context')!=d['context']:raise ValueError('foreign foundation context')

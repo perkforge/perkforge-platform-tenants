@@ -9,6 +9,7 @@ import (
  "k8s.io/apimachinery/pkg/api/meta"
  "k8s.io/apimachinery/pkg/runtime/schema"
  "k8s.io/apimachinery/pkg/util/version"
+ utilvalidation "k8s.io/apimachinery/pkg/util/validation"
  admissioncel "k8s.io/apiserver/pkg/admission/plugin/cel"
  "k8s.io/apiserver/pkg/admission/plugin/policy/validating"
  "k8s.io/apiserver/pkg/cel/environment"
@@ -34,6 +35,7 @@ func TestIdentityFoundation(t *testing.T){
  for _,tc:=range f.Cases{t.Run(tc.Name,func(t *testing.T){allowed:=true;p:=policies[tc.Policy];if tc.Username==""{tc.Username="system:serviceaccount:flux-system:identity-group-reconciler"};if tc.Operation==""{tc.Operation="CREATE"}
   for _,v:=range p.Spec.Validations{r:=compiler.CompileCELExpression(expression{v.Expression,false},admissioncel.OptionalVariableDeclarations{},environment.NewExpressions);if r.Error!=nil{t.Fatal(r.Error)}
    value,_,err:=r.Program.ContextEval(context.Background(),map[string]any{"object":tc.Object,"oldObject":tc.OldObject,"request":map[string]any{"operation":tc.Operation,"userInfo":map[string]any{"username":tc.Username}},"namespaceObject":nil});if err!=nil || value.Value()!=true{allowed=false}}
+  if tc.Allowed && tc.Object["kind"] == "Job" {name:=tc.Object["metadata"].(map[string]any)["name"].(string);if errors:=utilvalidation.IsValidLabelValue(name);len(errors)>0{t.Fatalf("Job controller label invalid: %s %v",name,errors)}}
   if allowed!=tc.Allowed{t.Fatalf("allowed=%v expected=%v",allowed,tc.Allowed)}
  })}
 }

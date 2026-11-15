@@ -8,6 +8,20 @@ from test_private_receipts import Private
 with contextlib.redirect_stdout(io.StringIO()):F=runpy.run_path(str(pathlib.Path(__file__).with_name('identity_foundation_cases.py')))
 class Contexts(unittest.TestCase):
  def fixture(self):return alternate(F['D'],F['I'],F['custody'])
+ def test_alternate_default_off(self):
+  d={'schemaVersion':1,'context':'atlas','enabled':False,'contextDigest':derive('atlas')['digest']};self.assertEqual(render(d)['kustomization.yaml']['resources'],[])
+  self.assertEqual(build(d,{},{}),[])
+  for bad in ({k:v for k,v in d.items() if k!='contextDigest'},dict(d,contextDigest=derive('portal')['digest']),dict(d,extra=True)):
+   with self.assertRaises(ValueError):render(bad)
+ def test_maximum_context_job_label_length(self):
+  d,i,c=alternate(F['D'],F['I'],F['custody'],'a'*31);g=render(d)
+  for phase in ('foundation','attest','memberships'):
+   name=g[phase+'/job.yaml']['metadata']['name'];self.assertLessEqual(len(name),63);self.assertTrue(name.endswith(g[phase+'/job.yaml']['metadata']['annotations']['platform.perkforge.io/attempt'][:16]))
+ def test_shared_long_prefix_not_aliased(self):
+  names=[]
+  for context in ('a'*30+'b','a'*30+'c'):
+   d,i,c=alternate(F['D'],F['I'],F['custody'],context);names.append(render(d)['memberships/job.yaml']['metadata']['name'])
+  self.assertNotEqual(*names)
  def test_names_and_credential_boundaries(self):
   d,i,c=self.fixture();b=derive('atlas');g=render(d);o=build(d,F['network'],c,i)
   self.assertEqual(g['receipt-intent.yaml']['metadata']['namespace'],b['writer_namespace']);self.assertEqual(g['receipt-intent.yaml']['metadata']['name'],b['evidence_name'])
