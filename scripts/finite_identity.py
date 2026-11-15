@@ -88,6 +88,17 @@ def render(d):
  for x in r:match(r[x]['cpu'],r'[1-9][0-9]*m');match(r[x]['memory'],r'[1-9][0-9]*Mi')
  if any(int(r['requests'][k].rstrip('Mi' if k=='memory' else 'm'))>int(r['limits'][k].rstrip('Mi' if k=='memory' else 'm')) for k in ('cpu','memory')):raise ValueError('resource order')
  if set(d['phaseInputs'])!=set(PHASES):raise ValueError('three explicit phase inputs')
+ # Separate issuer predecessor is explicit, literal and identical across phases.
+ # Omission everywhere preserves the legacy native contract and rendered bytes.
+ predecessor='identity_previous_attestation_invocation'
+ identities=[d['phaseInputs'][p].get('identity',{}) for p in PHASES]
+ if any(predecessor in x for x in identities):
+  if not all(predecessor in x for x in identities):raise ValueError('partial issuer predecessor binding')
+  for x in identities:
+   match(x[predecessor],r'(?:[0-9a-f]{64})?')
+   match(x.get('identity_previous_invocation'),r'(?:[0-9a-f]{64})?')
+   if x[predecessor] and not x['identity_previous_invocation']:raise ValueError('issuer predecessor requires prior foundation')
+  if len({x[predecessor] for x in identities})!=1 or len({x['identity_previous_invocation'] for x in identities})!=1:raise ValueError('different phase predecessors')
  # Full declaration identity changes the Job name, including input bytes/placement/bundle.
  attempt=digest(attempt_input(d)); out={}; refs=[]
  for i,phase in enumerate(PHASES):
