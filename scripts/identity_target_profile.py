@@ -1,6 +1,11 @@
 """Versioned, literal adopter profile. No runtime discovery or provider fallback."""
-import copy,json,pathlib,re
+import copy,json,pathlib,re,hashlib
 PILOT=json.loads((pathlib.Path(__file__).resolve().parents[1]/'profiles/identity/portal-rke2-longhorn.json').read_text())
+# Immutable compatibility identity, independent of editable example contents.
+LEGACY_PROFILE_SHA256='269689a11d29ec643bc44632828cb4d02bb1283931311c615d3db2bfc13453a1'
+def legacy_profile(p):
+ return hashlib.sha256(json.dumps(p,sort_keys=True,separators=(',',':')).encode()).hexdigest()==LEGACY_PROFILE_SHA256
+if not legacy_profile(PILOT):raise ValueError('legacy profile example changed; explicit versioned migration required')
 def exact(d,keys):
  if not isinstance(d,dict) or set(d)!=set(keys):raise ValueError('target profile exact fields required')
 def port(v):
@@ -29,7 +34,7 @@ def attempt_input(d):
  # Explicit legacy-equivalent profile preserves already reviewed pilot names.
  # Every other validated profile participates in attempt identity.
  p=validate(d['targetProfile']);out={k:v for k,v in d.items() if k!='membershipReleased'}
- if p==PILOT:out.pop('targetProfile')
+ if legacy_profile(p):out.pop('targetProfile')
  return out
 def initializer_identity(i):
  out={k:v for k,v in i.items() if k not in ('pv','pvUID','volumeHandle')}

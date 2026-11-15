@@ -1,5 +1,5 @@
 import contextlib,copy,hashlib,io,json,pathlib,runpy,unittest
-from identity_target_profile import PILOT,validate
+from identity_target_profile import PILOT,validate,legacy_profile
 from finite_identity import render
 from identity_foundation import build
 from private_receipts import plan,guard
@@ -30,6 +30,8 @@ class Profiles(unittest.TestCase):
    if f is None:d['targetProfile'][k]=v
    else:d['targetProfile'][k][f]=v
    self.assertNotEqual(render(d)['foundation/job.yaml']['metadata']['name'],original,(k,f))
+ def test_legacy_identity_is_pinned(self):
+  self.assertTrue(legacy_profile(PILOT));p=copy.deepcopy(PILOT);p['dns']['port']=5353;self.assertFalse(legacy_profile(p))
  def test_fail_closed(self):
   bad=[{},dict(PILOT,extra=True),dict(PILOT,schemaVersion=True),dict(PILOT,apiAudience='*')]
   for field,value in [('provider','generic'),('size','0Gi'),('size','100Gi'),('className','*')]:p=copy.deepcopy(PILOT);p['storage'][field]=value;bad.append(p)
