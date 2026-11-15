@@ -78,7 +78,7 @@ negatives alongside existing phase boundaries. No provider credentials used.
 Still required before activation: independently reviewed exact source, approved
 operator/admission batch, actual server default/SSA behavior, current scheduling
 and household load decision, private child ownership across real subsequent mounts,
-then existing zero-roster three-phase acceptance. No lossless/onboarding-complete
+then existing selected-roster three-phase acceptance. No lossless/onboarding-complete
 claim follows from this storage test.
 
 ### Native representation readback
