@@ -12,6 +12,15 @@ jobs:
       NEXTCLOUD_ROLLBACK_APP_CHECKOUT: ${{ github.workspace }}/.inputs/nextcloud-rollback
     steps:
     - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      with:
+        fetch-depth: 0
+        persist-credentials: false
+    - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      with:
+        repository: perkforge/perkforge-platform
+        ref: c0129f44faf33f0ed809ef904cc853067d219daa
+        path: .inputs/identity-platform-fixture
+        persist-credentials: false
     - uses: azure/setup-helm@v4.3.1
       with:
         version: v3.19.0
@@ -88,6 +97,14 @@ jobs:
         echo "NEXTCLOUD_CHART=$RUNNER_TEMP/nextcloud-9.4.1.tgz" >> "$GITHUB_ENV"
         echo "NEXTCLOUD_OPENAPI=$RUNNER_TEMP/nextcloud-schemas/openapi.json" >> "$GITHUB_ENV"
         echo "NEXTCLOUD_CRD_DIR=$RUNNER_TEMP/nextcloud-schemas" >> "$GITHUB_ENV"
+    - name: Verify actual released identity bundle admission fixture
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        scripts/verify-release-ref.sh perkforge/perkforge-platform v0.46.0 c0129f44faf33f0ed809ef904cc853067d219daa
+        scripts/verify-release-ref.sh perkforge/perkforge-platform-tenants v2.7.0 8bc4fd6e457e2abb45ea184be3ced7f5e097ebff
+        python3 scripts/identity_source_bundle.py --enrollment-revision 8bc4fd6e457e2abb45ea184be3ced7f5e097ebff --platform .inputs/identity-platform-fixture --platform-revision c0129f44faf33f0ed809ef904cc853067d219daa --output "$RUNNER_TEMP/identity-native-bundle.json"
+        echo "IDENTITY_BUNDLE_FIXTURE=$RUNNER_TEMP/identity-native-bundle.json" >> "$GITHUB_ENV"
     - name: Check candidate contracts and native CEL with no cluster access
       run: |
         python3 -m unittest discover -s tests -p 'test_*.py' -v

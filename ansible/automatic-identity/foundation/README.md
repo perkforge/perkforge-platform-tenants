@@ -108,3 +108,22 @@ roles intentionally cannot delete/replay them.
 The executable source and fixed Job subPath integration are documented in
 [PRIVATE-RECEIPTS.md](PRIVATE-RECEIPTS.md). The profile remains disabled; no live
 initialization, admission, custody or scheduling approval is implied.
+
+## Final full-bundle validation and translated API endpoint
+
+The real released26-file94957-byte source bundle plus initializer exceeded CEL's
+100000-codepoint limit when all exact ConfigMap bodies were one OR expression.
+Validation now denies unknown names first, then uses separate name-scoped
+implications for exact key sets, immutable/binary-data checks and each exact value.
+No hashes replace byte equality. Each escaped expression is limited conservatively
+to90000 codepoints; native schema/compiler tests use the actual pinned released
+bundle plus initializer, not only short dummy payloads. An oversized escaped value
+fails rendering before deployment; validation count is tested against64.
+
+Network input now requires separate `apiHosts` (service hosts TCP443) and
+`apiBackendHosts` (translated API hosts TCP6443), each bounded to exact /32 or /128
+hosts. Only the attestor receives these rules. Current read-only target evidence
+shows service10.43.0.1:443→192.168.1.101:6443; these are target inputs, not hardcoded
+portable defaults. No wildcard subnet or new writer/helper API access. Native
+reachability remains an activation test; service metadata alone is not proof of
+network delivery. Source/target changes require a new reviewed plan.

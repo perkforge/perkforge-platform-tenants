@@ -5,7 +5,7 @@ import copy,json,os,yaml
 D=Tests().sample()
 if os.environ.get('IDENTITY_BUNDLE_FIXTURE'):
  b=json.load(open(os.environ['IDENTITY_BUNDLE_FIXTURE']));D.update(sourceBundle=b,sourceItems=b['items'],sourceBundleSHA256=b['sha256'],sourceBundleName='identity-source-'+b['sha256'][:20])
-network={'ingressHosts':['192.0.2.1/32'],'apiHosts':['192.0.2.2/32'],'apiCA':'-----BEGIN CERTIFICATE-----\nSYNTHETIC-API\n-----END CERTIFICATE-----','traefikBackend':True}
+network={'ingressHosts':['192.0.2.1/32'],'apiHosts':['192.0.2.2/32'],'apiBackendHosts':['192.0.2.3/32'],'apiCA':'-----BEGIN CERTIFICATE-----\nSYNTHETIC-API\n-----END CERTIFICATE-----','traefikBackend':True}
 custody={'server':'https://bao.example.test','publicCA':'-----BEGIN CERTIFICATE-----\nSYNTHETIC\n-----END CERTIFICATE-----','writer':{'record':'identity/gitlab/tenants-writer-v1','properties':{'group-writer':'token'}},'reader':{'record':'identity/gitlab/tenant-reader-v1','properties':{'gitlab-reader':'token'}},'keycloak':{'record':'identity/keycloak/portal-membership-reader-v1','properties':{'kc-client-id':'client_id','kc-client-secret':'client_secret'}}}
 from test_private_receipts import Private
 I=Private().fixture()[0];I.update(claim=D['receiptClaim'],node=D['workerNode'],pullSecret=D['pullSecret'])
@@ -20,7 +20,9 @@ for phase in ('foundation','attest','memberships'):
  cases.append({'Name':phase+'-controller-pod','Policy':'identity-pods-'+j['metadata']['namespace'],'Object':p,'Allowed':True})
  bad=copy.deepcopy(p);bad['spec']['containers'].append(copy.deepcopy(bad['spec']['containers'][0]));cases.append({'Name':phase+'-injected-sidecar','Policy':'identity-pods-'+j['metadata']['namespace'],'Object':bad,'Allowed':False})
 for phase in ('foundation','attest'):
- c=g[phase+'/source.yaml'];cases.append({'Name':phase+'-code','Policy':'identity-config-'+c['metadata']['namespace'],'Object':c,'Allowed':True})
+ c=g[phase+'/source.yaml'];pn='identity-config-'+c['metadata']['namespace'];cases.append({'Name':phase+'-code','Policy':pn,'Object':c,'Allowed':True})
+ for label,mutate in [('bytes',lambda x:x['data'].update({next(iter(x['data'])):'tampered'})),('extra-key',lambda x:x['data'].update(extra='foreign')),('missing-key',lambda x:x['data'].pop(next(iter(x['data'])))),('foreign-name',lambda x:x['metadata'].update(name='foreign'))]:
+  bad=copy.deepcopy(c);mutate(bad);cases.append({'Name':phase+'-'+label,'Policy':pn,'Object':bad,'Allowed':False})
 for phase in ('foundation','attest','memberships'):
  k=g[phase+'-reconcile.yaml'];user='system:serviceaccount:flux-system:identity-declaration-reconciler'
  cases.append({'Name':phase+'-declaration','Policy':'identity-declaration-scope','Object':k,'Username':user,'Allowed':True})
