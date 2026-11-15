@@ -7,6 +7,27 @@ from identity_target_profile import validate as target_profile,attempt_input
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 IMAGE='registry1.dso.mil/ironbank/opensource/ansible/ansible@sha256:3308322cc09f20a813c00e9087c166a3d97dbb7789c059f1020f3c0b092fdf02'
 PHASES=('foundation','attest','memberships')
+RUNTIME_PROFILE='private-tmp-supervised-v1'
+TMP_INIT="""import os,stat
+os.umask(0o077)
+f=os.open('/work',os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW)
+s=os.fstat(f)
+if s.st_uid!=0 or s.st_gid!=1001 or stat.S_IMODE(s.st_mode)!=0o2777 or os.listdir(f):
+ raise SystemExit('UnsafeTemporaryRoot')
+os.mkdir('private',0o700,dir_fd=f)
+created=os.stat('private',dir_fd=f,follow_symlinks=False)
+c=os.open('private',os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW,dir_fd=f)
+s=os.fstat(c)
+if (s.st_dev,s.st_ino)!=(created.st_dev,created.st_ino) or s.st_uid!=1001 or s.st_gid!=1001 or stat.S_IMODE(s.st_mode) not in (0o700,0o2700) or os.listdir(c):
+ raise SystemExit('UnsafeCreatedTemporaryDirectory')
+# Only this invocation's exclusively created child; never repair an existing path.
+os.fchmod(c,0o700)
+s=os.fstat(c)
+if s.st_uid!=1001 or s.st_gid!=1001 or stat.S_IMODE(s.st_mode)!=0o700 or os.listdir(c):
+ raise SystemExit('UnsafePrivateTemporaryDirectory')
+os.close(c);os.close(f)
+"""
+SUPERVISOR=['/usr/bin/timeout','--signal=TERM','--kill-after=10s','270s','/bin/bash','/opt/perkforge/bin/launch']
 def digest(d):return hashlib.sha256(json.dumps(d,sort_keys=True,separators=(',',':')).encode()).hexdigest()
 def match(v,p):
  if not isinstance(v,str) or not re.fullmatch(p,v):raise ValueError('invalid literal')
@@ -22,6 +43,9 @@ def render(d):
   selection(d);return {'kustomization.yaml':{'apiVersion':'kustomize.config.k8s.io/v1beta1','kind':'Kustomization','resources':[]}}
  required={'targetProfile','schemaVersion','context','enabled','foundationApproved','membershipReleased','sourceName','sourcePath','enrollmentRevision','platformRevision','invocation','retryGeneration','image','sourceBundleName','sourceBundleSHA256','sourceBundle','sourceItems','workerNode','receiptClaim','writerSecret','attestorSecret','pullSecret','resources','phaseInputs'}
  if 'contextDigest' in d:required.add('contextDigest')
+ if 'runtimeProfile' in d:
+  required.add('runtimeProfile')
+  if d['runtimeProfile']!=RUNTIME_PROFILE:raise ValueError('unsupported runtime profile')
  binding=selection(d)
  if set(d)!=required or d['schemaVersion']!=1 or d['enabled'] is not True or d['foundationApproved'] is not True:raise ValueError('explicit approved context declaration required')
  if type(d['membershipReleased']) is not bool:raise ValueError('explicit membership release gate')
@@ -88,6 +112,10 @@ def render(d):
   if phase=='memberships':
    volumes += [{'name':'evidence','configMap':{'name':binding['evidence_name']}}];mounts += [{'name':'evidence','mountPath':'/identity-evidence','readOnly':True}]
   pod={'serviceAccountName':'identity-attestor' if phase=='attest' else 'identity-group-worker','automountServiceAccountToken':False,'nodeSelector':{'kubernetes.io/hostname':d['workerNode']},'restartPolicy':'Never','imagePullSecrets':[{'name':d['pullSecret']}],'securityContext':{'runAsNonRoot':True,'runAsUser':1001,'runAsGroup':1001,'fsGroup':1001,'fsGroupChangePolicy':'OnRootMismatch','seccompProfile':{'type':'RuntimeDefault'}},'containers':[{'name':'reconcile','image':IMAGE,'command':['/bin/bash','/opt/perkforge/bin/launch'],'args':['--phase',phase,'--invocation',d['invocation'],'--inputs-sha256',ih,'--bundle-sha256',d['sourceBundleSHA256']],'resources':r,'securityContext':{'allowPrivilegeEscalation':False,'readOnlyRootFilesystem':True,'capabilities':{'drop':['ALL']}},'volumeMounts':mounts}],'volumes':volumes}
+  if d.get('runtimeProfile')==RUNTIME_PROFILE:
+   pod['containers'][0]['command']=SUPERVISOR.copy()
+   next(m for m in mounts if m['name']=='tmp')['subPath']='private'
+   pod['initContainers']=[{'name':'private-tmp','image':IMAGE,'command':['/home/python/python-env/bin/python3','-c',TMP_INIT],'args':[],'resources':r,'securityContext':{'allowPrivilegeEscalation':False,'readOnlyRootFilesystem':True,'capabilities':{'drop':['ALL']}},'volumeMounts':[{'name':'tmp','mountPath':'/work'}]}]
   job={'apiVersion':'batch/v1','kind':'Job','metadata':{'name':name,'namespace':ns,'annotations':annotations},'spec':{'backoffLimit':0,'activeDeadlineSeconds':300,'completions':1,'parallelism':1,'template':{'metadata':{'annotations':annotations,'labels':{'platform.perkforge.io/identity-phase':'true'}},'spec':pod}}}
   out[phase+'/job.yaml']=job;out[phase+'/inputs.yaml']={'apiVersion':'v1','kind':'ConfigMap','metadata':{'name':cm,'namespace':ns},'immutable':True,'data':{'inputs.json':raw}}
   phase_resources=['inputs.yaml','job.yaml']

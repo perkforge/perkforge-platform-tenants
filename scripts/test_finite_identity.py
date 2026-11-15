@@ -54,4 +54,17 @@ class Tests(unittest.TestCase):
   for key,value in [('foundationApproved',False),('image','bad'),('workerNode',''),('retryGeneration',True),('sourceBundleName','mutable')]:
    d=self.sample();d[key]=value
    with self.assertRaises(ValueError):render(d)
+ def test_explicit_supervised_runtime(self):
+  from finite_identity import RUNTIME_PROFILE,TMP_INIT,SUPERVISOR
+  d=self.sample();old=render(d);d['runtimeProfile']=RUNTIME_PROFILE;new=render(d)
+  for phase in ('foundation','attest','memberships'):
+   self.assertNotEqual(old[phase+'/job.yaml']['metadata']['name'],new[phase+'/job.yaml']['metadata']['name'])
+   pod=new[phase+'/job.yaml']['spec']['template']['spec'];init=pod['initContainers'][0]
+   self.assertEqual(init['volumeMounts'],[{'name':'tmp','mountPath':'/work'}])
+   self.assertEqual(init['command'],['/home/python/python-env/bin/python3','-c',TMP_INIT]);self.assertEqual(init['resources'],d['resources'])
+   self.assertEqual(pod['containers'][0]['command'],SUPERVISOR)
+   self.assertEqual(next(m for m in pod['containers'][0]['volumeMounts'] if m['name']=='tmp'),{'name':'tmp','mountPath':'/tmp','subPath':'private'})
+   self.assertEqual(new[phase+'/job.yaml']['spec']['activeDeadlineSeconds'],300)
+  d['runtimeProfile']='foreign'
+  with self.assertRaises(ValueError):render(d)
 if __name__=='__main__':unittest.main()

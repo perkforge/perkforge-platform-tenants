@@ -39,3 +39,13 @@ func TestIdentityFoundation(t *testing.T){
   if allowed!=tc.Allowed{t.Fatalf("allowed=%v expected=%v",allowed,tc.Allowed)}
  })}
 }
+
+func TestIdentityFoundationSupervised(t *testing.T) {
+ t.Setenv("IDENTITY_RUNTIME_PROFILE_FIXTURE", "private-tmp-supervised-v1")
+ TestIdentityFoundation(t)
+}
+
+func TestIdentityFoundationSupervisedMaximumContext(t *testing.T) {
+ t.Setenv("IDENTITY_CONTEXT_FIXTURE", "abcdefghijklmnopqrstuvwxyzabcde")
+ TestIdentityFoundationSupervised(t)
+}

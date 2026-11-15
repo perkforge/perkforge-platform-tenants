@@ -22,6 +22,8 @@ if os.environ.get('IDENTITY_SELECTION_FIXTURE_DIR'):
  selected=json.loads((root/'declarations/identity/foundation.json').read_text())
  if D.get('enabled') is not True or selected.get('enabled') is not True:raise ValueError('enabled selected fixture required')
  network,custody,I=selected['network'],selected['custody'],selected['initializer']
+if os.environ.get('IDENTITY_RUNTIME_PROFILE_FIXTURE'):
+ D['runtimeProfile']=os.environ['IDENTITY_RUNTIME_PROFILE_FIXTURE']
 from identity_context_binding import selection
 B=selection(D)
 policies=[o for o in build(D,network,custody,I) if o['kind']=='ValidatingAdmissionPolicy'];g=render(D);cases=[]
@@ -73,6 +75,24 @@ for field in ('ownerReferences','finalizers'):
  cases.append({'Name':'intent-forbidden-'+field,'Policy':B['evidence_policy'],'Object':bad,'OldObject':old,'Operation':'UPDATE','Username':intent,'Allowed':False})
 bad=copy.deepcopy(new);bad['data']={};cases.append({'Name':'intent-cannot-erase','Policy':B['evidence_policy'],'Object':bad,'OldObject':old,'Operation':'UPDATE','Username':intent,'Allowed':False})
 cases.append({'Name':'missing-evidence-no-adoption','Policy':B['evidence_policy'],'Object':new,'Operation':'CREATE','Username':intent,'Allowed':False})
+if D.get('runtimeProfile'):
+ for phase in ('foundation','attest','memberships'):
+  job=g[phase+'/job.yaml'];pol='identity-jobs-'+job['metadata']['namespace']
+  for label,mutation in [
+   ('missing',lambda p:p.pop('initContainers')),
+   ('extra',lambda p:p['initContainers'].append(copy.deepcopy(p['initContainers'][0]))),
+   ('command',lambda p:p['initContainers'][0].update(command=['false'])),
+   ('secret-mount',lambda p:p['initContainers'][0]['volumeMounts'].append({'name':'credentials','mountPath':'/credentials'})),
+   ('subpath',lambda p:p['initContainers'][0]['volumeMounts'][0].update(subPath='foreign')),
+   ('resources',lambda p:p['initContainers'][0]['resources']['limits'].update(cpu='999m')),
+   ('sidecar',lambda p:p['initContainers'][0].update(restartPolicy='Always')),
+   ('env',lambda p:p['initContainers'][0].update(env=[{'name':'FOREIGN','value':'x'}])),
+   ('privileged',lambda p:p['initContainers'][0]['securityContext'].update(privileged=True)),
+   ('unsupervised',lambda p:p['containers'][0].update(command=['/bin/bash','/opt/perkforge/bin/launch']))]:
+   bad=copy.deepcopy(job);mutation(bad['spec']['template']['spec'])
+   cases.append({'Name':phase+'-init-'+label,'Policy':pol,'Object':bad,'Allowed':False})
+  defaulted=copy.deepcopy(job);init=defaulted['spec']['template']['spec']['initContainers'][0];init.pop('args');init.update(terminationMessagePath='/dev/termination-log',terminationMessagePolicy='File',imagePullPolicy='IfNotPresent')
+  cases.append({'Name':phase+'-init-defaulted','Policy':pol,'Object':defaulted,'Allowed':True})
 from private_receipts import plan
 H=plan(I)
 cases.append({'Name':'private-init','Policy':'identity-pods-'+B['writer_namespace'],'Object':H['pod'],'Allowed':True})
