@@ -53,9 +53,9 @@ def pod_checks(p,prefix='object.spec.template.spec'):
 def build(d,network,custody,initializer=None):
  generated=render(d)
  if not d.get('enabled'):return []
- if set(network)!={'ingressHosts','apiHosts','apiCA','traefikBackend'} or network['traefikBackend'] is not True:raise ValueError('explicit target endpoints required')
+ if set(network)!={'ingressHosts','apiHosts','apiBackendHosts','apiCA','traefikBackend'} or network['traefikBackend'] is not True:raise ValueError('explicit target endpoints required')
  if not isinstance(network['apiCA'],str) or not network['apiCA'].startswith('-----BEGIN CERTIFICATE-----'):raise ValueError('explicit public API CA')
- for k in ('ingressHosts','apiHosts'):
+ for k in ('ingressHosts','apiHosts','apiBackendHosts'):
   if not isinstance(network[k],list) or not 1<=len(network[k])<=4:raise ValueError('bounded endpoints')
   for ip in network[k]:
    n=ipaddress.ip_network(ip,strict=True)
@@ -88,22 +88,28 @@ def build(d,network,custody,initializer=None):
   if init and ns==WRITER:
    h=init['pod'];checks=pod_checks(h['spec'],'object.spec');checks=[x for x in checks if x!='!has(object.spec.tolerations)'];checks += ['object.metadata.name == '+cel(h['metadata']['name']),'object.metadata.annotations == '+cel(h['metadata']['annotations']),'object.metadata.labels == '+cel(h['metadata']['labels']),'!has(object.metadata.ownerReferences)','object.spec.activeDeadlineSeconds == 300','(!has(object.spec.tolerations) || (object.spec.tolerations.size() <= 2 && object.spec.tolerations.all(t, t.key in ["node.kubernetes.io/not-ready","node.kubernetes.io/unreachable"] && t.operator == "Exists" && t.effect == "NoExecute" && t.tolerationSeconds == 300)))'];pod_clauses.append('('+' && '.join(checks)+')')
   out+=policy('identity-pods-'+ns,'','v1','pods',ns,[' || '.join(pod_clauses)],operations=('CREATE',))
-  clauses=['(object.metadata.name == \"kube-root-ca.crt\" && object.data == '+cel({'ca.crt':network['apiCA']})+' && !has(object.binaryData))','(object.metadata.name == \"identity-openbao-ca\" && object.immutable == true && object.data == '+cel({'ca.crt':custody['publicCA']})+' && !has(object.binaryData))']
-  for cm in cms:
-   checks=['object.metadata.name == '+cel(cm['metadata']['name']),'object.immutable == true']
-   checks+=['object.data == '+cel(cm['data']),'!has(object.binaryData)']
-   clauses.append('('+' && '.join(checks)+')')
+  # One bounded implication per exact name/key, never one giant OR literal.
+  # Exact key sets preserve full-map equality; unknown object names remain denied.
+  checks=[];names=[]
+  def exact_cm(name,data,immutable):
+   names.append(name);prefix='object.metadata.name != '+cel(name)+' || '
+   checks.append(prefix+'(!has(object.binaryData) && '+('object.immutable == true && ' if immutable else '')+'object.data.size() == '+str(len(data))+' && object.data.all(k, k in '+cel(list(data))+'))')
+   for key,value in data.items():checks.append(prefix+'object.data['+cel(key)+'] == '+cel(value))
+  exact_cm('kube-root-ca.crt',{'ca.crt':network['apiCA']},False)
+  exact_cm('identity-openbao-ca',{'ca.crt':custody['publicCA']},True)
+  for cm in cms:exact_cm(cm['metadata']['name'],cm['data'],True)
   if init and ns==WRITER:
-   for c in (init['configMap'],init['inputs']):clauses.append('(object.metadata.name == '+cel(c['metadata']['name'])+' && object.immutable == true && object.data == '+cel(c['data'])+' && !has(object.binaryData))')
-   gate=init['gate'];clauses.append('(object.metadata.name == '+cel(gate['metadata']['name'])+' && request.userInfo.username == '+cel(initializer['operatorUser'])+' && !has(object.binaryData) && object.data.size() <= 1 && object.data.all(k, k == "approval.json" && object.data[k].size() <= 4096))')
-  # Evidence gets its own actor/field policy; credential placeholders are Secrets.
-  cmexpr=' || '.join(clauses)
-  if ns==WRITER:cmexpr='object.metadata.name == "portal-identity-evidence" || '+cmexpr
-  out+=policy('identity-config-'+ns,'','v1','configmaps',ns,[cmexpr])
+   for cm in (init['configMap'],init['inputs']):exact_cm(cm['metadata']['name'],cm['data'],True)
+   name=init['gate']['metadata']['name'];names.append(name)
+   checks.append('object.metadata.name != '+cel(name)+' || (request.userInfo.username == '+cel(initializer['operatorUser'])+' && !has(object.binaryData) && object.data.size() <= 1 && object.data.all(k, k == "approval.json" && object.data[k].size() <= 4096))')
+  if ns==WRITER:names.append('portal-identity-evidence')
+  checks.insert(0,'object.metadata.name in '+cel(names))
+  if any(len(x)>90000 for x in checks):raise ValueError('admission expression exceeds conservative source budget')
+  out+=policy('identity-config-'+ns,'','v1','configmaps',ns,checks)
   out.append(obj('networking.k8s.io/v1','NetworkPolicy','identity-default-deny',ns,spec={'podSelector':{},'policyTypes':['Ingress','Egress']}))
   dns={'to':[{'namespaceSelector':{'matchLabels':{'kubernetes.io/metadata.name':'kube-system'}},'podSelector':{'matchLabels':{'k8s-app':'kube-dns'}}}],'ports':[{'protocol':'UDP','port':53},{'protocol':'TCP','port':53}]}
   egress=[dns,{'to':[{'ipBlock':{'cidr':ip}} for ip in network['ingressHosts']],'ports':[{'protocol':'TCP','port':443}]},{'to':[{'namespaceSelector':{'matchLabels':{'kubernetes.io/metadata.name':'kube-system'}},'podSelector':{'matchLabels':{'app.kubernetes.io/name':'rke2-traefik','app.kubernetes.io/instance':'rke2-traefik-kube-system'}}}],'ports':[{'protocol':'TCP','port':8443}]}]
-  if ns==ATTESTOR:egress += [{'to':[{'ipBlock':{'cidr':ip}} for ip in network['apiHosts']],'ports':[{'protocol':'TCP','port':443}]}]
+  if ns==ATTESTOR:egress += [{'to':[{'ipBlock':{'cidr':ip}} for ip in network[key]],'ports':[{'protocol':'TCP','port':port}]} for key,port in [('apiHosts',443),('apiBackendHosts',6443)]]
   out.append(obj('networking.k8s.io/v1','NetworkPolicy','identity-worker-egress',ns,spec={'podSelector':{'matchLabels':{'platform.perkforge.io/identity-phase':'true'}},'policyTypes':['Egress'],'egress':egress}))
  out.append(sa('identity-declaration-reconciler','flux-system'))
  children=[generated[p+'-reconcile.yaml'] for p in PHASES]
