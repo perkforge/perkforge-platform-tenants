@@ -32,6 +32,8 @@ for phase in ('foundation','attest','memberships'):
  cases.append({'Name':phase+'-declaration','Policy':'identity-declaration-scope','Object':k,'Username':user,'Allowed':True})
  for label,mutation in [('sa',lambda s:s.update(serviceAccountName='foreign-admin')),('source',lambda s:s['sourceRef'].update(namespace='foreign')),('patch',lambda s:s.update(patches=[{'patch':'foreign'}])),('wait',lambda s:s.update(wait=False))]:
   bad=copy.deepcopy(k);mutation(bad['spec']);cases.append({'Name':phase+'-declaration-'+label,'Policy':'identity-declaration-scope','Object':bad,'Username':user,'Allowed':False})
+bad=copy.deepcopy(g['memberships-reconcile.yaml']);bad['spec']['suspend']=False
+cases.append({'Name':'membership-release-before-policy-update','Policy':'identity-declaration-scope','Object':bad,'Username':'system:serviceaccount:flux-system:identity-declaration-reconciler','Allowed':False})
 old={'apiVersion':'v1','kind':'ConfigMap','metadata':{'uid':'22222222-2222-4222-8222-222222222222','name':'portal-identity-evidence','namespace':'tenant-identity-writer','labels':{'app.kubernetes.io/managed-by':'perkforge-identity','perkforge.dev/context':'portal'},'annotations':{'perkforge.dev/desired-invocation':'old'}},'data':{'receipt.json':'old'}}
 issuer='system:serviceaccount:tenant-identity-attestor:identity-attestor';intent='system:serviceaccount:flux-system:identity-declaration-reconciler'
 new=copy.deepcopy(old);new['data']['receipt.json']='new'

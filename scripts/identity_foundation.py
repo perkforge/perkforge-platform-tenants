@@ -122,6 +122,7 @@ def build(d,network,custody,initializer=None):
  for child in children:
   q=child['spec'];checks=['object.metadata.name == '+cel(child['metadata']['name'])]
   for key in ('interval','timeout','path','serviceAccountName','prune','force','wait'):checks.append('object.spec.'+key+' == '+cel(q[key]))
+  checks.append('object.spec.suspend == '+cel(q['suspend']) if 'suspend' in q else '!has(object.spec.suspend) || object.spec.suspend == false')
   checks += ['object.spec.commonMetadata.annotations == '+cel(q['commonMetadata']['annotations']),'!has(object.spec.commonMetadata.labels)','object.spec.healthChecks.size() == 1']
   checks += ['object.spec.healthChecks[0].'+k+' == '+cel(v) for k,v in q['healthChecks'][0].items()]
   checks += ['object.spec.sourceRef.kind == "GitRepository"','object.spec.sourceRef.name == '+cel(q['sourceRef']['name']),'!has(object.spec.sourceRef.namespace)']
