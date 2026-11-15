@@ -1,0 +1,159 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: identity-portal-attest-45382250184caa3d
+  namespace: tenant-identity-attestor
+  annotations: &id001
+    platform.perkforge.io/invocation: 5d92796ed2fcc186e8a770a13f69916eed814ed1d0bd6e9eb1fa67e61e84bca4
+    platform.perkforge.io/attempt: 45382250184caa3d280b5dfb25898fa10fbc919fd547dbbaa65213b95b94f6b3
+spec:
+  backoffLimit: 0
+  activeDeadlineSeconds: 300
+  completions: 1
+  parallelism: 1
+  template:
+    metadata:
+      annotations: *id001
+      labels:
+        platform.perkforge.io/identity-phase: 'true'
+    spec:
+      serviceAccountName: identity-attestor
+      automountServiceAccountToken: false
+      nodeSelector:
+        kubernetes.io/hostname: worker-2
+      restartPolicy: Never
+      imagePullSecrets:
+      - name: private-registry
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        runAsGroup: 1001
+        fsGroup: 1001
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - name: reconcile
+        image: registry1.dso.mil/ironbank/opensource/ansible/ansible@sha256:3308322cc09f20a813c00e9087c166a3d97dbb7789c059f1020f3c0b092fdf02
+        command:
+        - /bin/bash
+        - /opt/perkforge/bin/launch
+        args:
+        - --phase
+        - attest
+        - --invocation
+        - 5d92796ed2fcc186e8a770a13f69916eed814ed1d0bd6e9eb1fa67e61e84bca4
+        - --inputs-sha256
+        - 0f1060dad8494bbbcc166506c89b94cf32276d1aeec49a6f5a63c18d35faca50
+        - --bundle-sha256
+        - 43bad232454e5fb0698b417270dfbd329efa64cef34862c98af97dba0a311aaa
+        resources:
+          limits:
+            cpu: 500m
+            memory: 512Mi
+          requests:
+            cpu: 100m
+            memory: 256Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+        volumeMounts:
+        - name: source
+          mountPath: /opt
+          readOnly: true
+        - name: inputs
+          mountPath: /inputs
+          readOnly: true
+        - name: credentials
+          mountPath: /credentials
+          readOnly: true
+        - name: tmp
+          mountPath: /tmp
+        - name: api
+          mountPath: /identity-api
+          readOnly: true
+      volumes:
+      - name: source
+        configMap:
+          name: identity-source-43bad232454e5fb0698b
+          defaultMode: 365
+          items:
+          - key: file-0
+            path: perkforge/bin/launch
+          - key: file-1
+            path: perkforge/bin/refresh-identity-evidence
+          - key: file-2
+            path: perkforge/bin/run-phase.py
+          - key: file-3
+            path: platform/big-bang-bootstrap/configuration/authorization/contexts/portal.yaml
+          - key: file-4
+            path: platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/ensure-groups.yaml
+          - key: file-5
+            path: platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/ensure-one-group.yaml
+          - key: file-6
+            path: platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/identity_context.py
+          - key: file-7
+            path: platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/phases/attest-one.yaml
+          - key: file-8
+            path: platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/phases/attest.yaml
+          - key: file-9
+            path: platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/phases/contract.py
+          - key: file-10
+            path: platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/phases/member-one.yaml
+          - key: file-11
+            path: platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/phases/membership-state.py
+          - key: file-12
+            path: platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/phases/memberships.yaml
+          - key: file-13
+            path: platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/phases/paths.py
+          - key: file-14
+            path: platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/phases/phase-lock.py
+          - key: file-15
+            path: platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/phases/publish.yaml
+          - key: file-16
+            path: platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/phases/run-attestor.sh
+          - key: file-17
+            path: platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/phases/run-memberships.sh
+          - key: file-18
+            path: platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/read-keycloak-context.py
+          - key: file-19
+            path: platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/resolve-subject.py
+          - key: file-20
+            path: platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/run-groups.sh
+          - key: file-21
+            path: platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/verify_group_paths.py
+          - key: file-22
+            path: platform/big-bang-bootstrap/configuration/packages/gitlab/reconcile-membership.yaml
+          - key: file-23
+            path: platform/big-bang-bootstrap/configuration/packages/gitlab/run-membership.sh
+          - key: file-24
+            path: platform/big-bang-bootstrap/configuration/packages/gitlab/verification/membership_inputs.py
+          - key: file-25
+            path: provenance.sha256
+          - key: file-26
+            path: revisions.json
+      - name: inputs
+        configMap:
+          name: identity-portal-attest-45382250184caa3d-inputs
+      - name: credentials
+        secret:
+          secretName: isolated-attestor
+          defaultMode: 288
+      - name: tmp
+        emptyDir:
+          sizeLimit: 128Mi
+      - name: api
+        projected:
+          sources:
+          - serviceAccountToken:
+              path: token
+              expirationSeconds: 600
+              audience: https://kubernetes.default.svc.cluster.local
+          - configMap:
+              name: kube-root-ca.crt
+              items:
+              - key: ca.crt
+                path: ca.crt

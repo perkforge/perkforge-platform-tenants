@@ -1,0 +1,55 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: identity-attestor-reconciler
+  labels:
+    platform.perkforge.io/owner: tenant-identity-foundation-v1
+  namespace: tenant-identity-attestor
+rules:
+- apiGroups:
+  - batch
+  resources:
+  - jobs
+  verbs:
+  - create
+- apiGroups:
+  - batch
+  resources:
+  - jobs
+  verbs:
+  - get
+  - patch
+  resourceNames:
+  - identity-portal-attest-45382250184caa3d
+- apiGroups:
+  - batch
+  resources:
+  - jobs
+  verbs:
+  - list
+  - watch
+- apiGroups:
+  - ''
+  resources:
+  - pods
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ''
+  resources:
+  - configmaps
+  verbs:
+  - create
+- apiGroups:
+  - ''
+  resources:
+  - configmaps
+  verbs:
+  - get
+  - patch
+  - update
+  resourceNames:
+  - identity-portal-attest-45382250184caa3d-inputs
+  - identity-source-43bad232454e5fb0698b

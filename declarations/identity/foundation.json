@@ -1,1 +1,72 @@
-{"schemaVersion":1,"enabled":false}
+{
+  "custody": {
+    "keycloak": {
+      "properties": {
+        "kc-client-id": "client_id",
+        "kc-client-secret": "client_secret"
+      },
+      "record": "identity/keycloak/portal-membership-reader-v1"
+    },
+    "publicCA": "-----BEGIN CERTIFICATE-----\nMIIFeDCCA2CgAwIBAgIUEanzHzgBfkxwoS78lrRlcK/T6cQwDQYJKoZIhvcNAQEL\nBQAwQjEbMBkGA1UECgwSUGVya0ZvcmdlIEhvbWUgTGFiMSMwIQYDVQQDDBpQZXJr\nRm9yZ2UgSG9tZSBMYWIgUm9vdCBDQTAeFw0yNjEwMzEyMTEzMzFaFw0zNjEwMjgy\nMTEzMzFaMEIxGzAZBgNVBAoMElBlcmtGb3JnZSBIb21lIExhYjEjMCEGA1UEAwwa\nUGVya0ZvcmdlIEhvbWUgTGFiIFJvb3QgQ0EwggIiMA0GCSqGSIb3DQEBAQUAA4IC\nDwAwggIKAoICAQC2801AnJ+qag9Czr8WaFZscIYK42rVPxuthBgGjtVAjPH/umW3\n72pZjLc1QMxjTT9U8n35cEOVYEG61upVnyycqYkSWNJfBRB4S+BSYegenOpSjhsj\n/JQHMGnOcLpb1WznD0MW4maGGuwoNY+5/GzeIAn8MtLeRXaKQyG/12BTac9UyEG5\nJIJ31j0/S4mY08cebyLHfQWpS9NhlW9cipEyZBctjCxfwRo+YvPIfpD0kjk7Ga7r\nO25KROg8/sj2EzBfnwxfipCDiTAQirWqYPnVy5en4A9Fur1RtXe5J0u+F3z96Xob\nlzpqIXO2qj8VqNyVM9Lwb4y2mtgn0TTmoXUMjvOOqqA639Yu+lpjyMzkbp3oX2aN\nB3Tz955eo+l0zqESl24ZBaGBFoQEdFyJ8v+ca2+fXZX9C4VH62dwB1UF3Z8LxFqI\ngp4QT3ta/o28Y1u8Dhm46XZx2QGAOMFg3IP0led//yJxofc2lsLmUfvCkNKpk/ZJ\nsPqbrDH1FpuT5sPcLPnWetHoRo6zrXJpTyvOrxMnTwXvQCq2H1RstKsl9v+w5kBB\nLrrBUII2X/CIQ8rCNbrXSJPnTvkTn9ufgqVjkw+bJ7wJzJtoVuuBevZNIOSyW4X3\npvHK74E7mBYZxG2+9fsdnXb9LjuGODEJpX2EmEQA6lww8TVU+MgP8BopJwIDAQAB\no2YwZDAfBgNVHSMEGDAWgBQLdnhIQbb0erzITUAg9H4voxHGXzASBgNVHRMBAf8E\nCDAGAQH/AgEAMA4GA1UdDwEB/wQEAwIBBjAdBgNVHQ4EFgQUC3Z4SEG29Hq8yE1A\nIPR+L6MRxl8wDQYJKoZIhvcNAQELBQADggIBAI23qYicBwXd+RSbchv1HZAgBcDD\nV9snYZU1texYBoYC531IsaKD1CgAwRf4cqZrcoaFzk3xeVbGAvydpVCW/ADGwCDP\npmDTqj6jeaMQNJF/zcpDageWU6v91G9EdsszXFda0G6/ieGx0KnGIuRNv3I/t2mS\nYz5MvzuvAbH0+YEOmPokS8Roki/wcCWWXPAVCKjf3FErwqNLE+uu3a4bm2C9u9Uo\nH0IJOv90JSgwY90e5KfBa1TqrH7TwelSpSf1Pv3Y8kWI8EIwo6Yt5RierEfUXFo3\nXomEzWXPEa0T5qUEhzuqX3dEHAXvkD11prZ7sxjP0hMsQgSF9eLFKtKxvSf4egDT\nagOyuYVfsgmVyO1UC2IjyiQyt9i0z3gLwmJpqyVc0Z009fWZd0d4mXzQ+nQxfhwS\nuZBr0zpGDi+xoQmbHp7zcxT/imbQSZV0wbOpLNQvtZLyK9he/gJQQzPtEWQnW4xR\nA8qfOPjX9Qp45w5ijidXL4IbzbBwgrWPIErk9nDysAkylzIZI/x1/EW4nqneOWUe\nyBS4rA4J/+0Ym4pDVr/acNUOuqBYoGRvhJRgt6Qzs77/MaidfwG4WiAzpaB8Cpbh\nS6QhPVC4UYtPpsBKiMicBtKzmJvsiqcVTp5oP8OavJNj/W4K2nltCUF5jcN6QRJu\nMFOT0kRpDtCbrCZR\n-----END CERTIFICATE-----\n",
+    "reader": {
+      "properties": {
+        "gitlab-reader": "token"
+      },
+      "record": "identity/gitlab/tenant-reader-v1"
+    },
+    "server": "https://openbao.perkforge.home.arpa",
+    "writer": {
+      "properties": {
+        "group-writer": "token"
+      },
+      "record": "identity/gitlab/tenants-writer-v1"
+    }
+  },
+  "enabled": true,
+  "initializer": {
+    "claim": "identity-receipts",
+    "claimUID": "cb7f1dfa-8d40-4bc4-a9b3-8f5a92503967",
+    "clusterUID": "255012a6-243c-4053-843f-c268e1b4a321",
+    "context": "portal",
+    "contextDigest": "a9c6f07b9a6a553e8c343da4e7a50cb47ab7a61b16fd5eed321a43fc382446ad",
+    "node": "worker-2",
+    "operatorUser": "system:admin",
+    "pullSecret": "private-registry",
+    "pv": null,
+    "pvUID": null,
+    "storageProfile": {
+      "className": "longhorn",
+      "provider": "longhorn-v1",
+      "size": "1Gi"
+    },
+    "volumeHandle": null
+  },
+  "network": {
+    "apiBackendHosts": [
+      "192.168.1.101/32"
+    ],
+    "apiCA": "-----BEGIN CERTIFICATE-----\nMIIBeTCCAR+gAwIBAgIBADAKBggqhkjOPQQDAjAkMSIwIAYDVQQDDBlya2UyLXNl\ncnZlci1jYUAxNzkzNDY5Mjk4MB4XDTI2MTAzMTE2NTQ1OFoXDTM2MTAyODE2NTQ1\nOFowJDEiMCAGA1UEAwwZcmtlMi1zZXJ2ZXItY2FAMTc5MzQ2OTI5ODBZMBMGByqG\nSM49AgEGCCqGSM49AwEHA0IABBuSgvCVJMzAh3OyjOjUlHJEMTFDwN1X/GHQbCm4\n3E95FBD/CMscH1LCR9dQ0fiuCXtSgRdomCK1n6LntQgnXv+jQjBAMA4GA1UdDwEB\n/wQEAwICpDAPBgNVHRMBAf8EBTADAQH/MB0GA1UdDgQWBBTjfmv3et1TEHdCWQFO\neDwteJWd0DAKBggqhkjOPQQDAgNIADBFAiEA4owsAyK1sXNKwEKHWNMVvaC7ZMgA\nnO/uHG16wLsjoGACIFvAACD4rRU7IOd72KuDTpi5BkKDTB+Om63b8m+ZvYSc\n-----END CERTIFICATE-----\n",
+    "apiHosts": [
+      "10.43.0.1/32"
+    ],
+    "ingressHosts": [
+      "192.168.1.102/32"
+    ],
+    "traefikBackend": true
+  },
+  "ownership": {
+    "controlNamespace": "flux-system",
+    "foundationSHA256": "a8942ebe077f84fedb9d382a1e4e4f02aee40094cfb4f00a44f1cbefa1f6368c",
+    "namePrefix": "identity-portal-foundation",
+    "platformServiceAccount": "platform-reconciler",
+    "runtimeNamespaces": [
+      "tenant-identity-writer",
+      "tenant-identity-attestor"
+    ],
+    "scope": "identity-foundation-gitops-v1",
+    "sourceName": "tenant-enrollments",
+    "sourceNamespace": "flux-system",
+    "sourcePath": "./generated/identity-foundation/portal"
+  },
+  "schemaVersion": 1
+}

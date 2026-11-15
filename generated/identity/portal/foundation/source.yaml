@@ -1,0 +1,1129 @@
+apiVersion: v1
+data:
+  file-0: '#!/usr/bin/env bash
+
+    set -euo pipefail
+
+    umask 077
+
+    [[ $# == 8 && $7 == --bundle-sha256 && $8 =~ ^[a-f0-9]{64}$ ]] || exit 2
+
+    actual=$(sha256sum /opt/provenance.sha256); [[ ${actual%% *} == "$8" ]] || exit
+    2
+
+    (cd /opt && sha256sum --strict -c provenance.sha256 >/dev/null)
+
+    export HOME=/tmp/home ANSIBLE_LOCAL_TEMP=/tmp/ansible-local ANSIBLE_REMOTE_TEMP=/tmp/ansible-remote
+    PYTHONDONTWRITEBYTECODE=1 GIT_OPTIONAL_LOCKS=0
+
+    mkdir -p /tmp/home
+
+    source /home/python/python-env/bin/activate
+
+    exec python3 /opt/perkforge/bin/run-phase.py "${@:1:6}"
+
+    '
+  file-1: "#!/usr/bin/env python3\n\"\"\"Refresh only the fixed issuer projection;\
+    \ never fetch, authenticate or log bodies.\"\"\"\nimport importlib.util,os,stat,sys,tempfile\n\
+    from pathlib import Path\nCONTRACT='/opt/platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/phases/contract.py'\n\
+    PROJECTION=Path('/identity-evidence')\ndef refresh(inputs,work):\n w=Path(work)\n\
+    \ if str(w)!=work or inputs!=work+'/phase-inputs.json':raise ValueError('fixed\
+    \ paths')\n s=w.lstat()\n if not stat.S_ISDIR(s.st_mode) or s.st_uid!=os.getuid()\
+    \ or stat.S_IMODE(s.st_mode)!=0o700:raise ValueError('private work')\n sys.path.insert(0,str(Path(CONTRACT).parent))\n\
+    \ spec=importlib.util.spec_from_file_location('phase_contract',CONTRACT);contract=importlib.util.module_from_spec(spec);spec.loader.exec_module(contract)\n\
+    \ d=contract.inputs(inputs,'memberships')\n if PROJECTION.is_symlink() or not\
+    \ PROJECTION.is_dir():raise ValueError('projection root')\n p=(PROJECTION/'receipt.json').resolve(strict=True)\n\
+    \ if not p.is_relative_to(PROJECTION) or p==PROJECTION:raise ValueError('projection\
+    \ escape')\n fd=os.open(p,os.O_RDONLY|os.O_NONBLOCK|os.O_NOFOLLOW)\n try:\n  s=os.fstat(fd)\n\
+    \  if not stat.S_ISREG(s.st_mode) or s.st_size>262144:raise ValueError('projection\
+    \ file')\n  with os.fdopen(fd,'rb',closefd=False) as f:raw=f.read(262145)\n finally:os.close(fd)\n\
+    \ if len(raw)>262144:raise ValueError('projection size')\n fd,tmp=tempfile.mkstemp(prefix='.envelope-',dir=w)\n\
+    \ try:\n  os.fchmod(fd,0o600)\n  with os.fdopen(fd,'wb') as f:f.write(raw);f.flush();os.fsync(f.fileno())\n\
+    \  contract.envelope(d,tmp)\n  target=w/'envelope.json'\n  if os.path.lexists(target):\n\
+    \   s=target.lstat()\n   if not stat.S_ISREG(s.st_mode) or s.st_uid!=os.getuid()\
+    \ or stat.S_IMODE(s.st_mode)!=0o600 or s.st_nlink!=1:raise ValueError('existing\
+    \ envelope')\n  os.replace(tmp,target)\n finally:\n  if os.path.exists(tmp):os.unlink(tmp)\n\
+    if __name__=='__main__':\n try:\n  if len(sys.argv)!=3:raise ValueError('arguments')\n\
+    \  refresh(*sys.argv[1:])\n except Exception:raise SystemExit('Issuer evidence\
+    \ rejected; no writer operation permitted.')\n"
+  file-10: "- ansible.builtin.set_fact: {phase_substage: issuer-observation-refresh}\n\
+    - name: Refresh only the fixed issuer-owned projection; no writer Kubernetes token\n\
+    \  ansible.builtin.command:\n    argv: [/opt/perkforge/bin/refresh-identity-evidence,\
+    \ '{{ phase_inputs }}', '{{ phase_work }}']\n  changed_when: false\n- ansible.builtin.command:\n\
+    \    argv: [python3, '{{ playbook_dir }}/contract.py', --phase, memberships, --inputs,\
+    \ '{{ phase_inputs }}', --envelope, '{{ phase_work }}/envelope.json']\n  changed_when:\
+    \ false\n- ansible.builtin.set_fact:\n    phase_envelope: '{{ lookup(\"file\"\
+    , phase_work + \"/envelope.json\") | from_json }}'\n- name: Same attempt cannot\
+    \ replace the complete observation while a batch is running\n  ansible.builtin.assert:\n\
+    \    that: phase_envelope == initial_envelope\n- ansible.builtin.set_fact:\n \
+    \   selected_desired: '{{ phase_envelope.snapshot.members | selectattr(\"subject\"\
+    ,\"equalto\",selected_subject) | first | default({}) }}'\n    selected_identity:\
+    \ '{{ phase_envelope.identities | selectattr(\"subject\",\"equalto\",selected_subject)\
+    \ | first | default({}) }}'\n    selected_prior: '{{ membership_state.prior |\
+    \ selectattr(\"subject\",\"equalto\",selected_subject) | first | default({}) }}'\n\
+    \    selected_operation: none\n    selected_stage: NoOwnedMembership\n- ansible.builtin.set_fact:\n\
+    \    selected_stage: '{{ selected_identity.stage | default(\"NoOwnedMembership\"\
+    ) }}'\n  when: selected_desired.enabled | default(false)\n- ansible.builtin.set_fact:\n\
+    \    selected_operation: grant\n    selected_stage: GrantPending\n  when: selected_identity.stage\
+    \ | default('') == 'IdentityVerified'\n- ansible.builtin.set_fact:\n    selected_operation:\
+    \ revoke\n    selected_stage: RevokePending\n  when:\n  - selected_prior | length\
+    \ > 0\n  - selected_identity.stage | default('') != 'IdentityVerified'\n- ansible.builtin.set_fact:\n\
+    \    selected_operation: none\n    selected_stage: PendingRoleChange\n  when:\n\
+    \  - selected_prior | length > 0\n  - selected_identity.stage | default('') ==\
+    \ 'IdentityVerified'\n  - selected_prior.role != selected_desired.role or selected_prior.native_user_id\
+    \ != selected_identity.native_user_id\n- when: selected_operation != 'none'\n\
+    \  block:\n  - ansible.builtin.set_fact:\n      phase_substage: native-membership-readback\n\
+    \      selected_role: '{{ selected_desired.role if selected_operation == \"grant\"\
+    \ else selected_prior.role }}'\n      selected_user: '{{ selected_identity.native_user_id\
+    \ if selected_operation == \"grant\" else selected_prior.native_user_id }}'\n\
+    \  - ansible.builtin.copy:\n      dest: '{{ phase_work }}/member-inputs.json'\n\
+    \      mode: '0600'\n      content: \"{{ {'gitlab_membership_run':true,'gitlab_membership_scope':'gitlab-membership-'\
+    \ + selected_operation + '-v1','gitlab_membership_operation':selected_operation,'gitlab_membership_recovery_verified':identity_membership_recovery_verified,'gitlab_membership_context':identity_context,'gitlab_membership_source_revision':identity_source_revision,'gitlab_native_origin':identity_gitlab_origin,'gitlab_native_ca_file':phase_work\
+    \ + '/lab-ca.crt','gitlab_native_user_id':selected_user | int,'gitlab_native_subject':selected_subject,'gitlab_native_group_id':membership_state.group.group_id,'gitlab_native_group_path':'tenants/'\
+    \ + identity_context,'gitlab_native_access_level':{'tenant-admin':50,'tenant-developer':30,'tenant-viewer':20}[selected_role],'gitlab_native_role':selected_role}\
+    \ | to_json }}\"\n  - ansible.builtin.copy:\n      dest: '{{ phase_work }}/member-attestation.json'\n\
+    \      mode: '0600'\n      content: '{{ selected_identity | to_json }}'\n  - ansible.builtin.set_fact:\n\
+    \      operations_attempted: '{{ operations_attempted | int + 1 }}'\n  - ansible.builtin.command:\n\
+    \      argv: ['{{ playbook_dir }}/../../run-membership.sh', --apply, '{{ phase_work\
+    \ }}/group-writer', '{{ phase_work }}/member-attestation.json', '{{ phase_group_receipt\
+    \ }}', '{{ phase_work }}/member-inputs.json', '{{ phase_group_receipt | dirname\
+    \ }}/gitlab-member-{{ selected_subject }}.json']\n    changed_when: true\n  -\
+    \ ansible.builtin.set_fact:\n      selected_stage: '{{ \"Granted\" if selected_operation\
+    \ == \"grant\" else (selected_identity.stage if selected_desired.enabled | default(false)\
+    \ else \"Revoked\") }}'\n- ansible.builtin.set_fact:\n    member_results: '{{\
+    \ member_results + [{\"subject\":selected_subject,\"stage\":selected_stage}] }}'\n"
+  file-11: "#!/usr/bin/env python3\n\"\"\"Validate protected prior ownership metadata,\
+    \ never decide native permissions.\"\"\"\nimport json,re,sys\nfrom pathlib import\
+    \ Path\nfrom contract import inputs,envelope,read,safe,age,UUID,ROLES\n\ndef verify(input_file,work,group_file):\n\
+    \ d=inputs(input_file,'memberships');e=envelope(d,work+'/envelope.json');g=read(group_file)\n\
+    \ if Path(group_file).name!='gitlab-group.json' or Path(group_file).parent.name!=d['identity_context']:raise\
+    \ ValueError('stable context group receipt')\n expected={'schema':1,'origin':d['identity_gitlab_origin'],'context':d['identity_context'],'source_revision':d['identity_source_revision'],'stage':'group-ready'}\n\
+    \ if not isinstance(g,dict) or set(g)!=set(expected)|{'parent_id','group_id','previous_revisions'}\
+    \ or any(g.get(k)!=v for k,v in expected.items()):raise ValueError('group binding')\n\
+    \ if any(type(g[k]) is not int or not 0<g[k]<2**63 for k in ('parent_id','group_id')):raise\
+    \ ValueError('native IDs')\n if not isinstance(g['previous_revisions'],list) or\
+    \ len(g['previous_revisions'])>32 or any(not isinstance(x,str) or not re.fullmatch('[a-f0-9]{40}',x)\
+    \ for x in g['previous_revisions']):raise ValueError('group history')\n foundation=read(str(Path(group_file).parent/'foundation-result.json'))\n\
+    \ expected_foundation={'schema':1,'phase':'GroupReady','context':d['identity_context'],'invocation':d['identity_invocation'],'source_revision':d['identity_source_revision'],'platform_revision':d['identity_platform_revision'],'parent_id':g['parent_id'],'group_id':g['group_id']}\n\
+    \ if not isinstance(foundation,dict) or set(foundation)!=set(expected_foundation)|{'captured_at'}\
+    \ or any(foundation.get(k)!=v for k,v in expected_foundation.items()):raise ValueError('fresh\
+    \ invocation foundation required')\n age(foundation['captured_at'])\n prior=[]\n\
+    \ for p in sorted(Path(group_file).parent.glob('gitlab-member-*.json')):\n  if\
+    \ len(prior)>=3:raise ValueError('pilot prior receipt cap')\n  r=read(str(p));base={'schema':1,'origin':d['identity_gitlab_origin'],'context':d['identity_context'],'group_id':g['group_id']}\n\
+    \  if not isinstance(r,dict) or any(r.get(k)!=v for k,v in base.items()) or r.get('stage')\
+    \ not in ('GrantPending','Granted','Revoked'):raise ValueError('foreign ownership')\n\
+    \  keys=set(base)|{'subject','source_revision','native_user_id','role','access_level','stage'}|({'attempted_at'}\
+    \ if r['stage']=='GrantPending' else set())\n  if set(r)!=keys or not isinstance(r['subject'],str)\
+    \ or not re.fullmatch(UUID,r['subject']) or p.name!='gitlab-member-'+r['subject']+'.json':raise\
+    \ ValueError('prior subject')\n  if not isinstance(r['source_revision'],str) or\
+    \ not re.fullmatch('[a-f0-9]{40}',r['source_revision']):raise ValueError('prior\
+    \ revision')\n  if type(r['native_user_id']) is not int or not 0<r['native_user_id']<2**63\
+    \ or r['role'] not in ROLES or type(r['access_level']) is not int or r['access_level']!={'tenant-admin':50,'tenant-developer':30,'tenant-viewer':20}[r['role']]:raise\
+    \ ValueError('prior identity/role')\n  # Pending timestamps are checked by the\
+    \ actual writer before native requests.\n  if r['stage']=='GrantPending' and not\
+    \ isinstance(r['attempted_at'],str):raise ValueError('pending timestamp')\n  prior.append(r)\n\
+    \ subjects=sorted(set(x['subject'] for x in e['snapshot']['members'])|set(x['subject']\
+    \ for x in prior))\n if len(subjects)>3:raise ValueError('pilot union cap')\n\
+    \ return {'group':g,'prior':prior,'subjects':subjects}\nif __name__=='__main__':\n\
+    \ try:print(json.dumps(verify(*sys.argv[1:]),sort_keys=True))\n except Exception:raise\
+    \ SystemExit('Invalid protected membership state; no native changes permitted.')\n"
+  file-12: "# The fixed executor owns context serialization and trusted issuer-only\
+    \ projection.\n- name: Apply one finite explicitly selected membership observation\n\
+    \  hosts: localhost\n  connection: local\n  gather_facts: false\n  vars: {identity_run:\
+    \ false}\n  tasks:\n  - when: identity_run | bool and not ansible_check_mode\n\
+    \    no_log: true\n    block:\n    - ansible.builtin.set_fact:\n        phase_substage:\
+    \ protected-state-validation\n        member_results: []\n        operations_attempted:\
+    \ 0\n    - ansible.builtin.command:\n        argv: [python3, '{{ playbook_dir\
+    \ }}/phase-lock.py', --locked, '{{ phase_work }}', '{{ phase_group_receipt }}']\n\
+    \      changed_when: false\n    - name: Refresh issuer evidence even for an empty\
+    \ roster\n      ansible.builtin.command:\n        argv: [/opt/perkforge/bin/refresh-identity-evidence,\
+    \ '{{ phase_inputs }}', '{{ phase_work }}']\n      changed_when: false\n    -\
+    \ ansible.builtin.command:\n        argv: [python3, '{{ playbook_dir }}/membership-state.py',\
+    \ '{{ phase_inputs }}', '{{ phase_work }}', '{{ phase_group_receipt }}']\n   \
+    \   changed_when: false\n      register: verified_state\n    - ansible.builtin.set_fact:\n\
+    \        membership_state: '{{ verified_state.stdout | from_json }}'\n       \
+    \ initial_envelope: '{{ lookup(\"file\", phase_work + \"/envelope.json\") | from_json\
+    \ }}'\n    - ansible.builtin.include_tasks: member-one.yaml\n      loop: '{{ membership_state.subjects\
+    \ }}'\n      loop_control: {loop_var: selected_subject}\n    - ansible.builtin.copy:\n\
+    \        dest: '{{ phase_work }}/member-results.json'\n        mode: '0600'\n\
+    \        content: '{{ member_results | to_json }}'\n    - ansible.builtin.copy:\n\
+    \        dest: '{{ phase_work }}/result.json'\n        mode: '0600'\n        content:\
+    \ \"{{ {'phase':('NoDesiredMembers' if membership_state.subjects | length == 0\
+    \ else ('MembershipReady' if member_results | rejectattr('stage','in',['Granted','Revoked','NoOwnedMembership'])\
+    \ | list | length == 0 else 'MembershipPending')),'invocation':identity_invocation,'operations_attempted':operations_attempted,'completed_subjects':member_results\
+    \ | length,'pending_subjects':member_results | rejectattr('stage','in',['Granted','Revoked','NoOwnedMembership'])\
+    \ | list | length,'membership_ready':(membership_state.subjects | length > 0 and\
+    \ member_results | rejectattr('stage','in',['Granted','Revoked','NoOwnedMembership'])\
+    \ | list | length == 0),'current_group_readback_claim':true} | to_json }}\"\n\
+    \    rescue:\n    - ansible.builtin.copy:\n        dest: '{{ phase_work }}/member-results.json'\n\
+    \        mode: '0600'\n        content: '{{ member_results | default([]) | to_json\
+    \ }}'\n    - ansible.builtin.copy:\n        dest: '{{ phase_work }}/result.json'\n\
+    \        mode: '0600'\n        content: \"{{ {'phase':('PartialFailure' if operations_attempted\
+    \ | default(0) | int > 0 else 'MembershipFailed'),'substage':phase_substage |\
+    \ default('protected-state-validation'),'category':'validation-or-native-readback-failed','invocation':identity_invocation,'operations_attempted':operations_attempted\
+    \ | default(0),'completed_subjects':member_results | default([]) | length,'membership_ready':false,'manual_recovery_may_be_required':operations_attempted\
+    \ | default(0) | int > 0} | to_json }}\"\n    - ansible.builtin.fail:\n      \
+    \  msg: Membership phase stopped; protected ownership and bounded result retained.\n\
+    \    always:\n    - ansible.builtin.set_fact:\n        phase_envelope: {}\n  \
+    \      selected_identity: {}\n        verified_state: {}\n"
+  file-13: "#!/usr/bin/env python3\n\"\"\"Validate only the fixed private staging\
+    \ interface before loading Ansible.\"\"\"\nimport os,re,sys\nfrom pathlib import\
+    \ Path\nfrom contract import inputs,safe\n\ndef validate(phase,input_file,work):\n\
+    \ if phase not in ('attest','memberships') or not re.fullmatch(r'/[A-Za-z0-9_./-]+',work)\
+    \ or str(Path(work))!=work:raise ValueError('stage')\n if input_file!=work+'/phase-inputs.json':raise\
+    \ ValueError('fixed input path')\n inputs(input_file,phase)\n names=['gitlab-reader','kc-client-id','kc-client-secret','lab-ca.crt','api-token','api-ca.crt']\
+    \ if phase=='attest' else ['group-writer','lab-ca.crt','envelope.json']\n for\
+    \ name in names:safe(work+'/'+name,limit=262144 if name.endswith('.crt') or name=='envelope.json'\
+    \ else 4096)\n for name in ['run.log','result.json','snapshot-inputs.json','snapshot.json','kc-token','subject-inputs.json']+(['envelope.json']\
+    \ if phase=='attest' else []):\n  if os.path.lexists(work+'/'+name):raise ValueError('fresh\
+    \ phase work required')\n if phase=='attest':\n  client=Path(work+'/kc-client-id').read_text().strip()\n\
+    \  if not re.fullmatch(r'[A-Za-z0-9_.-]{1,128}',client):raise ValueError('client\
+    \ binding')\nif __name__=='__main__':\n try:validate(*sys.argv[1:])\n except Exception:raise\
+    \ SystemExit('Invalid phase staging; no credential use permitted.')\n print('Private\
+    \ phase staging verified.')\n"
+  file-14: "#!/usr/bin/env python3\n\"\"\"Reuse the reviewed exact Linux lock-owner\
+    \ proof for the whole writer phase.\"\"\"\nimport os,sys\nfrom pathlib import\
+    \ Path\nsys.path.insert(0,str(Path(__file__).resolve().parents[1]))\nfrom verify_group_paths\
+    \ import verify\nif __name__=='__main__':\n try:\n  mode,work,group=sys.argv[1:]\n\
+    \  if mode not in ('--prepare','--locked') or Path(group).name!='gitlab-group.json':raise\
+    \ ValueError('lock arguments')\n  os.environ['PERKFORGE_GROUP_LOCK_OWNER']=os.environ.get('PERKFORGE_PHASE_LOCK_OWNER','0')\n\
+    \  verify(work+'/group-writer',str(Path(group).parent/'trigger'),prepare=mode=='--prepare',require_locked=mode=='--locked')\n\
+    \ except Exception:raise SystemExit('Missing or foreign whole-context phase lock;\
+    \ no native changes permitted.')\n"
+  file-15: "# Exact precreated object only. No create/delete, no Secret access, no\
+    \ data adoption.\n- ansible.builtin.set_fact:\n    receipt_url: '{{ identity_kubernetes_origin\
+    \ }}/api/v1/namespaces/{{ identity_receipt_namespace }}/configmaps/{{ identity_receipt_name\
+    \ }}'\n    receipt_headers: {Authorization: 'Bearer {{ lookup(\"file\",phase_api_token)\
+    \ | trim }}'}\n- ansible.builtin.uri:\n    url: '{{ receipt_url }}'\n    headers:\
+    \ '{{ receipt_headers }}'\n    validate_certs: true\n    ca_path: '{{ phase_api_ca\
+    \ }}'\n    use_proxy: false\n    use_netrc: false\n    follow_redirects: none\n\
+    \    unredirected_headers: [Authorization]\n    timeout: 10\n  register: receipt_before\n\
+    - ansible.builtin.assert:\n    that:\n    - receipt_before.json.metadata.uid ==\
+    \ identity_receipt_uid\n    - receipt_before.json.metadata.name == identity_receipt_name\n\
+    \    - receipt_before.json.metadata.namespace == identity_receipt_namespace\n\
+    \    - receipt_before.json.metadata.resourceVersion is match('^[0-9]+$')\n   \
+    \ - receipt_before.json.metadata.labels['app.kubernetes.io/managed-by'] == 'perkforge-identity'\n\
+    \    - receipt_before.json.metadata.labels['perkforge.dev/context'] == identity_context\n\
+    \    - receipt_before.json.metadata.annotations['perkforge.dev/desired-invocation']\
+    \ == identity_invocation\n    - receipt_before.json.data | default({}) | list\
+    \ | difference(['receipt.json']) | length == 0\n    - (receipt_before.json.data\
+    \ | default({})).get('receipt.json','') | length <= 262144\n- name: First attempt\
+    \ cannot adopt existing data; later attempts require exact predecessor\n  ansible.builtin.assert:\n\
+    \    that: (receipt_before.json.data | default({})).get('receipt.json','') ==\
+    \ ''\n  when: identity_previous_invocation == ''\n- ansible.builtin.set_fact:\n\
+    \    prior_envelope: '{{ receipt_before.json.data[\"receipt.json\"] | from_json\
+    \ }}'\n  when: identity_previous_invocation != ''\n- ansible.builtin.assert:\n\
+    \    that:\n    - prior_envelope.invocation == identity_previous_invocation\n\
+    \    - prior_envelope.context == identity_context\n    - prior_envelope.receipt_uid\
+    \ == identity_receipt_uid\n  when: identity_previous_invocation != ''\n- name:\
+    \ CAS only the owned data after UID, version and desired-attempt checks\n  ansible.builtin.uri:\n\
+    \    url: '{{ receipt_url }}'\n    method: PATCH\n    headers: '{{ receipt_headers\
+    \ | combine({\"Content-Type\":\"application/json-patch+json\"}) }}'\n    body_format:\
+    \ json\n    body:\n    - {op: test, path: /metadata/uid, value: '{{ identity_receipt_uid\
+    \ }}'}\n    - {op: test, path: /metadata/resourceVersion, value: '{{ receipt_before.json.metadata.resourceVersion\
+    \ }}'}\n    - {op: test, path: /metadata/annotations/perkforge.dev~1desired-invocation,\
+    \ value: '{{ identity_invocation }}'}\n    - op: add\n      path: /data\n    \
+    \  value: {receipt.json: '{{ lookup(\"file\",phase_work + \"/envelope.json\")\
+    \ }}'}\n    validate_certs: true\n    ca_path: '{{ phase_api_ca }}'\n    use_proxy:\
+    \ false\n    use_netrc: false\n    follow_redirects: none\n    unredirected_headers:\
+    \ [Authorization]\n    timeout: 10\n    status_code: 200\n- ansible.builtin.uri:\n\
+    \    url: '{{ receipt_url }}'\n    headers: '{{ receipt_headers }}'\n    validate_certs:\
+    \ true\n    ca_path: '{{ phase_api_ca }}'\n    use_proxy: false\n    use_netrc:\
+    \ false\n    follow_redirects: none\n    unredirected_headers: [Authorization]\n\
+    \    timeout: 10\n  register: receipt_after\n- ansible.builtin.assert:\n    that:\n\
+    \    - receipt_after.json.metadata.uid == identity_receipt_uid\n    - receipt_after.json.metadata.annotations['perkforge.dev/desired-invocation']\
+    \ == identity_invocation\n    - receipt_after.json.data['receipt.json'] == lookup('file',phase_work\
+    \ + '/envelope.json')\n"
+  file-16: "#!/usr/bin/env bash\nset -euo pipefail\numask 077\nif [[ ${1:-} != --apply\
+    \ && ${1:-} != --validate ]]; then printf '%s\\n' 'INERT: explicit phase execution\
+    \ required'; exit 0; fi\n[[ $# == 3 ]] || exit 2\nhere=$(CDPATH='' cd -- \"$(dirname\
+    \ -- \"$0\")\" && pwd -P)\npython3 \"$here/paths.py\" attest \"$2\" \"$3\" >/dev/null\n\
+    [[ $1 == --apply ]] || { printf '%s\\n' 'Validated; no authentication or native\
+    \ calls'; exit 0; }\nw=$3\nset -o noclobber\nif ansible-playbook -i localhost,\
+    \ \"$here/attest.yaml\" -e \"@$2\" \\\n -e \"phase_inputs=$2\" -e \"phase_work=$w\"\
+    \ \\\n -e \"phase_kc_id=$w/kc-client-id\" -e \"phase_kc_secret=$w/kc-client-secret\"\
+    \ \\\n -e \"phase_gitlab_reader=$w/gitlab-reader\" -e \"phase_lab_ca=$w/lab-ca.crt\"\
+    \ \\\n -e \"phase_api_token=$w/api-token\" -e \"phase_api_ca=$w/api-ca.crt\" >\"\
+    $w/run.log\" 2>&1; then\n cat \"$w/result.json\"\nelse\n if [[ -f $w/result.json\
+    \ ]]; then cat \"$w/result.json\"; else printf '%s\\n' '{\"phase\":\"AttestationFailed\"\
+    ,\"substage\":\"local-execution\",\"category\":\"result-unavailable\",\"membership_ready\"\
+    :false}'; fi\n exit 1\nfi\n"
+  file-17: "#!/usr/bin/env bash\nset -euo pipefail\numask 077\nif [[ ${1:-} != --apply\
+    \ && ${1:-} != --validate ]]; then printf '%s\\n' 'INERT: explicit phase execution\
+    \ required'; exit 0; fi\n[[ $# == 4 ]] || exit 2\nhere=$(CDPATH='' cd -- \"$(dirname\
+    \ -- \"$0\")\" && pwd -P)\npython3 \"$here/paths.py\" memberships \"$2\" \"$3\"\
+    \ >/dev/null\npython3 \"$here/membership-state.py\" \"$2\" \"$3\" \"$4\" >/dev/null\n\
+    [[ $1 == --apply ]] || { printf '%s\\n' 'Validated; no authentication or native\
+    \ calls'; exit 0; }\nw=$3\n# Standalone use and packaged use share the same stable\
+    \ cross-attempt lock.\nif [[ -z ${PERKFORGE_PHASE_LOCK_OWNER:-} ]]; then\n python3\
+    \ \"$here/phase-lock.py\" --prepare \"$3\" \"$4\"\n export PERKFORGE_PHASE_LOCK_OWNER=$$\n\
+    \ exec flock --no-fork --exclusive --nonblock \"$(dirname -- \"$4\")/trigger.lock\"\
+    \ bash \"$0\" \"$@\"\nfi\npython3 \"$here/phase-lock.py\" --locked \"$3\" \"$4\"\
+    \nset -o noclobber\nif ansible-playbook -i localhost, \"$here/memberships.yaml\"\
+    \ -e \"@$2\" -e \"phase_inputs=$2\" -e \"phase_work=$w\" -e \"phase_group_receipt=$4\"\
+    \ >\"$w/run.log\" 2>&1; then\n cat \"$w/result.json\"\nelse\n if [[ -f $w/result.json\
+    \ ]]; then cat \"$w/result.json\"; else printf '%s\\n' '{\"phase\":\"MembershipFailed\"\
+    ,\"substage\":\"local-execution\",\"category\":\"result-unavailable\",\"membership_ready\"\
+    :false}'; fi\n exit 1\nfi\n"
+  file-18: "#!/usr/bin/env python3\n\"\"\"Read exact canonical group membership; never\
+    \ configure Keycloak or grant access.\"\"\"\nimport argparse,datetime as dt,hashlib,json,os,re,ssl,stat,urllib.request\n\
+    from pathlib import Path\nimport yaml\nfrom verify_group_paths import safe\nLIMIT=262144\n\
+    ROLES={'tenant-admin':'Owner','tenant-developer':'Developer','tenant-viewer':'Reporter'}\n\
+    UUID=r'[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}'\ndef unique(pairs):\n d={}\n\
+    \ for k,v in pairs:\n  if k in d:raise ValueError('duplicate key')\n  d[k]=v\n\
+    \ return d\ndef private(path,limit=LIMIT):\n safe(path,limit=limit)\n fd=os.open(path,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK)\n\
+    \ try:\n  s=os.fstat(fd)\n  if not stat.S_ISREG(s.st_mode) or s.st_uid!=os.getuid()\
+    \ or stat.S_IMODE(s.st_mode)!=0o600 or s.st_nlink!=1 or s.st_size>limit:raise\
+    \ ValueError('unsafe opened file')\n  with os.fdopen(fd,'rb',closefd=False) as\
+    \ f:data=f.read(limit+1)\n  if len(data)>limit:raise ValueError('oversize')\n\
+    \  return data\n finally:os.close(fd)\ndef validate(path):\n d=json.loads(private(path),object_pairs_hook=unique)\n\
+    \ keys={'context','source_revision','origin','ca_file','contract_sha256','group_ids'}\n\
+    \ if not isinstance(d,dict) or set(d)!=keys:raise ValueError('input fields')\n\
+    \ for k,p in {'context':r'[a-z][a-z0-9-]{0,30}','source_revision':r'[a-f0-9]{40}','origin':r'https://[A-Za-z0-9.-]+(?::[0-9]+)?(?:/auth)?','ca_file':r'/[A-Za-z0-9_./-]+','contract_sha256':r'[a-f0-9]{64}'}.items():\n\
+    \  if not isinstance(d[k],str) or not re.fullmatch(p,d[k]):raise ValueError('nonliteral\
+    \ input')\n if d['context'] in {'platform','system','default','tenants'}:raise\
+    \ ValueError('reserved context')\n groups=d['group_ids']\n if not isinstance(groups,dict)\
+    \ or set(groups)!=set(ROLES) or any(not isinstance(v,str) or not re.fullmatch(UUID,v)\
+    \ for v in groups.values()) or len(set(groups.values()))!=3:raise ValueError('group\
+    \ bindings')\n safe(d['ca_file'],limit=LIMIT,private=False)\n contract=Path(__file__).resolve().parents[3]/'authorization/contexts'/\
+    \ (d['context']+'.yaml')\n raw=contract.read_bytes()\n if len(raw)>65536 or hashlib.sha256(raw).hexdigest()!=d['contract_sha256']:raise\
+    \ ValueError('contract mismatch')\n c=yaml.safe_load(raw)['paas_context']\n if\
+    \ c['schema_version']!=1 or c['id']!=d['context'] or c['targets']['gitlab']['role_mappings']!=ROLES:raise\
+    \ ValueError('canonical GitLab mapping')\n expected={r:'/tenants/'+d['context']+'/'+leaf\
+    \ for r,leaf in [('tenant-admin','admins'),('tenant-developer','developers'),('tenant-viewer','viewers')]}\n\
+    \ if c['keycloak']['groups']!=expected or not re.fullmatch(r'[A-Za-z0-9_-]{1,64}',c['keycloak']['realm']):raise\
+    \ ValueError('canonical group contract')\n return d,c\nclass NoRedirect(urllib.request.HTTPRedirectHandler):\n\
+    \ def redirect_request(self,*args,**kwargs):raise ValueError('redirect forbidden')\n\
+    def snapshot(d,c,token):\n opener=urllib.request.build_opener(urllib.request.ProxyHandler({}),NoRedirect(),urllib.request.HTTPSHandler(context=ssl.create_default_context(cafile=d['ca_file'])))\n\
+    \ base=d['origin']+'/admin/realms/'+c['keycloak']['realm']\n def get(path):\n\
+    \  req=urllib.request.Request(base+path,headers={'Authorization':'Bearer '+token,'Accept':'application/json'},method='GET')\n\
+    \  with opener.open(req,timeout=10) as response:\n   if response.status!=200:raise\
+    \ ValueError('read failed')\n   raw=response.read(LIMIT+1)\n   if len(raw)>LIMIT:raise\
+    \ ValueError('oversize response')\n   return json.loads(raw,object_pairs_hook=unique)\n\
+    \ def one_pass():\n  people={};bindings=[]\n  for role in sorted(ROLES):\n   gid=d['group_ids'][role];path=c['keycloak']['groups'][role]\n\
+    \   meta=get('/groups/'+gid)\n   if not isinstance(meta,dict) or meta.get('id')!=gid\
+    \ or meta.get('path')!=path or meta.get('subGroupCount')!=0 or meta.get('subGroups',[])!=[]:raise\
+    \ ValueError('group drift or nesting')\n   bindings.append({'role':role,'id':gid,'path':path})\n\
+    \   seen=set()\n   for first in range(0,501,100):\n    page=get('/groups/'+gid+'/members?briefRepresentation=true&first='+str(first)+'&max=100')\n\
+    \    if not isinstance(page,list) or len(page)>100 or first+len(page)>500:raise\
+    \ ValueError('membership bound exceeded')\n    for user in page:\n     if not\
+    \ isinstance(user,dict) or not isinstance(user.get('id'),str) or not re.fullmatch(UUID,user['id'])\
+    \ or type(user.get('enabled')) is not bool:raise ValueError('member identity')\n\
+    \     subject=user['id']\n     if subject in seen or subject in people:raise ValueError('duplicate\
+    \ or conflicting roles')\n     seen.add(subject);people[subject]={'subject':subject,'role':role,'enabled':user['enabled']}\n\
+    \    if len(page)<100:break\n   else:raise ValueError('membership bound exceeded')\n\
+    \  return {'groups':bindings,'members':[people[s] for s in sorted(people)]}\n\
+    \ first=one_pass();second=one_pass()\n if first!=second:raise ValueError('membership\
+    \ changed during read')\n return {'schema':1,'stage':'SnapshotVerified','context':d['context'],'source_revision':d['source_revision'],'contract_sha256':d['contract_sha256'],'origin':d['origin'],'realm':c['keycloak']['realm'],'captured_at':dt.datetime.now(dt.timezone.utc).isoformat(),**second}\n\
+    def main():\n p=argparse.ArgumentParser();mode=p.add_mutually_exclusive_group();mode.add_argument('--read',action='store_true');mode.add_argument('--validate',action='store_true');p.add_argument('token',nargs='?');p.add_argument('receipt',nargs='?');p.add_argument('inputs',nargs='?');a=p.parse_args()\n\
+    \ if not a.read and not a.validate:print('INERT: explicit read required');return\n\
+    \ d,c=validate(a.inputs);safe(a.token,limit=4096);safe(a.receipt,optional=True)\n\
+    \ if os.path.lexists(a.receipt):raise ValueError('fresh receipt required')\n if\
+    \ a.validate:print('Validated; no authentication or file creation');return\n token=private(a.token,4096).decode('ascii').strip()\n\
+    \ if not re.fullmatch(r'[A-Za-z0-9_.-]{8,4096}',token):raise ValueError('invalid\
+    \ token encoding')\n fd=os.open(a.receipt,os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600);owned=os.fstat(fd)\n\
+    \ try:\n  result=snapshot(d,c,token)\n  with os.fdopen(fd,'wb',closefd=False)\
+    \ as f:f.write((json.dumps(result,sort_keys=True)+'\\n').encode());f.flush();os.fsync(fd)\n\
+    \  print('SnapshotVerified; native authority and caller provenance remain external\
+    \ acceptance gates')\n except Exception:\n  current=os.lstat(a.receipt)\n  if\
+    \ (current.st_dev,current.st_ino)==(owned.st_dev,owned.st_ino):os.unlink(a.receipt)\n\
+    \  raise\n finally:os.close(fd)\nif __name__=='__main__':\n try:main()\n except\
+    \ Exception:raise SystemExit('Canonical identity snapshot unavailable; no native\
+    \ mutation performed.')\n"
+  file-19: "#!/usr/bin/env python3\n\"\"\"Read-only native identity verification,\
+    \ not account or membership management.\"\"\"\nimport argparse\nimport datetime\
+    \ as dt\nimport json\nimport os\nimport re\nimport ssl\nimport stat\nimport urllib.parse\n\
+    import urllib.request\nfrom verify_group_paths import safe\n\nLIMIT = 65536\n\n\
+    \ndef read_private(path, limit=LIMIT):\n    safe(path, limit=limit)\n    fd =\
+    \ os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)\n    try:\n     \
+    \   s = os.fstat(fd)\n        if not stat.S_ISREG(s.st_mode) or s.st_uid != os.getuid()\
+    \ or stat.S_IMODE(s.st_mode) != 0o600 or s.st_nlink != 1 or s.st_size > limit:\n\
+    \            raise ValueError('unsafe opened input')\n        with os.fdopen(fd,\
+    \ 'rb', closefd=False) as stream:\n            value = stream.read(limit + 1)\n\
+    \        if len(value) > limit:\n            raise ValueError('oversized input')\n\
+    \        return value\n    finally:\n        os.close(fd)\n\n\ndef unique(pairs):\n\
+    \    result = {}\n    for key, value in pairs:\n        if key in result:\n  \
+    \          raise ValueError('duplicate key')\n        result[key] = value\n  \
+    \  return result\n\n\ndef inputs(path):\n    data = json.loads(read_private(path),\
+    \ object_pairs_hook=unique)\n    patterns = {\n        'context': r'[a-z][a-z0-9-]{0,30}',\n\
+    \        'subject': r'[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}',\n        'source_revision':\
+    \ r'[a-f0-9]{40}',\n        'origin': r'https://[A-Za-z0-9.-]+(?::[0-9]+)?',\n\
+    \        'ca_file': r'/[A-Za-z0-9_./-]+',\n    }\n    if not isinstance(data,\
+    \ dict) or set(data) != set(patterns):\n        raise ValueError('unexpected input\
+    \ keys')\n    for key, pattern in patterns.items():\n        if not isinstance(data[key],\
+    \ str) or not re.fullmatch(pattern, data[key]):\n            raise ValueError('nonliteral\
+    \ input')\n    if data['context'] in {'platform', 'system', 'default', 'tenants'}:\n\
+    \        raise ValueError('reserved context')\n    safe(data['ca_file'], limit=262144,\
+    \ private=False)\n    return data\n\n\nclass NoRedirect(urllib.request.HTTPRedirectHandler):\n\
+    \    def redirect_request(self, *args, **kwargs):\n        raise ValueError('redirect\
+    \ forbidden')\n\n\ndef resolve(data, token):\n    opener = urllib.request.build_opener(\n\
+    \        urllib.request.ProxyHandler({}), NoRedirect(),\n        urllib.request.HTTPSHandler(context=ssl.create_default_context(cafile=data['ca_file'])))\n\
+    \n    def get(path):\n        request = urllib.request.Request(data['origin']\
+    \ + '/api/v4/' + path,\n                                         headers={'PRIVATE-TOKEN':\
+    \ token, 'Accept': 'application/json'}, method='GET')\n        with opener.open(request,\
+    \ timeout=10) as response:\n            if response.status != 200:\n         \
+    \       raise ValueError('native verification failed')\n            raw = response.read(LIMIT\
+    \ + 1)\n            if len(raw) > LIMIT:\n                raise ValueError('oversized\
+    \ native response')\n            if response.headers.get('X-Next-Page', ''):\n\
+    \                raise ValueError('ambiguous paginated identity')\n          \
+    \  return json.loads(raw, object_pairs_hook=unique)\n\n    authority = get('personal_access_tokens/self')\n\
+    \    if not isinstance(authority, dict) or authority.get('active') is not True\
+    \ or authority.get('revoked') is not False:\n        raise ValueError('inactive\
+    \ reader')\n    scopes = authority.get('scopes')\n    if not isinstance(scopes,\
+    \ list) or len(scopes) != len(set(scopes)) or set(scopes) not in ({'read_api'},\
+    \ {'read_api', 'self_rotate'}):\n        raise ValueError('unexpected reader scopes')\n\
+    \    expiry = authority.get('expires_at')\n    if not isinstance(expiry, str)\
+    \ or dt.date.fromisoformat(expiry) <= dt.datetime.now(dt.timezone.utc).date():\n\
+    \        raise ValueError('reader expiry missing or elapsed')\n    users = get('users?'\
+    \ + urllib.parse.urlencode({'provider': 'openid_connect', 'extern_uid': data['subject'],\
+    \ 'per_page': 2}))\n    if not isinstance(users, list) or len(users) > 1:\n  \
+    \      raise ValueError('ambiguous identity')\n    result = {'schema': 1, 'origin':\
+    \ data['origin'], 'context': data['context'],\n              'subject': data['subject'],\
+    \ 'source_revision': data['source_revision'],\n              'captured_at': dt.datetime.now(dt.timezone.utc).isoformat(),\
+    \ 'stage': 'PendingFirstLogin'}\n    if not users:\n        return result\n  \
+    \  user = users[0]\n    if not isinstance(user, dict) or type(user.get('id'))\
+    \ is not int or not 0 < user['id'] < 2**63 or user.get('is_admin') is not False:\n\
+    \        raise ValueError('invalid tenant identity')\n    identities = user.get('identities')\n\
+    \    if not isinstance(identities, list):\n        raise ValueError('privileged\
+    \ identity read unavailable')\n    oidc = [item for item in identities if isinstance(item,\
+    \ dict) and item.get('provider') == 'openid_connect']\n    if len(oidc) != 1 or\
+    \ oidc[0].get('extern_uid') != data['subject']:\n        raise ValueError('subject\
+    \ mismatch')\n    if user.get('state') == 'active':\n        result.update(stage='IdentityVerified',\
+    \ native_user_id=user['id'])\n    elif user.get('state') in {'blocked', 'blocked_pending_approval'}:\n\
+    \        result['stage'] = 'PendingAccountApproval'\n    else:\n        raise\
+    \ ValueError('unsupported account state')\n    return result\n\n\ndef main(argv=None):\n\
+    \    parser = argparse.ArgumentParser(description=__doc__)\n    mode = parser.add_mutually_exclusive_group()\n\
+    \    mode.add_argument('--verify', action='store_true')\n    mode.add_argument('--validate',\
+    \ action='store_true')\n    parser.add_argument('token', nargs='?')\n    parser.add_argument('receipt',\
+    \ nargs='?')\n    parser.add_argument('inputs', nargs='?')\n    args = parser.parse_args(argv)\n\
+    \    if not args.verify and not args.validate:\n        print('INERT: explicit\
+    \ verification required')\n        return\n    data = inputs(args.inputs)\n  \
+    \  safe(args.token, limit=4096)\n    safe(args.receipt, optional=True)\n    if\
+    \ os.path.lexists(args.receipt):\n        raise ValueError('fresh receipt path\
+    \ required')\n    if args.validate:\n        print('Validated; no authentication\
+    \ or receipt write')\n        return\n    # Exclusive reservation before authentication\
+    \ prevents concurrent writers. Failed runs\n    # remove only this exact owned\
+    \ inode, never preserve an apparently successful receipt.\n    fd = os.open(args.receipt,\
+    \ os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)\n    owned = os.fstat(fd)\n\
+    \    try:\n        token = read_private(args.token, 4096).decode('ascii').strip()\n\
+    \        if not re.fullmatch(r'[A-Za-z0-9_-]{8,4096}', token):\n            raise\
+    \ ValueError('invalid reader token encoding')\n        result = resolve(data,\
+    \ token)\n        encoded = (json.dumps(result, sort_keys=True) + '\\n').encode()\n\
+    \        with os.fdopen(fd, 'wb', closefd=False) as stream:\n            stream.write(encoded)\n\
+    \            stream.flush()\n            os.fsync(fd)\n        print(result['stage'])\n\
+    \    except Exception:\n        current = os.lstat(args.receipt)\n        if (current.st_dev,\
+    \ current.st_ino) == (owned.st_dev, owned.st_ino):\n            os.unlink(args.receipt)\n\
+    \        raise\n    finally:\n        os.close(fd)\n\n\nif __name__ == '__main__':\n\
+    \    try:\n        main()\n    except Exception:\n        raise SystemExit('Identity\
+    \ verification failed; no native mutation performed.')\n"
+  file-2: "#!/usr/bin/env python3\n\"\"\"Finite native launcher; fixed mounts, literal\
+    \ schemas, isolated credential sets.\"\"\"\nimport argparse,datetime,fcntl,hashlib,importlib.util,json,os,pathlib,shutil,stat,subprocess,sys,tempfile\n\
+    BASE=pathlib.Path('/opt/platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment')\n\
+    sys.path.insert(0,str(BASE/'phases'));import contract\nsys.path.insert(0,str(BASE));import\
+    \ verify_group_paths as guard\nfrom pathlib import Path\n\ndef bounded(p,n):\n\
+    \ fd=os.open(p,os.O_RDONLY|os.O_NONBLOCK|os.O_NOFOLLOW)\n try:\n  s=os.fstat(fd)\n\
+    \  if not stat.S_ISREG(s.st_mode) or s.st_size>n:raise ValueError('file')\n  with\
+    \ os.fdopen(fd,'rb',closefd=False) as f:b=f.read(n+1)\n  if len(b)>n:raise ValueError('size')\n\
+    \  return b\n finally:os.close(fd)\ndef projection(root,name,n):\n r=Path(root)\n\
+    \ if r.is_symlink() or not r.is_dir():raise ValueError('mount')\n p=(r/name).resolve(strict=True)\n\
+    \ if not p.is_relative_to(r) or p==r:raise ValueError('escape')\n return bounded(p,n)\n\
+    def write(p,b):\n fd=os.open(p,os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600)\n\
+    \ with os.fdopen(fd,'wb') as f:f.write(b);f.flush();os.fsync(f.fileno())\ndef\
+    \ atomic(p,d):\n fd,tmp=tempfile.mkstemp(prefix='.result-',dir=p.parent)\n try:\n\
+    \  with os.fdopen(fd,'w') as f:json.dump(d,f,sort_keys=True);f.flush();os.fsync(f.fileno())\n\
+    \  os.replace(tmp,p)\n finally:\n  if os.path.exists(tmp):os.unlink(tmp)\ndef\
+    \ run(a):\n raw=projection('/inputs','inputs.json',262144)\n if hashlib.sha256(raw).hexdigest()!=a.inputs_sha256:raise\
+    \ ValueError('input hash')\n body=json.loads(raw,object_pairs_hook=contract.unique)\n\
+    \ if not isinstance(body,dict) or set(body)!=({'identity','group'} if a.phase=='foundation'\
+    \ else {'identity'}):raise ValueError('wrapper fields')\n w=Path(tempfile.mkdtemp(prefix='phase-',dir='/tmp'));os.chmod(w,0o700)\n\
+    \ lock=None\n try:\n  write(w/'phase-inputs.json',json.dumps(body['identity']).encode())\n\
+    \  d=contract.inputs(str(w/'phase-inputs.json'),'attest' if a.phase=='foundation'\
+    \ else a.phase)\n  revisions=json.loads(bounded('/opt/revisions.json',4096))\n\
+    \  if revisions!={'enrollment':d['identity_source_revision'],'platform':d['identity_platform_revision']}\
+    \ or d['identity_invocation']!=a.invocation:raise ValueError('source/attempt')\n\
+    \  if a.phase=='foundation':\n   write(w/'group-inputs.json',json.dumps(body['group']).encode());g=guard.validate_inputs(str(w/'group-inputs.json'))\n\
+    \   if g['gitlab_group_context']!=d['identity_context'] or g['gitlab_group_source_revision']!=d['identity_source_revision']\
+    \ or g['gitlab_native_origin']!=d['identity_gitlab_origin'] or g['gitlab_native_ca_file']!='/credentials/lab-ca.crt'\
+    \ or g['gitlab_group_run'] is not True or g.get('gitlab_group_allow_parent_create',False)\
+    \ is not False or type(g.get('gitlab_group_expected_parent_id')) is not int or\
+    \ g['gitlab_group_expected_parent_id']<=0:raise ValueError('group binding')\n\
+    \  names=['gitlab-reader','kc-client-id','kc-client-secret','lab-ca.crt'] if a.phase=='attest'\
+    \ else ['group-writer','lab-ca.crt']\n  for n in names:write(w/n,projection('/credentials',n,262144\
+    \ if n.endswith('.crt') else 4096))\n  if a.phase=='attest':\n   write(w/'api-token',projection('/identity-api','token',4096));write(w/'api-ca.crt',projection('/identity-api','ca.crt',262144))\n\
+    \   subprocess.run([str(BASE/'phases/run-attestor.sh'),'--apply',str(w/'phase-inputs.json'),str(w)],check=True)\n\
+    \   return\n  root=Path('/receipts');s=root.lstat()\n  if not stat.S_ISDIR(s.st_mode)\
+    \ or s.st_uid!=os.getuid() or stat.S_IMODE(s.st_mode)!=0o700:raise ValueError('receipt\
+    \ root')\n  context=root/d['identity_context'];context.mkdir(mode=0o700,exist_ok=True);group=context/'gitlab-group.json'\n\
+    \  guard.verify(str(w/'group-writer'),str(context/'trigger'),prepare=True)\n \
+    \ lock=os.open(context/'trigger.lock',os.O_RDWR|os.O_NOFOLLOW|os.O_NONBLOCK);fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)\n\
+    \  os.environ['PERKFORGE_PHASE_LOCK_OWNER']=str(os.getpid());os.environ['PERKFORGE_GROUP_LOCK_OWNER']=str(os.getpid())\n\
+    \  subprocess.run(['python3',str(BASE/'phases/phase-lock.py'),'--locked',str(w),str(group)],check=True,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)\n\
+    \  if a.phase=='memberships':\n   subprocess.run(['/opt/perkforge/bin/refresh-identity-evidence',str(w/'phase-inputs.json'),str(w)],check=True)\n\
+    \   subprocess.run([str(BASE/'phases/run-memberships.sh'),'--apply',str(w/'phase-inputs.json'),str(w),str(group)],check=True);return\n\
+    \  result=context/'foundation-result.json'\n  if os.path.lexists(result):\n  \
+    \ old=contract.read(str(result))\n   keys={'schema','phase','context','invocation','source_revision','platform_revision','parent_id','group_id','captured_at'}\n\
+    \   if set(old)!=keys or old['schema']!=1 or old['phase']!='GroupReady' or old['context']!=d['identity_context']\
+    \ or old['invocation'] not in {d['identity_invocation'],d['identity_previous_invocation']}:raise\
+    \ ValueError('prior attempt')\n  g['gitlab_native_ca_file']=str(w/'lab-ca.crt');(w/'group-inputs.json').unlink();write(w/'group-inputs.json',json.dumps(g).encode())\n\
+    \  cmd=[str(BASE/'run-groups.sh'),'--apply',str(w/'group-writer'),str(group),str(w/'group-inputs.json')]\n\
+    \  p=subprocess.run(cmd,capture_output=True,timeout=240)\n  if p.returncode:raise\
+    \ ValueError('foundation failed')\n  cmd[1]='--validate';subprocess.run(cmd,check=True,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)\n\
+    \  actual=contract.read(str(group))\n  if actual['stage']!='group-ready' or actual['context']!=d['identity_context']\
+    \ or actual['source_revision']!=d['identity_source_revision'] or actual['parent_id']!=g['gitlab_group_expected_parent_id']\
+    \ or type(actual['group_id']) is not int or actual['group_id']<=0:raise ValueError('readback')\n\
+    \  atomic(result,{'schema':1,'phase':'GroupReady','context':d['identity_context'],'invocation':d['identity_invocation'],'source_revision':d['identity_source_revision'],'platform_revision':d['identity_platform_revision'],'parent_id':actual['parent_id'],'group_id':actual['group_id'],'captured_at':datetime.datetime.now(datetime.timezone.utc).isoformat()})\n\
+    \  print('GroupReady; membership not yet evaluated.')\n finally:\n  if lock is\
+    \ not None:os.close(lock)\n  shutil.rmtree(w)\nif __name__=='__main__':\n p=argparse.ArgumentParser();p.add_argument('--phase',choices=['foundation','attest','memberships'],required=True);p.add_argument('--invocation',required=True);p.add_argument('--inputs-sha256',required=True);a=p.parse_args()\n\
+    \ try:run(a)\n except Exception:raise SystemExit('Finite identity phase rejected\
+    \ or failed; no completion claim.')\n"
+  file-20: "#!/usr/bin/env bash\nset -euo pipefail\n# Arguments contain paths only,\
+    \ never credential values. No action by default.\nif [[ ${1:-} != --apply && ${1:-}\
+    \ != --validate ]]; then\n  printf '%s\\n' 'INERT: explicit --apply TOKEN_FILE\
+    \ RECEIPT_FILE INPUTS_FILE required.'\n  exit 0\nfi\n[[ $# == 4 ]] || exit 2\n\
+    here=$(CDPATH='' cd -- \"$(dirname -- \"$0\")\" && pwd -P)\nif [[ $1 == --validate\
+    \ ]]; then\n  exec python3 \"$here/verify_group_paths.py\" --token \"$2\" --receipt\
+    \ \"$3\" --inputs \"$4\" --paths-only\nfi\npython3 \"$here/verify_group_paths.py\"\
+    \ --token \"$2\" --receipt \"$3\" --inputs \"$4\" --prepare\n# Native flock holds\
+    \ the lock for the entire child process; fail rather than queue.\nexport PERKFORGE_GROUP_LOCK_OWNER=$$\n\
+    exec flock --no-fork --exclusive --nonblock \"$3.lock\" \\\n  ansible-playbook\
+    \ -i localhost, \"$here/ensure-groups.yaml\" -e \"@$4\" \\\n  -e \"gitlab_native_token_file=$2\"\
+    \ -e \"gitlab_group_receipt_file=$3\"\n"
+  file-21: "#!/usr/bin/env python3\n\"\"\"Local path/lock verification only. Never\
+    \ reads credentials or calls an API.\"\"\"\nimport argparse,fcntl,os,stat,re,json\n\
+    from pathlib import Path\n\ndef safe(path,optional=False,limit=65536,private=True):\n\
+    \ p=Path(path)\n if not re.fullmatch(r'[A-Za-z0-9_./-]+',path) or not p.is_absolute()\
+    \ or str(p)!=path or '..' in p.parts:raise ValueError('noncanonical path')\n parts=list(reversed(p.parents))\n\
+    \ for parent in parts:\n  s=parent.lstat()\n  if not stat.S_ISDIR(s.st_mode) or\
+    \ s.st_uid not in (0,os.getuid()):raise ValueError('unsafe ancestor')\n  writable=s.st_mode\
+    \ & 0o022\n  sticky_root=s.st_uid==0 and bool(s.st_mode & stat.S_ISVTX)\n  if\
+    \ writable and not sticky_root:raise ValueError('writable ancestor')\n # A root\
+    \ sticky directory itself is not a private custody directory.\n s=p.parent.lstat()\n\
+    \ if private and (s.st_uid!=os.getuid() or stat.S_IMODE(s.st_mode)!=0o700):raise\
+    \ ValueError('private parent required')\n try:s=p.lstat()\n except FileNotFoundError:\n\
+    \  if optional:return\n  raise\n if not stat.S_ISREG(s.st_mode) or s.st_uid not\
+    \ in ((os.getuid(),) if private else (0,os.getuid())) or (stat.S_IMODE(s.st_mode)!=0o600\
+    \ if private else bool(s.st_mode & 0o022)) or s.st_nlink!=1 or s.st_size>limit:raise\
+    \ ValueError('unsafe leaf')\n # Open nonfollowing/nonblocking; reject replacement/type\
+    \ changes before returning.\n fd=os.open(p,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK)\n\
+    \ try:\n  now=os.fstat(fd)\n  if (s.st_dev,s.st_ino,s.st_mode,s.st_uid,s.st_nlink)!=(now.st_dev,now.st_ino,now.st_mode,now.st_uid,now.st_nlink):raise\
+    \ ValueError('leaf changed')\n finally:os.close(fd)\n\ndef validate_inputs(path):\n\
+    \ def unique(pairs):\n  result={}\n  for key,value in pairs:\n   if key in result:raise\
+    \ ValueError('duplicate input key')\n   result[key]=value\n  return result\n fd=os.open(path,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK)\n\
+    \ try:\n  s=os.fstat(fd)\n  if not stat.S_ISREG(s.st_mode) or s.st_size>65536:raise\
+    \ ValueError('invalid inputs')\n  with os.fdopen(fd,'rb',closefd=False) as f:raw=f.read(65537)\n\
+    \ finally:os.close(fd)\n if len(raw)>65536:raise ValueError('oversized inputs')\n\
+    \ data=json.loads(raw,object_pairs_hook=unique)\n allowed={'gitlab_group_run','gitlab_group_scope','gitlab_group_context','gitlab_group_source_revision','gitlab_group_previous_revision','gitlab_group_allow_parent_create','gitlab_group_expected_parent_id','gitlab_native_origin','gitlab_native_ca_file'}\n\
+    \ if not isinstance(data,dict) or not set(data)<=allowed:raise ValueError('unknown\
+    \ input keys')\n required={'gitlab_group_run','gitlab_group_scope','gitlab_group_context','gitlab_group_source_revision','gitlab_native_origin','gitlab_native_ca_file'}\n\
+    \ if not required<=set(data):raise ValueError('missing input keys')\n for key\
+    \ in ['gitlab_group_run','gitlab_group_allow_parent_create']:\n  if key in data\
+    \ and type(data[key]) is not bool:raise ValueError('invalid boolean')\n if 'gitlab_group_expected_parent_id'\
+    \ in data and (type(data['gitlab_group_expected_parent_id']) is not int or not\
+    \ 0<=data['gitlab_group_expected_parent_id']<2**63):raise ValueError('invalid\
+    \ native ID')\n patterns={'gitlab_group_context':r'[a-z][a-z0-9-]{0,30}','gitlab_group_source_revision':r'[a-f0-9]{40}','gitlab_group_previous_revision':r'(?:[a-f0-9]{40})?','gitlab_native_origin':r'https://[A-Za-z0-9.-]+(?::[0-9]+)?','gitlab_native_ca_file':r'/[A-Za-z0-9_./-]+'}\n\
+    \ for key,pattern in patterns.items():\n  if key in data and (not isinstance(data[key],str)\
+    \ or not re.fullmatch(pattern,data[key])):raise ValueError('nonliteral input')\n\
+    \ if data['gitlab_group_scope']!='gitlab-enrollment-group-foundation-v1' or data['gitlab_group_context']\
+    \ in {'platform','system','default','tenants'}:raise ValueError('unapproved scope')\n\
+    \ # Every value is a validated primitive before Ansible can evaluate templates/lookups.\n\
+    \ return data\n\ndef verify(token,receipt,inputs=None,prepare=False,require_locked=False,paths_only=False,ca=None):\n\
+    \ safe(token,limit=4096);safe(receipt,optional=True,limit=4096)\n if ca:safe(ca,limit=262144,private=False)\n\
+    \ if inputs:\n  safe(inputs)\n  validate_inputs(inputs)\n if paths_only:return\n\
+    \ lock=receipt+'.lock';safe(lock,optional=prepare,limit=0)\n fd=os.open(lock,os.O_RDWR|os.O_NOFOLLOW|os.O_NONBLOCK|(os.O_CREAT|os.O_EXCL\
+    \ if prepare and not os.path.lexists(lock) else 0),0o600)\n try:\n  s=os.fstat(fd)\n\
+    \  if not stat.S_ISREG(s.st_mode) or s.st_uid!=os.getuid() or stat.S_IMODE(s.st_mode)!=0o600\
+    \ or s.st_nlink!=1 or s.st_size:raise ValueError('unsafe lock')\n  if require_locked:\n\
+    \   owner=int(os.environ.get('PERKFORGE_GROUP_LOCK_OWNER','0'))\n   if owner<=1:raise\
+    \ ValueError('missing launcher lock owner')\n   ancestors=set();pid=os.getppid()\n\
+    \   for _ in range(64):\n    if pid<=1:break\n    ancestors.add(pid)\n    text=Path('/proc/'+str(pid)+'/status').read_text()\n\
+    \    pid=int(next(line.split()[1] for line in text.splitlines() if line.startswith('PPid:')))\n\
+    \   if owner not in ancestors:raise ValueError('lock owner is not this invocation\
+    \ ancestor')\n   wanted=(os.major(s.st_dev),os.minor(s.st_dev),s.st_ino)\n   owned=False\n\
+    \   for line in Path('/proc/locks').read_text().splitlines():\n    fields=line.split()\n\
+    \    if len(fields)<8 or fields[1:4]!=['FLOCK','ADVISORY','WRITE'] or fields[4]!=str(owner):continue\n\
+    \    major,minor,inode=fields[5].split(':')\n    if (int(major,16),int(minor,16),int(inode))==wanted:owned=True\n\
+    \   if not owned:raise ValueError('invocation does not own exact native lock')\n\
+    \   if not any((os.stat(entry).st_dev,os.stat(entry).st_ino)==(s.st_dev,s.st_ino)\
+    \ for entry in Path('/proc/'+str(owner)+'/fd').iterdir()):raise ValueError('owner\
+    \ descriptor missing')\n\n finally:os.close(fd)\n\nif __name__=='__main__':\n\
+    \ p=argparse.ArgumentParser(description=__doc__);p.add_argument('--token',required=True);p.add_argument('--receipt',required=True);p.add_argument('--inputs');p.add_argument('--ca');p.add_argument('--prepare',action='store_true');p.add_argument('--require-locked',action='store_true');p.add_argument('--paths-only',action='store_true');a=p.parse_args()\n\
+    \ try:verify(a.token,a.receipt,a.inputs,a.prepare,a.require_locked,a.paths_only,a.ca)\n\
+    \ except (OSError,ValueError):raise SystemExit('Unsafe custody path or missing\
+    \ transaction lock; no API operation permitted.')\n print('Custody paths and transaction\
+    \ lock verified.')\n"
+  file-22: "# Bounded native tenant-group membership only; never a whole-person offboard.\n\
+    - name: Reconcile one approved GitLab tenant-group membership\n  hosts: localhost\n\
+    \  connection: local\n  gather_facts: false\n  vars:\n    gitlab_membership_run:\
+    \ false\n    gitlab_membership_operation: inspect\n    gitlab_membership_scope:\
+    \ UNAPPROVED\n    gitlab_membership_recovery_verified: false\n    gitlab_native_origin:\
+    \ https://gitlab.UNCONFIGURED.invalid\n    gitlab_native_ca_file: /UNCONFIGURED/public-ca\n\
+    \    gitlab_native_token_file: /UNCONFIGURED/group-writer-token\n    gitlab_native_attestation_file:\
+    \ /UNCONFIGURED/attestation.json\n    gitlab_native_grant_receipt_file: /UNCONFIGURED/grant.json\n\
+    \    gitlab_native_group_receipt_file: /UNCONFIGURED/group-receipt.json\n    gitlab_native_membership_inputs_file:\
+    \ /UNCONFIGURED/inputs.json\n    gitlab_native_user_id: 0\n    gitlab_native_subject:\
+    \ UNCONFIGURED\n    gitlab_native_group_id: 0\n    gitlab_native_group_path: UNCONFIGURED\n\
+    \    gitlab_native_access_level: 0\n  module_defaults:\n    ansible.builtin.uri:\n\
+    \      validate_certs: true\n      ca_path: '{{ gitlab_native_ca_file }}'\n  \
+    \    use_proxy: false\n      use_netrc: false\n      follow_redirects: none\n\
+    \      unredirected_headers: [PRIVATE-TOKEN]\n      timeout: 20\n  tasks:\n  -\
+    \ ansible.builtin.debug:\n      msg: 'Default/check mode contacts no API. One\
+    \ selected native group membership only; no user approval/linking/admin grant,\
+    \ global block, session/token revocation or descendant/project membership deletion.'\n\
+    \  - when: gitlab_membership_run | bool and not ansible_check_mode\n    no_log:\
+    \ true\n    block:\n    - name: Require validated literal inputs and this invocation's\
+    \ whole-context lock\n      ansible.builtin.command:\n        argv: [python3,\
+    \ '{{ playbook_dir }}/verification/membership_inputs.py', '{{ gitlab_native_token_file\
+    \ }}', '{{ gitlab_native_attestation_file }}', '{{ gitlab_native_group_receipt_file\
+    \ }}', '{{ gitlab_native_membership_inputs_file }}', '{{ gitlab_native_grant_receipt_file\
+    \ }}', --locked]\n      changed_when: false\n    - ansible.builtin.assert:\n \
+    \       that:\n        - gitlab_membership_operation in ['inspect','grant','revoke']\n\
+    \        - gitlab_membership_scope == 'gitlab-membership-' + gitlab_membership_operation\
+    \ + '-v1'\n        - gitlab_membership_recovery_verified | bool\n        - gitlab_native_origin\
+    \ is match('^https://[A-Za-z0-9.-]+(:[0-9]+)?$')\n        - \"'UNCONFIGURED' not\
+    \ in gitlab_native_origin\"\n        - gitlab_native_user_id | type_debug == 'int'\
+    \ and gitlab_native_user_id > 0\n        - gitlab_native_group_id | type_debug\
+    \ == 'int' and gitlab_native_group_id > 0\n        - gitlab_native_subject !=\
+    \ 'UNCONFIGURED' and gitlab_native_subject | length > 0\n        - gitlab_native_group_path\
+    \ is match('^tenants/[a-z][a-z0-9-]{0,62}$')\n        - gitlab_native_access_level\
+    \ in [20,30,40,50]\n    - ansible.builtin.set_fact:\n        gitlab_native_headers:\
+    \ {PRIVATE-TOKEN: \"{{ lookup('file',gitlab_native_token_file) | trim }}\"}\n\
+    \        cacheable: false\n    - name: Verify dedicated non-admin writer bot and\
+    \ exact parent token authority\n      ansible.builtin.uri:\n        url: '{{ gitlab_native_origin\
+    \ }}/api/v4/{{ item }}'\n        headers: '{{ gitlab_native_headers }}'\n    \
+    \  loop: [user, personal_access_tokens/self]\n      register: gitlab_writer_identity\n\
+    \    - ansible.builtin.assert:\n        that:\n        - gitlab_writer_identity.results[0].json.bot\
+    \ is sameas true\n        - gitlab_writer_identity.results[0].json.state == 'active'\n\
+    \        - not (gitlab_writer_identity.results[0].json.is_admin | default(false))\n\
+    \        - gitlab_writer_identity.results[1].json.active is sameas true\n    \
+    \    - gitlab_writer_identity.results[1].json.revoked is sameas false\n      \
+    \  - gitlab_writer_identity.results[1].json.user_id == gitlab_writer_identity.results[0].json.id\n\
+    \        - gitlab_writer_identity.results[1].json.scopes == ['api']\n    - ansible.builtin.set_fact:\n\
+    \        gitlab_group_binding: \"{{ lookup('file',gitlab_native_group_receipt_file)\
+    \ | from_json }}\"\n    - ansible.builtin.uri:\n        url: '{{ gitlab_native_origin\
+    \ }}/api/v4/groups/{{ gitlab_group_binding.parent_id }}/{{ item }}'\n        headers:\
+    \ '{{ gitlab_native_headers }}'\n      loop:\n      - 'members/{{ gitlab_writer_identity.results[0].json.id\
+    \ }}'\n      - 'access_tokens/{{ gitlab_writer_identity.results[1].json.id }}'\n\
+    \      register: gitlab_writer_authority\n    - ansible.builtin.assert:\n    \
+    \    that:\n        - gitlab_writer_authority.results[0].json.id == gitlab_writer_identity.results[0].json.id\n\
+    \        - gitlab_writer_authority.results[0].json.access_level == 50\n      \
+    \  - gitlab_writer_authority.results[1].json.id == gitlab_writer_identity.results[1].json.id\n\
+    \        - gitlab_writer_authority.results[1].json.user_id == gitlab_writer_identity.results[0].json.id\n\
+    \        - gitlab_writer_authority.results[1].json.access_level == 50\n    - ansible.builtin.uri:\n\
+    \        url: '{{ gitlab_native_origin }}/api/v4/{{ item }}'\n        headers:\
+    \ '{{ gitlab_native_headers }}'\n      loop: ['version','groups/{{ gitlab_native_group_id\
+    \ }}','groups/{{ gitlab_group_binding.parent_id }}']\n      register: gitlab_native_identity\n\
+    \    - ansible.builtin.assert:\n        that:\n        - gitlab_native_identity.results[0].json.version\
+    \ in ['19.4.2','19.4.2-ee']\n        - gitlab_native_identity.results[1].json.id\
+    \ == gitlab_native_group_id\n        - gitlab_native_identity.results[1].json.full_path\
+    \ == gitlab_native_group_path\n        - gitlab_native_identity.results[1].json.visibility\
+    \ == 'private'\n        - gitlab_native_identity.results[1].json.parent_id ==\
+    \ gitlab_group_binding.parent_id\n        - gitlab_native_identity.results[2].json.id\
+    \ == gitlab_group_binding.parent_id\n        - gitlab_native_identity.results[2].json.full_path\
+    \ == 'tenants'\n        - gitlab_native_identity.results[2].json.visibility ==\
+    \ 'private'\n        - gitlab_native_identity.results[2].json.parent_id == none\n\
+    \    - name: Recheck native account remains active without privileged identity\
+    \ access\n      ansible.builtin.uri:\n        url: '{{ gitlab_native_origin }}/api/v4/users/{{\
+    \ gitlab_native_user_id }}'\n        headers: '{{ gitlab_native_headers }}'\n\
+    \      register: gitlab_native_user\n      when: gitlab_membership_operation !=\
+    \ 'revoke'\n    - ansible.builtin.assert:\n        that:\n        - gitlab_native_user.json.id\
+    \ == gitlab_native_user_id\n        - gitlab_native_user.json.state == 'active'\n\
+    \      when: gitlab_membership_operation != 'revoke'\n    - ansible.builtin.uri:\n\
+    \        url: '{{ gitlab_native_origin }}/api/v4/groups/{{ gitlab_native_group_id\
+    \ }}/{{ item }}/{{ gitlab_native_user_id }}'\n        headers: '{{ gitlab_native_headers\
+    \ }}'\n        status_code: [200,404]\n      loop: [members, members/all]\n  \
+    \    register: gitlab_native_before\n    - ansible.builtin.assert:\n        that:\n\
+    \        - item.json.id == gitlab_native_user_id\n        - item.json.access_level\
+    \ == gitlab_native_access_level\n        - item.json.expires_at | default(none)\
+    \ == none\n        - item.json.membership_state | default('active') == 'active'\n\
+    \      loop: '{{ gitlab_native_before.results }}'\n      when: item.status ==\
+    \ 200\n    - ansible.builtin.stat:\n        path: '{{ gitlab_native_grant_receipt_file\
+    \ }}'\n      register: gitlab_prior_grant\n    - name: Existing direct membership\
+    \ requires our protected prior ownership receipt\n      ansible.builtin.assert:\n\
+    \        that: gitlab_prior_grant.stat.exists\n      when: gitlab_membership_operation\
+    \ == 'grant' and gitlab_native_before.results[0].status == 200\n    - name: A\
+    \ revoked receipt cannot authorize adoption or removal of a later external grant\n\
+    \      ansible.builtin.assert:\n        that: (lookup('file',gitlab_native_grant_receipt_file)\
+    \ | from_json).stage in ['Granted','GrantPending']\n      when: gitlab_native_before.results[0].status\
+    \ == 200 and gitlab_prior_grant.stat.exists\n    - name: Do not duplicate or implicitly\
+    \ adopt inherited access\n      ansible.builtin.assert:\n        that: gitlab_native_before.results[1].status\
+    \ == 404\n      when: gitlab_membership_operation == 'grant' and gitlab_native_before.results[0].status\
+    \ == 404\n    - name: Record bounded intent before uncertain native write\n  \
+    \    ansible.builtin.copy:\n        dest: '{{ gitlab_native_grant_receipt_file\
+    \ }}'\n        mode: '0600'\n        content: \"{{ {'schema':1,'origin':gitlab_native_origin,'context':gitlab_membership_context,'subject':gitlab_native_subject,'source_revision':gitlab_membership_source_revision,'native_user_id':gitlab_native_user_id,'group_id':gitlab_native_group_id,'role':gitlab_native_role,'access_level':gitlab_native_access_level,'stage':'GrantPending','attempted_at':now(utc=true,fmt='%Y-%m-%dT%H:%M:%SZ')}\
+    \ | to_nice_json }}\"\n      when: gitlab_membership_operation == 'grant' and\
+    \ gitlab_native_before.results[0].status == 404\n    - ansible.builtin.uri:\n\
+    \        url: '{{ gitlab_native_origin }}/api/v4/groups/{{ gitlab_native_group_id\
+    \ }}/members'\n        headers: '{{ gitlab_native_headers }}'\n        method:\
+    \ POST\n        body_format: json\n        body: {user_id: '{{ gitlab_native_user_id\
+    \ }}', access_level: '{{ gitlab_native_access_level }}'}\n        status_code:\
+    \ 201\n      when: gitlab_membership_operation == 'grant' and gitlab_native_before.results[0].status\
+    \ == 404\n      changed_when: true\n    - name: Remove only exact direct membership;\
+    \ preserve descendant/project assignments\n      ansible.builtin.uri:\n      \
+    \  url: '{{ gitlab_native_origin }}/api/v4/groups/{{ gitlab_native_group_id }}/members/{{\
+    \ gitlab_native_user_id }}?skip_subresources=true&unassign_issuables=false'\n\
+    \        headers: '{{ gitlab_native_headers }}'\n        method: DELETE\n    \
+    \    status_code: 204\n      when: gitlab_membership_operation == 'revoke' and\
+    \ gitlab_native_before.results[0].status == 200\n      changed_when: true\n  \
+    \  - ansible.builtin.uri:\n        url: '{{ gitlab_native_origin }}/api/v4/groups/{{\
+    \ gitlab_native_group_id }}/{{ item }}/{{ gitlab_native_user_id }}'\n        headers:\
+    \ '{{ gitlab_native_headers }}'\n        status_code: [200,404]\n      loop: [members,\
+    \ members/all]\n      register: gitlab_native_after\n    - ansible.builtin.assert:\n\
+    \        that:\n        - item.status == 200\n        - item.json.id == gitlab_native_user_id\n\
+    \        - item.json.access_level == gitlab_native_access_level\n      loop: '{{\
+    \ gitlab_native_after.results }}'\n      when: gitlab_membership_operation ==\
+    \ 'grant'\n    - ansible.builtin.assert:\n        that: item.status == 404\n \
+    \       fail_msg: 'Membership removal is partial: effective/inherited group access\
+    \ remains. No other membership or credentials were touched.'\n      loop: '{{\
+    \ gitlab_native_after.results }}'\n      when: gitlab_membership_operation ==\
+    \ 'revoke'\n    - name: Persist only this verified owned membership outcome\n\
+    \      ansible.builtin.copy:\n        dest: '{{ gitlab_native_grant_receipt_file\
+    \ }}'\n        mode: '0600'\n        content: \"{{ {'schema':1,'origin':gitlab_native_origin,'context':gitlab_membership_context,'subject':gitlab_native_subject,'source_revision':gitlab_membership_source_revision,'native_user_id':gitlab_native_user_id,'group_id':gitlab_native_group_id,'role':gitlab_native_role,'access_level':gitlab_native_access_level,'stage':('Granted'\
+    \ if gitlab_membership_operation == 'grant' else 'Revoked')} | to_nice_json }}\"\
+    \n      when: gitlab_membership_operation in ['grant','revoke']\n    always:\n\
+    \    - ansible.builtin.set_fact:\n        gitlab_native_headers: {}\n        gitlab_native_user:\
+    \ {}\n        gitlab_writer_identity: {}\n        gitlab_writer_authority: {}\n\
+    \        gitlab_group_binding: {}\n        gitlab_native_identity: {}\n      \
+    \  gitlab_native_before: {}\n        gitlab_native_after: {}\n        cacheable:\
+    \ false\n      no_log: true\n"
+  file-23: '#!/usr/bin/env bash
+
+    set -euo pipefail
+
+    if [[ ${1:-} != --apply ]]; then printf ''%s\n'' ''INERT: --apply WRITER ATTESTATION
+    GROUP_RECEIPT INPUTS GRANT_RECEIPT required''; exit 0; fi
+
+    [[ $# == 6 ]] || exit 2
+
+    here=$(CDPATH='''' cd -- "$(dirname -- "$0")" && pwd -P)
+
+    python3 "$here/verification/membership_inputs.py" "$2" "$3" "$4" "$5" "$6" --prepare
+
+    export PERKFORGE_GROUP_LOCK_OWNER=$$
+
+    exec flock --no-fork --exclusive --nonblock "$4.lock" ansible-playbook -i localhost,
+    "$here/reconcile-membership.yaml" -e "@$5" -e "gitlab_native_token_file=$2" -e
+    "gitlab_native_attestation_file=$3" -e "gitlab_native_group_receipt_file=$4" -e
+    "gitlab_native_membership_inputs_file=$5" -e "gitlab_native_grant_receipt_file=$6"
+
+    '
+  file-24: "#!/usr/bin/env python3\n\"\"\"Validate literal metadata and shared context\
+    \ lock before Ansible interpretation.\"\"\"\nimport argparse,json,os,re,sys,datetime\
+    \ as dt\nfrom pathlib import Path\nsys.path.insert(0,str(Path(__file__).resolve().parents[1]/'enrollment'))\n\
+    from verify_group_paths import safe,verify\n\ndef read_json(path):\n safe(path)\n\
+    \ def unique(pairs):\n  result={}\n  for k,v in pairs:\n   if k in result:raise\
+    \ ValueError('duplicate field')\n   result[k]=v\n  return result\n fd=os.open(path,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK)\n\
+    \ try:\n  with os.fdopen(fd,'rb',closefd=False) as f:raw=f.read(65537)\n finally:os.close(fd)\n\
+    \ if len(raw)>65536:raise ValueError('oversize')\n return json.loads(raw,object_pairs_hook=unique)\n\
+    \ndef validate(writer,evidence,receipt,inputs,grant,locked=False,prepare=False):\n\
+    \ safe(writer,limit=4096);safe(receipt,limit=4096);safe(grant,optional=True,limit=4096)\n\
+    \ d=read_json(inputs);r=read_json(receipt)\n keys={'gitlab_membership_run','gitlab_membership_scope','gitlab_membership_operation','gitlab_membership_recovery_verified','gitlab_membership_context','gitlab_membership_source_revision','gitlab_native_origin','gitlab_native_ca_file','gitlab_native_user_id','gitlab_native_subject','gitlab_native_group_id','gitlab_native_group_path','gitlab_native_access_level','gitlab_native_role'}\n\
+    \ if not isinstance(d,dict) or set(d)!=keys:raise ValueError('input fields')\n\
+    \ if d['gitlab_membership_run'] is not True or d['gitlab_membership_recovery_verified']\
+    \ is not True:raise ValueError('explicit execution required')\n op=d['gitlab_membership_operation']\n\
+    \ if op not in ('inspect','grant','revoke') or d['gitlab_membership_scope']!='gitlab-membership-'+op+'-v1':raise\
+    \ ValueError('operation')\n patterns={'gitlab_membership_context':r'[a-z][a-z0-9-]{0,30}','gitlab_membership_source_revision':r'[0-9a-f]{40}','gitlab_native_origin':r'https://[A-Za-z0-9.-]+(?::[0-9]+)?','gitlab_native_ca_file':r'/[A-Za-z0-9_./-]+','gitlab_native_subject':r'[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}','gitlab_native_group_path':r'tenants/[a-z][a-z0-9-]{0,30}'}\n\
+    \ for k,p in patterns.items():\n  if not isinstance(d[k],str) or not re.fullmatch(p,d[k]):raise\
+    \ ValueError('nonliteral input')\n if d['gitlab_membership_context'] in ('platform','system','default','tenants'):raise\
+    \ ValueError('reserved context')\n for k in ('gitlab_native_user_id','gitlab_native_group_id'):\n\
+    \  if type(d[k]) is not int or not 0<d[k]<2**63:raise ValueError('invalid native\
+    \ ID')\n roles={'tenant-admin':50,'tenant-developer':30,'tenant-viewer':20}\n\
+    \ if d['gitlab_native_role'] not in roles or type(d['gitlab_native_access_level'])\
+    \ is not int or d['gitlab_native_access_level']!=roles[d['gitlab_native_role']]:raise\
+    \ ValueError('role mismatch')\n if d['gitlab_native_group_path']!='tenants/'+d['gitlab_membership_context']:raise\
+    \ ValueError('context mismatch')\n if grant!=str(Path(receipt).parent/('gitlab-member-'+d['gitlab_native_subject']+'.json'))\
+    \ or grant in (writer,evidence,receipt,inputs):raise ValueError('stable owned\
+    \ grant path required')\n if not isinstance(r,dict) or type(r.get('parent_id'))\
+    \ is not int or r['parent_id']<=0:raise ValueError('invalid receipt object')\n\
+    \ if any(r.get(k)!=v for k,v in {'schema':1,'context':d['gitlab_membership_context'],'origin':d['gitlab_native_origin'],'source_revision':d['gitlab_membership_source_revision'],'group_id':d['gitlab_native_group_id'],'stage':'group-ready'}.items()):raise\
+    \ ValueError('unverified group receipt')\n binding={'schema':1,'origin':d['gitlab_native_origin'],'context':d['gitlab_membership_context'],'subject':d['gitlab_native_subject'],'native_user_id':d['gitlab_native_user_id'],'group_id':d['gitlab_native_group_id'],'role':d['gitlab_native_role'],'access_level':d['gitlab_native_access_level']}\n\
+    \ if op in ('grant','inspect'):\n  a=read_json(evidence)\n  expected={'schema':1,'origin':d['gitlab_native_origin'],'context':d['gitlab_membership_context'],'subject':d['gitlab_native_subject'],'source_revision':d['gitlab_membership_source_revision'],'native_user_id':d['gitlab_native_user_id'],'stage':'IdentityVerified'}\n\
+    \  if not isinstance(a,dict) or set(a)!=set(expected)|{'captured_at'} or any(a.get(k)!=v\
+    \ for k,v in expected.items()):raise ValueError('unverified identity attestation')\n\
+    \  t=dt.datetime.fromisoformat(a['captured_at'])\n  if t.tzinfo is None or not\
+    \ 0<=(dt.datetime.now(dt.timezone.utc)-t).total_seconds()<=300:raise ValueError('stale\
+    \ identity attestation')\n if os.path.lexists(grant):\n  g=read_json(grant)\n\
+    \  if not isinstance(g,dict) or any(g.get(k)!=v for k,v in binding.items()) or\
+    \ g.get('stage') not in ('GrantPending','Granted','Revoked'):raise ValueError('foreign\
+    \ prior grant')\n  if not re.fullmatch(r'[a-f0-9]{40}',g.get('source_revision','')):raise\
+    \ ValueError('prior grant revision')\n  if g['stage']=='GrantPending':\n   t=dt.datetime.fromisoformat(g['attempted_at'])\n\
+    \   if t.tzinfo is None or not 0<=(dt.datetime.now(dt.timezone.utc)-t).total_seconds()<=300:raise\
+    \ ValueError('pending grant requires manual recovery')\n elif op=='revoke':raise\
+    \ ValueError('owned prior grant required')\n safe(d['gitlab_native_ca_file'],limit=262144,private=False)\n\
+    \ verify(writer,receipt,prepare=prepare,require_locked=locked)\n\nif __name__=='__main__':\n\
+    \ p=argparse.ArgumentParser();p.add_argument('writer');p.add_argument('evidence');p.add_argument('receipt');p.add_argument('inputs');p.add_argument('grant');p.add_argument('--locked',action='store_true');p.add_argument('--prepare',action='store_true');a=p.parse_args()\n\
+    \ try:validate(a.writer,a.evidence,a.receipt,a.inputs,a.grant,a.locked,a.prepare)\n\
+    \ except (ValueError,OSError,TypeError,KeyError):raise SystemExit('Invalid protected\
+    \ membership inputs or context lock; no API access permitted.')\n"
+  file-25: 'ea81649893bf6854a0320dd61acceb1fb5dcfc7771be3eb111a16ae72b71820a  perkforge/bin/launch
+
+    8d49d9f6a9685e4299aa507318dc7beb1772099d82f4eb1ecbf3a23a39f8b68b  perkforge/bin/refresh-identity-evidence
+
+    7c2035ffc37326ad827b584b8f6249d67e398fbbb5d5dc4211a004c2c072697c  perkforge/bin/run-phase.py
+
+    4574b7b3b5cf14660eb0726dc90568089453f8d3b3afcd68b79aa536aec9a4e2  platform/big-bang-bootstrap/configuration/authorization/contexts/portal.yaml
+
+    0f3c738e3a69fef5bc0695633e99251a00effc8de658ab1787adc576f131b0d1  platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/ensure-groups.yaml
+
+    d7d20ad373db9aef2037909bde7d62b8e3f430b5184f1cc7f04d40cca65fbd84  platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/ensure-one-group.yaml
+
+    fa8fbf7788f3a6aa6916c90b53fbdfb213b2a3c9315b4d4ec892205af739d7a7  platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/identity_context.py
+
+    94bde1013bf80f5db763624c2c4de9268d3c41daf1663bbe24157af15ac0c19a  platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/phases/attest-one.yaml
+
+    5a62830f689148cd3230a04d3a80d43fac19da58f61bb04925567aa82387c45c  platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/phases/attest.yaml
+
+    e243c12234095edf50a659c801d163e36d7dc9e81d431fa588b14e8a2aa01012  platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/phases/contract.py
+
+    42e878aba1ccf6336edba3e2f08b60a09b5b40ce83c8bd0584e9a3039906e8b2  platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/phases/member-one.yaml
+
+    83f067fe1f7fd87056ac8bb5c95e5a6ce027533dc23a208dfb13c44c1ec8e769  platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/phases/membership-state.py
+
+    8b8478c294135a5dd209b7a65abab93dd910c02c539aa61002cc3f0d67c8f224  platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/phases/memberships.yaml
+
+    5fd8d59bdafed84375154beab829a8f5d55ac8cdde608af796aaf22fe0171221  platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/phases/paths.py
+
+    47641bf80f58fd964a7839985df908466daaa304d667c0873d5964816c143b45  platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/phases/phase-lock.py
+
+    4df0fb2e6b69ed9d70967a9654fc79611522f8b390161cc1ad4f64a8e24912a7  platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/phases/publish.yaml
+
+    151a734be14807e4fec0dc4b45e664322b5cb0935a933dd089ccc74b9b12712a  platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/phases/run-attestor.sh
+
+    d80c54657315a60298d04d4cc99b10a5e24ed3c40c05549abf1af49669d51199  platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/phases/run-memberships.sh
+
+    e9d27d56aaac96377d6b1fd3c17a9bcefcc889bf68b0c12a05d966da20a254a1  platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/read-keycloak-context.py
+
+    66495bd36cb8a12267bd5988d8006929f10b1f9fa3b762b68d9e16f733a2aa21  platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/resolve-subject.py
+
+    7b2c4b65170341eda05ffef30457ffa02b9cec88bba5552e5aa5388065a78d0d  platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/run-groups.sh
+
+    833ee8e0ddfa21982767f52dd286bc72211bbd0514b63bd43f95bfcc8a1c76dd  platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/verify_group_paths.py
+
+    8236fd3f15e831dbca7017483038fbe296dea18cc122f9c774559363e89e14a7  platform/big-bang-bootstrap/configuration/packages/gitlab/reconcile-membership.yaml
+
+    a2f9aa0afa9ad78fa2f348fb9622b60f31126d79b4b5088665cf71b8c5d2e895  platform/big-bang-bootstrap/configuration/packages/gitlab/run-membership.sh
+
+    15bf468e3f294090c3857fc46ad87141fc72a9bd5db10a59d107f4a0dc262f50  platform/big-bang-bootstrap/configuration/packages/gitlab/verification/membership_inputs.py
+
+    15250421a9bd65445a97f8d757f54ebba19b9174a2d26949d17a720d54527793  revisions.json
+
+    '
+  file-26: '{"enrollment": "5621e9b05bd94566c1bfdc6bcf8b75b0404e8ff0", "platform":
+    "b904017158100944a81129899e8fc64a3ed976b8"}'
+  file-3: "# Platform-owned desired context, approved for the Portal pilot.\n# Inactive:\
+    \ names are desired state, not discovered native IDs or live grants.\npaas_context:\n\
+    \  schema_version: 1\n  id: portal\n  activation: false\n  keycloak:\n    realm:\
+    \ perkforge\n    groups:\n      tenant-admin: /tenants/portal/admins\n      tenant-developer:\
+    \ /tenants/portal/developers\n      tenant-viewer: /tenants/portal/viewers\n \
+    \ kubernetes:\n    runtime_namespaces: [tenant-portal]\n    control_namespaces:\
+    \ [tenant-portal-config, tenant-portal-release]\n  applications: [portal]\n  targets:\n\
+    \    grafana:\n      access: blocked_until_query_isolation\n      role_mappings:\n\
+    \        tenant-admin: Admin\n        tenant-developer: Editor\n        tenant-viewer:\
+    \ Viewer\n    ntfy:\n      topic: tenant-portal-alerts\n    mattermost:\n    \
+    \  team_name: perkforge\n      channel_name: portal-alerts\n      channel_type:\
+    \ P\n    gitlab:\n      group_id: null\n      project_ids: []\n      role_mappings:\n\
+    \        tenant-admin: Owner\n        tenant-developer: Developer\n        tenant-viewer:\
+    \ Reporter\n"
+  file-4: "# Explicit platform-owned enrollment step; no project, user or membership\
+    \ mutations.\n- name: Ensure exact private tenant GitLab group foundation\n  hosts:\
+    \ localhost\n  connection: local\n  gather_facts: false\n  vars:\n    gitlab_group_run:\
+    \ false\n    gitlab_group_scope: UNAPPROVED\n    gitlab_group_context: UNCONFIGURED\n\
+    \    gitlab_group_source_revision: UNCONFIGURED\n    gitlab_group_previous_revision:\
+    \ ''\n    gitlab_group_allow_parent_create: false\n    gitlab_group_expected_parent_id:\
+    \ 0\n    gitlab_group_receipt_file: /UNCONFIGURED/group-receipt.json\n    gitlab_native_origin:\
+    \ https://gitlab.UNCONFIGURED.invalid\n    gitlab_native_ca_file: /UNCONFIGURED/ca.crt\n\
+    \    gitlab_native_token_file: /UNCONFIGURED/api-token\n  module_defaults:\n \
+    \   ansible.builtin.uri:\n      validate_certs: true\n      ca_path: '{{ gitlab_native_ca_file\
+    \ }}'\n      follow_redirects: none\n      unredirected_headers: [PRIVATE-TOKEN]\n\
+    \      use_proxy: false\n      use_netrc: false\n      timeout: 20\n  tasks:\n\
+    \  - ansible.builtin.debug:\n      msg: 'Default/check inert. Explicit run ensures\
+    \ only private tenants/context groups; no users, projects, memberships, deletion\
+    \ or scheduling.'\n  - when: gitlab_group_run | bool and not ansible_check_mode\n\
+    \    no_log: true\n    block:\n    - ansible.builtin.assert:\n        that:\n\
+    \        - gitlab_group_scope == 'gitlab-enrollment-group-foundation-v1'\n   \
+    \     - gitlab_group_context is match('^[a-z][a-z0-9-]{0,30}$')\n        - gitlab_group_context\
+    \ not in ['platform','system','default','tenants']\n        - gitlab_group_source_revision\
+    \ is match('^[0-9a-f]{40}$')\n        - gitlab_group_previous_revision == '' or\
+    \ gitlab_group_previous_revision is match('^[0-9a-f]{40}$')\n        - gitlab_native_origin\
+    \ is match('^https://[a-zA-Z0-9.-]+(:[0-9]+)?$')\n        - \"'UNCONFIGURED' not\
+    \ in gitlab_native_origin\"\n        - gitlab_group_expected_parent_id | type_debug\
+    \ == 'int'\n        - gitlab_group_expected_parent_id >= 0\n        - gitlab_group_allow_parent_create\
+    \ | type_debug == 'bool'\n        - gitlab_group_receipt_file is match('^/')\n\
+    \        - gitlab_group_receipt_file | realpath == gitlab_group_receipt_file\n\
+    \        - gitlab_native_token_file is match('^/')\n        - gitlab_native_token_file\
+    \ | realpath == gitlab_native_token_file\n    - name: Require protected paths\
+    \ and actual whole-transaction native lock\n      ansible.builtin.command:\n \
+    \       argv:\n        - python3\n        - '{{ playbook_dir }}/verify_group_paths.py'\n\
+    \        - --token\n        - '{{ gitlab_native_token_file }}'\n        - --receipt\n\
+    \        - '{{ gitlab_group_receipt_file }}'\n        - --require-locked\n   \
+    \     - --ca\n        - '{{ gitlab_native_ca_file }}'\n      changed_when: false\n\
+    \    - ansible.builtin.stat:\n        path: '{{ item }}'\n        follow: false\n\
+    \      loop: ['{{ gitlab_native_token_file }}','{{ gitlab_group_receipt_file |\
+    \ dirname }}','{{ gitlab_group_receipt_file }}']\n      register: group_files\n\
+    \    - ansible.builtin.assert:\n        that:\n        - group_files.results[0].stat.isreg\
+    \ | default(false)\n        - group_files.results[0].stat.mode == '0600'\n   \
+    \     - group_files.results[0].stat.uid == lookup('pipe','id -u') | int\n    \
+    \    - group_files.results[0].stat.nlink == 1\n        - group_files.results[0].stat.size\
+    \ > 0 and group_files.results[0].stat.size < 4096\n        - group_files.results[1].stat.isdir\
+    \ | default(false)\n        - not (group_files.results[1].stat.islnk | default(false))\n\
+    \        - group_files.results[1].stat.mode == '0700'\n        - group_files.results[1].stat.uid\
+    \ == lookup('pipe','id -u') | int\n        - not group_files.results[2].stat.exists\
+    \ or (group_files.results[2].stat.isreg | default(false) and not group_files.results[2].stat.islnk\
+    \ | default(false) and group_files.results[2].stat.mode == '0600' and group_files.results[2].stat.uid\
+    \ == lookup('pipe','id -u') | int and group_files.results[2].stat.nlink == 1 and\
+    \ group_files.results[2].stat.size < 4096)\n    - ansible.builtin.set_fact:\n\
+    \        group_prior: '{{ lookup(\"file\",gitlab_group_receipt_file) | from_json\
+    \ if group_files.results[2].stat.exists else {\"schema\":1,\"origin\":gitlab_native_origin,\"\
+    context\":gitlab_group_context,\"source_revision\":gitlab_group_source_revision,\"\
+    parent_id\":gitlab_group_expected_parent_id,\"group_id\":0,\"stage\":\"pending\"\
+    ,\"previous_revisions\":[]} }}'\n    - ansible.builtin.assert:\n        that:\n\
+    \        - group_prior.keys() | sort == ['context','group_id','origin','parent_id','previous_revisions','schema','source_revision','stage']\n\
+    \        - group_prior.schema | type_debug == 'int' and group_prior.schema ==\
+    \ 1\n        - group_prior.origin == gitlab_native_origin\n        - group_prior.context\
+    \ == gitlab_group_context\n        - group_prior.source_revision == gitlab_group_source_revision\
+    \ or (gitlab_group_previous_revision == group_prior.source_revision and group_prior.stage\
+    \ == 'group-ready' and group_prior.group_id > 0 and group_prior.parent_id > 0)\n\
+    \        - group_prior.previous_revisions | type_debug == 'list'\n        - group_prior.previous_revisions\
+    \ | length <= 32\n        - group_prior.source_revision == gitlab_group_source_revision\
+    \ or group_prior.previous_revisions | length < 32\n        - group_prior.previous_revisions\
+    \ | select('match','^[0-9a-f]{40}$') | list == group_prior.previous_revisions\n\
+    \        - group_prior.previous_revisions | unique | length == group_prior.previous_revisions\
+    \ | length\n        - gitlab_group_source_revision not in group_prior.previous_revisions\n\
+    \        - group_prior.parent_id | type_debug == 'int' and group_prior.parent_id\
+    \ >= 0\n        - group_prior.group_id | type_debug == 'int' and group_prior.group_id\
+    \ >= 0\n        - group_prior.stage in ['pending','parent-ready','group-ready']\n\
+    \        - gitlab_group_expected_parent_id == 0 or group_prior.parent_id == gitlab_group_expected_parent_id\n\
+    \        - group_prior.group_id == 0 or group_prior.parent_id > 0\n    - ansible.builtin.set_fact:\n\
+    \        group_headers: {PRIVATE-TOKEN: '{{ lookup(\"file\",gitlab_native_token_file)\
+    \ | trim }}'}\n    - ansible.builtin.uri:\n        url: '{{ gitlab_native_origin\
+    \ }}/api/v4/version'\n        headers: '{{ group_headers }}'\n      register:\
+    \ group_version\n    - ansible.builtin.assert:\n        that: group_version.json.version\
+    \ in ['19.4.2','19.4.2-ee']\n    - name: Inspect both paths before any creation\n\
+    \      ansible.builtin.uri:\n        url: '{{ gitlab_native_origin }}/api/v4/groups/{{\
+    \ item }}?with_projects=false'\n        headers: '{{ group_headers }}'\n     \
+    \   status_code: [200,404]\n      loop: ['tenants','tenants%2F{{ gitlab_group_context\
+    \ }}']\n      register: group_before\n    - ansible.builtin.assert:\n        that:\n\
+    \        - group_before.results[0].status == 200 or (gitlab_group_allow_parent_create\
+    \ and group_prior.parent_id == 0 and group_before.results[1].status == 404)\n\
+    \        - group_before.results[0].status == 404 or (group_prior.parent_id > 0\
+    \ and group_before.results[0].json.id == group_prior.parent_id and group_before.results[0].json.full_path\
+    \ == 'tenants' and group_before.results[0].json.visibility == 'private' and group_before.results[0].json.parent_id\
+    \ == none)\n        - group_before.results[1].status == 404 or (group_prior.group_id\
+    \ > 0 and group_before.results[1].json.id == group_prior.group_id and group_before.results[1].json.full_path\
+    \ == 'tenants/' + gitlab_group_context and group_before.results[1].json.visibility\
+    \ == 'private' and group_before.results[1].json.parent_id == group_prior.parent_id)\n\
+    \        - group_prior.group_id == 0 or group_before.results[1].status == 200\n\
+    \        - group_prior.parent_id == 0 or group_before.results[0].status == 200\n\
+    \    - name: Persist pending exact source intent before writes\n      ansible.builtin.copy:\n\
+    \        dest: '{{ gitlab_group_receipt_file }}'\n        mode: '0600'\n     \
+    \   content: '{{ group_prior | to_nice_json }}'\n    - ansible.builtin.include_tasks:\
+    \ ensure-one-group.yaml\n      vars:\n        group_name: tenants\n        group_path:\
+    \ tenants\n        group_parent_id: null\n        group_existing_id: '{{ group_prior.parent_id\
+    \ }}'\n        group_receipt_key: parent_id\n        group_stage: parent-ready\n\
+    \    - ansible.builtin.include_tasks: ensure-one-group.yaml\n      vars:\n   \
+    \     group_name: '{{ gitlab_group_context }}'\n        group_path: 'tenants/{{\
+    \ gitlab_group_context }}'\n        group_parent_id: '{{ group_prior.parent_id\
+    \ }}'\n        group_existing_id: '{{ group_prior.group_id }}'\n        group_receipt_key:\
+    \ group_id\n        group_stage: group-ready\n    - ansible.builtin.set_fact:\n\
+    \        group_transition_required: '{{ group_prior.source_revision != gitlab_group_source_revision\
+    \ }}'\n    - name: Advance approved revision CAS only after both exact native\
+    \ readbacks\n      when: group_transition_required | bool\n      block:\n    \
+    \  - ansible.builtin.set_fact:\n          group_prior: '{{ group_prior | combine({\"\
+    previous_revisions\": group_prior.previous_revisions + [group_prior.source_revision],\
+    \ \"source_revision\": gitlab_group_source_revision}) }}'\n      - ansible.builtin.copy:\n\
+    \          dest: '{{ gitlab_group_receipt_file }}'\n          mode: '0600'\n \
+    \         content: '{{ group_prior | to_nice_json }}'\n    always:\n    - ansible.builtin.set_fact:\n\
+    \        group_headers: {}\n        group_before: {}\n        group_created: {}\n\
+    \        group_readback: {}\n        cacheable: false\n      no_log: true\n"
+  file-5: "# Included only after full two-path ownership preflight. Re-read immediately\
+    \ before mutation.\n- ansible.builtin.uri:\n    url: '{{ gitlab_native_origin\
+    \ }}/api/v4/groups/{{ group_path | replace(\"/\",\"%2F\") }}?with_projects=false'\n\
+    \    headers: '{{ group_headers }}'\n    status_code: [200,404]\n  register: group_current\n\
+    - ansible.builtin.assert:\n    that:\n    - group_current.status == 404 if group_existing_id\
+    \ | int == 0 else group_current.status == 200\n    - group_current.status == 404\
+    \ or (group_current.json.id == group_existing_id | int and group_current.json.full_path\
+    \ == group_path and group_current.json.parent_id == group_parent_id and group_current.json.visibility\
+    \ == 'private')\n- ansible.builtin.uri:\n    url: '{{ gitlab_native_origin }}/api/v4/groups'\n\
+    \    headers: '{{ group_headers }}'\n    method: POST\n    body_format: json\n\
+    \    body:\n      name: '{{ group_name }}'\n      path: '{{ group_name }}'\n \
+    \     parent_id: '{{ group_parent_id | default(omit, true) }}'\n      visibility:\
+    \ private\n      request_access_enabled: false\n    status_code: 201\n  register:\
+    \ group_created\n  when: group_existing_id | int == 0\n  changed_when: true\n\
+    - ansible.builtin.set_fact:\n    group_verified_id: '{{ group_created.json.id\
+    \ if group_existing_id | int == 0 else group_existing_id | int }}'\n- ansible.builtin.uri:\n\
+    \    url: '{{ gitlab_native_origin }}/api/v4/groups/{{ group_verified_id }}?with_projects=false'\n\
+    \    headers: '{{ group_headers }}'\n  register: group_readback\n- ansible.builtin.assert:\n\
+    \    that:\n    - group_verified_id | type_debug == 'int' and group_verified_id\
+    \ > 0\n    - group_readback.json.id == group_verified_id\n    - group_readback.json.full_path\
+    \ == group_path\n    - group_readback.json.parent_id == group_parent_id\n    -\
+    \ group_readback.json.visibility == 'private'\n    - group_existing_id | int >\
+    \ 0 or not group_readback.json.request_access_enabled\n- ansible.builtin.set_fact:\n\
+    \    group_prior: '{{ group_prior | combine({group_receipt_key: group_verified_id,\
+    \ \"stage\": group_stage}) }}'\n- ansible.builtin.copy:\n    dest: '{{ gitlab_group_receipt_file\
+    \ }}'\n    mode: '0600'\n    content: '{{ group_prior | to_nice_json }}'\n"
+  file-6: "\"\"\"Pure, versioned identity naming/authority contract; no I/O or native\
+    \ actions.\"\"\"\nimport hashlib\nimport json\nimport re\n\n\ndef derive(context):\n\
+    \    if not isinstance(context, str) or not re.fullmatch(r'[a-z][a-z0-9-]{0,30}',\
+    \ context) or context.endswith('-') or context in {'platform', 'tenants', 'system',\
+    \ 'default'}:\n        raise ValueError('InvalidIdentityContext')\n    legacy\
+    \ = context == 'portal'\n    kc_policy = 'tenant-identity-bootstrap-keycloak-v1'\
+    \ if legacy else f'tenant-identity-bootstrap-keycloak-{context}-v1'\n    eso =\
+    \ 'eso-identity-keycloak' if legacy else f'eso-identity-keycloak-{context}'\n\
+    \    result = {\n        'schema': 1, 'context': context,\n        'binding':\
+    \ 'portal-legacy-v1' if legacy else 'tenant-derived-v1',\n        'client_id':\
+    \ f'perkforge-{context}-identity-reader',\n        'actor_policy_name': f'perkforge-{context}-reader-actor',\n\
+    \        'permission_name': f'perkforge-{context}-reader-groups',\n        'record':\
+    \ f'identity/keycloak/{context}-membership-reader-v1',\n        'bootstrap_policy':\
+    \ kc_policy,\n        'eso_policy': eso, 'eso_role': eso, 'eso_service_account':\
+    \ eso,\n        'writer_namespace': 'tenant-identity-writer' if legacy else f'tenant-identity-{context}-writer',\n\
+    \        'attestor_namespace': 'tenant-identity-attestor' if legacy else f'tenant-identity-{context}-attestor',\n\
+    \        'evidence_name': f'{context}-identity-evidence',\n        'group_reconciler':\
+    \ 'identity-group-reconciler' if legacy else f'identity-{context}-group-reconciler',\n\
+    \        'attestor_reconciler': 'identity-attestor-reconciler' if legacy else\
+    \ f'identity-{context}-attestor-reconciler',\n        'declaration_reconciler':\
+    \ 'identity-declaration-reconciler' if legacy else f'identity-{context}-declaration-reconciler',\n\
+    \        'declaration_policy': 'identity-declaration-scope' if legacy else f'identity-{context}-declaration-scope',\n\
+    \        'evidence_policy': 'identity-evidence-fields' if legacy else f'identity-{context}-evidence-fields',\n\
+    \        'phase_prefix': f'identity-{context}',\n        'writer_eso_role': 'eso-identity-writer'\
+    \ if legacy else f'eso-identity-writer-{context}',\n        'writer_eso_service_account':\
+    \ 'eso-identity-writer' if legacy else f'eso-identity-writer-{context}',\n   \
+    \     'reader_eso_role': 'eso-identity-reader' if legacy else f'eso-identity-reader-{context}',\n\
+    \        'reader_eso_service_account': 'eso-identity-reader' if legacy else f'eso-identity-reader-{context}',\n\
+    \        'gitlab_writer_record': 'identity/gitlab/tenants-writer-v1',\n      \
+    \  'gitlab_reader_record': 'identity/gitlab/tenant-reader-v1',\n    }\n    result['digest']\
+    \ = hashlib.sha256(json.dumps(result, sort_keys=True, separators=(',', ':')).encode()).hexdigest()\n\
+    \    return result\n\n\ndef policy_text(context):\n    \"\"\"Exact single-record\
+    \ custody ACL, including its own policy readback.\"\"\"\n    d = derive(context)\n\
+    \    return ('path \"auth/token/lookup-self\" { capabilities = [\"read\"] }\\\
+    n'\n            f'path \"sys/policies/acl/{d[\"bootstrap_policy\"]}\" {{ capabilities\
+    \ = [\"read\"] }}\\n'\n            f'path \"platform/metadata/{d[\"record\"]}\"\
+    \ {{ capabilities = [\"read\"] }}\\n'\n            f'path \"platform/data/{d[\"\
+    record\"]}\" {{ capabilities = [\"create\", \"update\", \"read\"] }}\\n')\n"
+  file-7: "- ansible.builtin.copy:\n    dest: '{{ phase_work }}/subject-inputs.json'\n\
+    \    mode: '0600'\n    content: \"{{ {'context':identity_context,'subject':selected_member.subject,'source_revision':identity_source_revision,'origin':identity_gitlab_origin,'ca_file':phase_lab_ca}\
+    \ | to_json }}\"\n- ansible.builtin.command:\n    argv: [python3, '{{ playbook_dir\
+    \ }}/../resolve-subject.py', --verify, '{{ phase_gitlab_reader }}', '{{ phase_work\
+    \ }}/subject-{{ selected_member.subject }}.json', '{{ phase_work }}/subject-inputs.json']\n\
+    \  changed_when: false\n- ansible.builtin.set_fact:\n    observed_identities:\
+    \ '{{ observed_identities + [lookup(\"file\",phase_work + \"/subject-\" + selected_member.subject\
+    \ + \".json\") | from_json] }}'\n"
+  file-8: "# Runtime entry is the fixed reviewed wrapper; never expose arbitrary extra-vars.\n\
+    - name: Execute one bounded isolated identity observation and publication\n  hosts:\
+    \ localhost\n  connection: local\n  gather_facts: false\n  vars:\n    identity_run:\
+    \ false\n  tasks:\n  - when: identity_run | bool and not ansible_check_mode\n\
+    \    no_log: true\n    block:\n    - ansible.builtin.set_fact: {phase_substage:\
+    \ input-validation}\n    - ansible.builtin.command:\n        argv: [python3, '{{\
+    \ playbook_dir }}/contract.py', --phase, attest, --inputs, '{{ phase_inputs }}']\n\
+    \      changed_when: false\n    - ansible.builtin.set_fact: {phase_substage: keycloak-authentication}\n\
+    \    - name: Obtain only the dedicated read-only Keycloak client's short token\n\
+    \      ansible.builtin.uri:\n        url: '{{ identity_keycloak_origin }}/realms/{{\
+    \ identity_keycloak_realm }}/protocol/openid-connect/token'\n        method: POST\n\
+    \        body_format: form-urlencoded\n        body:\n          grant_type: client_credentials\n\
+    \          client_id: '{{ lookup(\"file\",phase_kc_id) | trim }}'\n          client_secret:\
+    \ '{{ lookup(\"file\",phase_kc_secret) | trim }}'\n        validate_certs: true\n\
+    \        ca_path: '{{ phase_lab_ca }}'\n        use_proxy: false\n        use_netrc:\
+    \ false\n        follow_redirects: none\n        timeout: 10\n      register:\
+    \ kc_token\n    - ansible.builtin.assert:\n        that:\n        - kc_token.json.token_type\
+    \ | lower == 'bearer'\n        - kc_token.json.access_token is match('^[A-Za-z0-9_.-]{8,4096}$')\n\
+    \    - ansible.builtin.copy:\n        dest: '{{ phase_work }}/kc-token'\n    \
+    \    mode: '0600'\n        content: '{{ kc_token.json.access_token }}'\n    -\
+    \ ansible.builtin.set_fact: {phase_substage: canonical-snapshot}\n    - ansible.builtin.copy:\n\
+    \        dest: '{{ phase_work }}/snapshot-inputs.json'\n        mode: '0600'\n\
+    \        content: \"{{ {'context':identity_context,'source_revision':identity_source_revision,'origin':identity_keycloak_origin,'ca_file':phase_lab_ca,'contract_sha256':identity_contract_sha256,'group_ids':identity_group_ids}\
+    \ | to_json }}\"\n    - ansible.builtin.command:\n        argv: [python3, '{{\
+    \ playbook_dir }}/../read-keycloak-context.py', --read, '{{ phase_work }}/kc-token',\
+    \ '{{ phase_work }}/snapshot.json', '{{ phase_work }}/snapshot-inputs.json']\n\
+    \      changed_when: false\n    - ansible.builtin.set_fact:\n        observed_snapshot:\
+    \ '{{ lookup(\"file\",phase_work + \"/snapshot.json\") | from_json }}'\n     \
+    \   observed_identities: []\n    - ansible.builtin.assert:\n        that:\n  \
+    \      - observed_snapshot.members | length <= 3\n        - observed_snapshot.realm\
+    \ == identity_keycloak_realm\n    - ansible.builtin.set_fact: {phase_substage:\
+    \ native-identity-observation}\n    - ansible.builtin.include_tasks: attest-one.yaml\n\
+    \      loop: '{{ observed_snapshot.members }}'\n      loop_control: {loop_var:\
+    \ selected_member}\n      when: selected_member.enabled\n    - ansible.builtin.copy:\n\
+    \        dest: '{{ phase_work }}/envelope.json'\n        mode: '0600'\n      \
+    \  content: \"{{ {'schema':1,'context':identity_context,'source_revision':identity_source_revision,'platform_revision':identity_platform_revision,'contract_sha256':identity_contract_sha256,'invocation':identity_invocation,'previous_invocation':identity_previous_invocation,'retry_generation':identity_retry_generation,'receipt_uid':identity_receipt_uid,'captured_at':now(utc=true,fmt='%Y-%m-%dT%H:%M:%SZ'),'snapshot':observed_snapshot,'identities':observed_identities}\
+    \ | combine({'context_digest':identity_context_digest} if identity_context_digest\
+    \ is defined else {}) | to_json }}\"\n    - ansible.builtin.command:\n       \
+    \ argv: [python3, '{{ playbook_dir }}/contract.py', --phase, attest, --inputs,\
+    \ '{{ phase_inputs }}', --envelope, '{{ phase_work }}/envelope.json']\n      changed_when:\
+    \ false\n    - ansible.builtin.set_fact: {phase_substage: issuer-receipt-cas}\n\
+    \    - ansible.builtin.include_tasks: publish.yaml\n    - ansible.builtin.copy:\n\
+    \        dest: '{{ phase_work }}/result.json'\n        mode: '0600'\n        content:\
+    \ \"{{ {'phase':'AttestationPublished','invocation':identity_invocation,'pending_identity_count':observed_identities\
+    \ | rejectattr('stage','equalto','IdentityVerified') | list | length,'membership_ready':false}\
+    \ | to_json }}\"\n    rescue:\n    - ansible.builtin.copy:\n        dest: '{{\
+    \ phase_work }}/result.json'\n        mode: '0600'\n        content: \"{{ {'phase':'AttestationFailed','substage':phase_substage\
+    \ | default('input-validation'),'category':'validation-or-native-request-failed','invocation':identity_invocation,'membership_ready':false,'native_membership_writes':false}\
+    \ | to_json }}\"\n    - ansible.builtin.fail:\n        msg: Attestation failed;\
+    \ only bounded result is public.\n    always:\n    - ansible.builtin.set_fact:\n\
+    \        kc_token: {}\n        receipt_headers: {}\n        observed_snapshot:\
+    \ {}\n        observed_identities: []\n        receipt_before: {}\n        receipt_after:\
+    \ {}\n"
+  file-9: "#!/usr/bin/env python3\n\"\"\"Literal finite-phase contract validation;\
+    \ no native mutation or credential output.\"\"\"\nimport argparse,datetime as\
+    \ dt,hashlib,json,os,re,sys\nfrom pathlib import Path\nsys.path.insert(0,str(Path(__file__).resolve().parents[1]))\n\
+    from verify_group_paths import safe\nfrom identity_context import derive\nUUID=r'[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}'\n\
+    ROLES={'tenant-admin','tenant-developer','tenant-viewer'}\ndef unique(pairs):\n\
+    \ d={}\n for k,v in pairs:\n  if k in d:raise ValueError('duplicate key')\n  d[k]=v\n\
+    \ return d\ndef read(path):\n safe(path,limit=262144)\n fd=os.open(path,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK)\n\
+    \ try:\n  with os.fdopen(fd,'rb',closefd=False) as f:raw=f.read(262145)\n finally:os.close(fd)\n\
+    \ if len(raw)>262144:raise ValueError('oversize')\n return json.loads(raw,object_pairs_hook=unique)\n\
+    def age(value):\n t=dt.datetime.fromisoformat(value)\n if t.tzinfo is None or\
+    \ not 0<=(dt.datetime.now(dt.timezone.utc)-t).total_seconds()<=300:raise ValueError('stale\
+    \ evidence')\ndef inputs(path,phase):\n d=read(path)\n patterns={'identity_context':r'[a-z][a-z0-9-]{0,30}','identity_source_revision':r'[a-f0-9]{40}','identity_platform_revision':r'[a-f0-9]{40}','identity_contract_sha256':r'[a-f0-9]{64}','identity_invocation':r'[a-f0-9]{64}','identity_previous_invocation':r'(?:[a-f0-9]{64})?','identity_gitlab_origin':r'https://[A-Za-z0-9.-]+(?::[0-9]+)?','identity_keycloak_origin':r'https://[A-Za-z0-9.-]+(?::[0-9]+)?(?:/auth)?','identity_keycloak_realm':r'[A-Za-z0-9_-]{1,64}','identity_kubernetes_origin':r'https://[A-Za-z0-9.-]+(?::[0-9]+)?','identity_receipt_uid':UUID,'identity_receipt_namespace':r'[a-z][a-z0-9-]{0,62}','identity_receipt_name':r'[a-z][a-z0-9-]{0,30}-identity-evidence'}\n\
+    \ if isinstance(d,dict) and 'identity_context_digest' in d:patterns['identity_context_digest']=r'[a-f0-9]{64}'\n\
+    \ if not isinstance(d,dict) or set(d)!=set(patterns)|{'identity_run','identity_scope','identity_retry_generation','identity_group_ids','identity_membership_recovery_verified'}:raise\
+    \ ValueError('unexpected fields')\n for k,p in patterns.items():\n  if not isinstance(d[k],str)\
+    \ or not re.fullmatch(p,d[k]):raise ValueError('nonliteral field')\n if type(d['identity_membership_recovery_verified'])\
+    \ is not bool or (phase=='memberships' and d['identity_membership_recovery_verified']\
+    \ is not True):raise ValueError('recovery prerequisite')\n if phase not in ('attest','memberships')\
+    \ or d['identity_run'] is not True or d['identity_scope']!='gitlab-identity-'+phase+'-v1':raise\
+    \ ValueError('phase scope')\n selected=derive(d['identity_context'])\n if d['identity_receipt_namespace']!=selected['writer_namespace']\
+    \ or d['identity_receipt_name']!=selected['evidence_name']:raise ValueError('context\
+    \ binding')\n if d.get('identity_context_digest')!=selected['digest'] and not\
+    \ (d['identity_context']=='portal' and 'identity_context_digest' not in d):raise\
+    \ ValueError('context digest')\n if type(d['identity_retry_generation']) is not\
+    \ int or not 0<=d['identity_retry_generation']<=1000000:raise ValueError('retry\
+    \ generation')\n if d['identity_previous_invocation']=='' and d['identity_retry_generation']!=0:raise\
+    \ ValueError('prior attempt required')\n g=d['identity_group_ids']\n if not isinstance(g,dict)\
+    \ or set(g)!=ROLES or any(not isinstance(v,str) or not re.fullmatch(UUID,v) for\
+    \ v in g.values()) or len(set(g.values()))!=3:raise ValueError('group IDs')\n\
+    \ material={k:v for k,v in d.items() if k not in ('identity_invocation','identity_scope','identity_run')}\n\
+    \ expected=hashlib.sha256(json.dumps(material,sort_keys=True,separators=(',',':')).encode()).hexdigest()\n\
+    \ if expected!=d['identity_invocation']:raise ValueError('invocation digest')\n\
+    \ return d\ndef envelope(d,path):\n e=read(path)\n binding={'schema':1,'context':d['identity_context'],'source_revision':d['identity_source_revision'],'platform_revision':d['identity_platform_revision'],'contract_sha256':d['identity_contract_sha256'],'invocation':d['identity_invocation'],'previous_invocation':d['identity_previous_invocation'],'retry_generation':d['identity_retry_generation'],'receipt_uid':d['identity_receipt_uid']}\n\
+    \ if 'identity_context_digest' in d:binding['context_digest']=d['identity_context_digest']\n\
+    \ if not isinstance(e,dict) or set(e)!=set(binding)|{'captured_at','snapshot','identities'}\
+    \ or any(e.get(k)!=v for k,v in binding.items()):raise ValueError('envelope binding')\n\
+    \ age(e['captured_at']);s=e['snapshot']\n sb={'schema':1,'stage':'SnapshotVerified','context':binding['context'],'source_revision':binding['source_revision'],'contract_sha256':binding['contract_sha256'],'origin':d['identity_keycloak_origin']}\n\
+    \ if not isinstance(s,dict) or set(s)!=set(sb)|{'realm','captured_at','groups','members'}\
+    \ or any(s.get(k)!=v for k,v in sb.items()):raise ValueError('snapshot binding')\n\
+    \ if s['realm']!=d['identity_keycloak_realm']:raise ValueError('realm binding')\n\
+    \ age(s['captured_at'])\n expected_groups=[{'role':r,'id':d['identity_group_ids'][r],'path':'/tenants/'+binding['context']+'/'+{'tenant-admin':'admins','tenant-developer':'developers','tenant-viewer':'viewers'}[r]}\
+    \ for r in sorted(ROLES)]\n if s['groups']!=expected_groups or not isinstance(s['members'],list)\
+    \ or len(s['members'])>3:raise ValueError('bounded complete snapshot')\n members={}\n\
+    \ for m in s['members']:\n  if not isinstance(m,dict) or set(m)!={'subject','role','enabled'}\
+    \ or not isinstance(m['subject'],str) or not re.fullmatch(UUID,m['subject']) or\
+    \ m['role'] not in ROLES or type(m['enabled']) is not bool or m['subject'] in\
+    \ members:raise ValueError('snapshot member')\n  members[m['subject']]=m\n if\
+    \ not isinstance(e['identities'],list) or len(e['identities'])!=sum(m['enabled']\
+    \ for m in members.values()):raise ValueError('complete identity set')\n seen=set()\n\
+    \ for a in e['identities']:\n  ab={'schema':1,'origin':d['identity_gitlab_origin'],'context':binding['context'],'source_revision':binding['source_revision']}\n\
+    \  if not isinstance(a,dict) or any(a.get(k)!=v for k,v in ab.items()) or a.get('stage')\
+    \ not in ('IdentityVerified','PendingFirstLogin','PendingAccountApproval'):raise\
+    \ ValueError('identity binding')\n  keys=set(ab)|{'subject','stage','captured_at'}|({'native_user_id'}\
+    \ if a['stage']=='IdentityVerified' else set())\n  if set(a)!=keys or a['subject']\
+    \ not in members or not members[a['subject']]['enabled'] or a['subject'] in seen:raise\
+    \ ValueError('identity selection')\n  if a['stage']=='IdentityVerified' and (type(a['native_user_id'])\
+    \ is not int or not 0<a['native_user_id']<2**63):raise ValueError('native ID')\n\
+    \  age(a['captured_at']);seen.add(a['subject'])\n return e\nif __name__=='__main__':\n\
+    \ p=argparse.ArgumentParser();p.add_argument('--phase',required=True);p.add_argument('--inputs',required=True);p.add_argument('--envelope');a=p.parse_args()\n\
+    \ try:\n  d=inputs(a.inputs,a.phase)\n  if a.envelope:envelope(d,a.envelope)\n\
+    \ except Exception:raise SystemExit('Invalid or stale phase evidence; no authority\
+    \ to continue.')\n print('Finite phase contract verified; runtime issuer custody\
+    \ remains required.')\n"
+immutable: true
+kind: ConfigMap
+metadata:
+  name: identity-source-43bad232454e5fb0698b
+  namespace: tenant-identity-writer

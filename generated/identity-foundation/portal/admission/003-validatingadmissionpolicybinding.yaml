@@ -1,0 +1,10 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: identity-pods-tenant-identity-writer
+  labels:
+    platform.perkforge.io/owner: tenant-identity-foundation-v1
+spec:
+  policyName: identity-pods-tenant-identity-writer
+  validationActions:
+  - Deny

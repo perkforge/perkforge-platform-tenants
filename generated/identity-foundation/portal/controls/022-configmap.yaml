@@ -1,0 +1,74 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: identity-openbao-ca
+  labels:
+    platform.perkforge.io/owner: tenant-identity-foundation-v1
+  namespace: tenant-identity-attestor
+immutable: true
+data:
+  ca.crt: '-----BEGIN CERTIFICATE-----
+
+    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
+
+    MFOT0kRpDtCbrCZR
+
+    -----END CERTIFICATE-----
+
+    '
