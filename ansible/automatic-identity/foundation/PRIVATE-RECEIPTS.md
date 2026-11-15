@@ -80,3 +80,29 @@ operator/admission batch, actual server default/SSA behavior, current scheduling
 and household load decision, private child ownership across real subsequent mounts,
 then existing zero-roster three-phase acceptance. No lossless/onboarding-complete
 claim follows from this storage test.
+
+### Native representation readback
+
+The held gate ConfigMap may return without `data` instead of `data: {}`. Its
+admission still requires the exact operator, forbids `binaryData`, and allows
+only the bounded `approval.json` key. Omitted container `args` is normalized only
+when the authored helper expects an empty list; nonempty values remain denied.
+
+Running helper readback preserves exact protected annotations and recognizes only
+an optional complete set of the three observed Calico keys: `containerID` (64
+lowercase hexadecimal characters), `podIP`, and `podIPs`, under
+`cni.projectcalico.org/`. Both address fields must be the same single host CIDR
+and match native `status.podIP`. Unknown/partial keys, altered protected values,
+non-host masks and multiple addresses fail closed. Dual-stack readback is not
+supported by this observed single-address profile. Pod admission remains
+CREATE-only and exact; no permission is added for Pod updates. These operator
+readback corrections do not change helper executable bytes, image or resources.
+
+The operator now waits for the exact helper UID to reach Running after volume
+attachment. PVC binding, Longhorn readiness and this wait share a 180-second
+pre-release ceiling starting before Pod creation, rather than extending the
+existing helper gate or 300-second Pod deadline. Terminal, deleting or replaced
+helpers stop immediately when observed. Metadata reads are bounded and the
+ceiling is rechecked before releasing the gate; a slow read cannot authorize a
+late release. Image pulls are not guaranteed to finish in this window. Timeout
+still enters the existing UID-specific cleanup/detach path; there is no retry.

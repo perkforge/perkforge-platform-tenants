@@ -69,6 +69,15 @@ for field,value in [('command',['false']),('image','foreign'),('args',['foreign'
 for key in ('configMap','inputs','gate'):
  cases.append({'Name':'private-init-'+key,'Policy':'identity-config-'+B['writer_namespace'],'Object':H[key],'Username':I['operatorUser'],'Allowed':True})
 cases.append({'Name':'private-gate-foreign','Policy':'identity-config-'+B['writer_namespace'],'Object':H['gate'],'Username':'foreign','Allowed':False})
+for mode in ('absent','empty','approval','foreign-absent','binary','extra','oversize'):
+ gate=copy.deepcopy(H['gate']);user=I['operatorUser'];allowed=mode in ('absent','empty','approval')
+ if mode in ('absent','foreign-absent'):gate.pop('data',None)
+ if mode=='approval':gate['data']={'approval.json':'{}'}
+ if mode=='foreign-absent':user='foreign'
+ if mode=='binary':gate.pop('data',None);gate['binaryData']={'approval.json':'e30='}
+ if mode=='extra':gate['data']={'other':'{}'}
+ if mode=='oversize':gate['data']={'approval.json':'x'*4097}
+ cases.append({'Name':'private-gate-'+mode,'Policy':'identity-config-'+B['writer_namespace'],'Object':gate,'Username':user,'Allowed':allowed})
 schemas={}
 crd_path=os.environ.get('IDENTITY_FLUX_CRD') or (os.path.join(os.environ['NEXTCLOUD_CRD_DIR'],'kustomization.yaml') if os.environ.get('NEXTCLOUD_CRD_DIR') else None)
 if crd_path:

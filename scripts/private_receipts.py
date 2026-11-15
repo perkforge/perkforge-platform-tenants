@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Offline exact helper plan and read-only runtime identity gate. No apply/delete API."""
-import argparse,hashlib,json,pathlib,re,copy,subprocess,time
+import argparse,hashlib,json,pathlib,re,copy,subprocess,time,ipaddress
 from finite_identity import IMAGE
 from identity_context_binding import selection
 from identity_target_profile import storage,initializer_identity
@@ -44,16 +44,32 @@ def pending_guard(i,cluster,pvc,pods):
  if any(p['metadata']['namespace']==namespace(i) and any(v.get('persistentVolumeClaim',{}).get('claimName')==i['claim'] for v in p['spec'].get('volumes',[])) for p in pods):raise ValueError('prebind consumer')
  return True
 
+def helper_annotations(actual,expected,status):
+ # Only observed Calico metadata is normalized; protected fields stay exact.
+ if not isinstance(actual,dict):raise ValueError('helper annotations')
+ extra=set(actual)-set(expected)
+ keys={'cni.projectcalico.org/containerID','cni.projectcalico.org/podIP','cni.projectcalico.org/podIPs'}
+ if extra:
+  if extra!=keys:raise ValueError('unknown or partial CNI annotations')
+  cid,one,many=[actual[k] for k in ('cni.projectcalico.org/containerID','cni.projectcalico.org/podIP','cni.projectcalico.org/podIPs')]
+  if not isinstance(cid,str) or not re.fullmatch(r'[0-9a-f]{64}',cid):raise ValueError('CNI container identity')
+  if not isinstance(one,str) or len(one)>64 or '/' not in one or many!=one:raise ValueError('CNI single-IP representation')
+  address=ipaddress.ip_interface(one)
+  if address.network.prefixlen!=address.max_prefixlen or str(address.ip)!=status.get('podIP'):raise ValueError('CNI address mismatch')
+ if {k:v for k,v in actual.items() if k not in extra}!=expected:raise ValueError('protected helper annotations')
+ return True
+
 def release_patch(i,cluster,pvc,pv,pods,helper,gate):
  # Caller supplies fresh metadata, never credentials. This only emits a CAS patch.
  h=plan(i);m=helper['metadata'];uid=m['uid']
- if (m['name'],m['namespace'])!=(h['pod']['metadata']['name'],namespace(i)) or m.get('annotations')!=h['pod']['metadata']['annotations'] or m.get('labels')!=h['pod']['metadata']['labels'] or m.get('deletionTimestamp'):raise ValueError('helper identity')
+ if (m['name'],m['namespace'])!=(h['pod']['metadata']['name'],namespace(i)) or not helper_annotations(m.get('annotations'),h['pod']['metadata']['annotations'],helper.get('status',{})) or m.get('labels')!=h['pod']['metadata']['labels'] or m.get('deletionTimestamp'):raise ValueError('helper identity')
  if helper['spec'].get('nodeName')!=i['node'] or helper['status']['phase']!='Running':raise ValueError('helper placement')
  for k in ('containers','volumes','serviceAccountName','automountServiceAccountToken','nodeSelector','securityContext','restartPolicy','activeDeadlineSeconds','imagePullSecrets'):
   # Runtime default representation must be independently reviewed before use.
   actual=copy.deepcopy(helper['spec'][k]);expected=h['pod']['spec'][k]
   if k=='containers':
-   for c in actual:
+   for index,c in enumerate(actual):
+    if index<len(expected) and expected[index].get('args')==[] and 'args' not in c:c['args']=[]
     for key,default in [('imagePullPolicy','IfNotPresent'),('terminationMessagePath','/dev/termination-log'),('terminationMessagePolicy','File')]:
      if key in c:
       if c.pop(key)!=default:raise ValueError('unsafe container default')
@@ -94,13 +110,27 @@ def kube(*args,body=None):
 def get(kind,name=None,namespace=None):
  args=['get',kind]+([name] if name else [])+(['-n',namespace] if namespace else [])+['-o','json']
  return kube(*args)
-def wait_for(fn,seconds):
+def remaining(deadline):
+ seconds=deadline-time.monotonic()
+ if seconds<=0:raise ValueError('pre-release deadline expired')
+ return seconds
+
+def wait_for(fn,seconds,deadline=None):
  end=time.monotonic()+seconds
+ if deadline is not None:end=min(end,deadline)
  while time.monotonic()<end:
   result=fn()
+  if time.monotonic()>=end:break
   if result:return result
-  time.sleep(2)
+  time.sleep(min(2,max(0,end-time.monotonic())))
  raise ValueError('bounded wait expired')
+
+def helper_state(i,h,uid):
+ p=get('pod',h['pod']['metadata']['name'],namespace(i))
+ if p['metadata']['uid']!=uid:raise ValueError('helper replaced')
+ if p['metadata'].get('deletionTimestamp') or p.get('status',{}).get('phase') in ('Failed','Succeeded'):raise ValueError('helper terminal before release')
+ return p
+
 def execute(i):
  """Explicit future operator action; never invoked by default or offline tests."""
  validate(i);h=plan(i);created=None;binding=None;volume_uid=None
@@ -109,22 +139,28 @@ def execute(i):
  try:
   # Create-only. No adoption or empty apply over existing objects.
   for key in ('configMap','inputs','gate'):kube('create','-f','-','-o','json',body=h[key])
+  release_deadline=time.monotonic()+180
   created=kube('create','-f','-','-o','json',body=h['pod'])
   def bound():
+   helper_state(i,h,created['metadata']['uid'])
    p=get('pvc',i['claim'],namespace(i))
    return p if p['status']['phase']=='Bound' else None
-  pvc=wait_for(bound,90);pv=get('pv',pvc['spec']['volumeName']);handle=pv['spec']['csi']['volumeHandle']
+  pvc=wait_for(bound,90,release_deadline);pv=get('pv',pvc['spec']['volumeName']);handle=pv['spec']['csi']['volumeHandle']
   binding=dict(i,pv=pv['metadata']['name'],pvUID=pv['metadata']['uid'],volumeHandle=handle)
   def healthy():
+   helper_state(i,h,created['metadata']['uid'])
    v=get('volumes.longhorn.io',handle,'longhorn-system')
    return v if v['status']['state']=='attached' and v['status']['robustness']=='healthy' else None
-  volume=wait_for(healthy,30);volume_uid=volume['metadata']['uid']
+  volume=wait_for(healthy,30,release_deadline);volume_uid=volume['metadata']['uid']
   engines=get('engines.longhorn.io',namespace='longhorn-system')['items'];engines=[e for e in engines if e['spec'].get('volumeName')==handle and e['spec'].get('active')]
   if volume['spec'].get('nodeID')!=i['node']:raise ValueError('volume attachment node')
   if volume['spec']['numberOfReplicas']!=2 or len(engines)!=1 or list(engines[0]['status'].get('replicaModeMap',{}).values()).count('RW')!=2:raise ValueError('two healthy replica proof')
-  helper=get('pod',h['pod']['metadata']['name'],namespace(i))
-  if helper['metadata']['uid']!=created['metadata']['uid']:raise ValueError('helper replaced')
+  def running():
+   p=helper_state(i,h,created['metadata']['uid'])
+   return p if p.get('status',{}).get('phase')=='Running' else None
+  helper=wait_for(running,remaining(release_deadline),release_deadline)
   release=release_patch(i,get('namespace','kube-system'),get('pvc',i['claim'],namespace(i)),get('pv',binding['pv']),get('pods',namespace=namespace(i))['items'],helper,get('cm',h['gate']['metadata']['name'],namespace(i)))
+  remaining(release_deadline) # No late release after slow metadata reads.
   kube('patch','cm',h['gate']['metadata']['name'],'-n',namespace(i),'--type=json','-p',json.dumps(release['patch']),'-o','json')
   def finished():
    p=get('pod',h['pod']['metadata']['name'],namespace(i))
