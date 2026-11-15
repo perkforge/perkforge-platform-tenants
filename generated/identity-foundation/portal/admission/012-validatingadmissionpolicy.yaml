@@ -25,7 +25,7 @@ spec:
   - name: exact-namespace
     expression: request.namespace == "tenant-identity-attestor"
   validations:
-  - expression: object.metadata.name in ["kube-root-ca.crt","identity-openbao-ca","identity-portal-attest-b9c6ab787d54ba27-inputs","identity-source-43bad232454e5fb0698b"]
+  - expression: object.metadata.name in ["kube-root-ca.crt","identity-openbao-ca","identity-portal-attest-74a1fd77a43038f5-inputs","identity-source-a3cd3cb767ad59076ac0"]
     message: Identity foundation boundary refused an unreviewed mutation.
     reason: Forbidden
   - expression: object.metadata.name != "kube-root-ca.crt" || (!has(object.binaryData)
@@ -47,21 +47,21 @@ spec:
       CERTIFICATE-----\n"
     message: Identity foundation boundary refused an unreviewed mutation.
     reason: Forbidden
-  - expression: object.metadata.name != "identity-portal-attest-b9c6ab787d54ba27-inputs"
+  - expression: object.metadata.name != "identity-portal-attest-74a1fd77a43038f5-inputs"
       || (!has(object.binaryData) && object.immutable == true && object.data.size()
       == 1 && object.data.all(k, k in ["inputs.json"]))
     message: Identity foundation boundary refused an unreviewed mutation.
     reason: Forbidden
-  - expression: object.metadata.name != "identity-portal-attest-b9c6ab787d54ba27-inputs"
-      || object.data["inputs.json"] == "{\"identity\":{\"identity_context\":\"portal\",\"identity_context_digest\":\"a9c6f07b9a6a553e8c343da4e7a50cb47ab7a61b16fd5eed321a43fc382446ad\",\"identity_contract_sha256\":\"4574b7b3b5cf14660eb0726dc90568089453f8d3b3afcd68b79aa536aec9a4e2\",\"identity_gitlab_origin\":\"https://gitlab.perkforge.home.arpa\",\"identity_group_ids\":{\"tenant-admin\":\"6bde6829-e7ec-409f-a623-1ef453505ae2\",\"tenant-developer\":\"386faab5-bc2c-46a2-9cc3-fa61a40f54da\",\"tenant-viewer\":\"6c189b55-a2c3-4767-bc06-1efabf785d50\"},\"identity_invocation\":\"5d92796ed2fcc186e8a770a13f69916eed814ed1d0bd6e9eb1fa67e61e84bca4\",\"identity_keycloak_origin\":\"https://keycloak.perkforge.home.arpa/auth\",\"identity_keycloak_realm\":\"perkforge\",\"identity_kubernetes_origin\":\"https://kubernetes.default.svc.cluster.local\",\"identity_membership_recovery_verified\":true,\"identity_platform_revision\":\"b904017158100944a81129899e8fc64a3ed976b8\",\"identity_previous_invocation\":\"\",\"identity_receipt_name\":\"portal-identity-evidence\",\"identity_receipt_namespace\":\"tenant-identity-writer\",\"identity_receipt_uid\":\"522e96ed-77e1-4dc9-b57c-e8281c761928\",\"identity_retry_generation\":0,\"identity_run\":true,\"identity_scope\":\"gitlab-identity-attest-v1\",\"identity_source_revision\":\"5621e9b05bd94566c1bfdc6bcf8b75b0404e8ff0\"}}"
+  - expression: object.metadata.name != "identity-portal-attest-74a1fd77a43038f5-inputs"
+      || object.data["inputs.json"] == "{\"identity\":{\"identity_context\":\"portal\",\"identity_context_digest\":\"a9c6f07b9a6a553e8c343da4e7a50cb47ab7a61b16fd5eed321a43fc382446ad\",\"identity_contract_sha256\":\"4574b7b3b5cf14660eb0726dc90568089453f8d3b3afcd68b79aa536aec9a4e2\",\"identity_gitlab_origin\":\"https://gitlab.perkforge.home.arpa\",\"identity_group_ids\":{\"tenant-admin\":\"6bde6829-e7ec-409f-a623-1ef453505ae2\",\"tenant-developer\":\"386faab5-bc2c-46a2-9cc3-fa61a40f54da\",\"tenant-viewer\":\"6c189b55-a2c3-4767-bc06-1efabf785d50\"},\"identity_invocation\":\"89fa3d6348444b25ede774bebe27287c083b5932d4ea192b4dc5826a7e6191c5\",\"identity_keycloak_origin\":\"https://keycloak.perkforge.home.arpa/auth\",\"identity_keycloak_realm\":\"perkforge\",\"identity_kubernetes_origin\":\"https://kubernetes.default.svc.cluster.local\",\"identity_membership_recovery_verified\":true,\"identity_platform_revision\":\"b904017158100944a81129899e8fc64a3ed976b8\",\"identity_previous_invocation\":\"\",\"identity_receipt_name\":\"portal-identity-evidence\",\"identity_receipt_namespace\":\"tenant-identity-writer\",\"identity_receipt_uid\":\"522e96ed-77e1-4dc9-b57c-e8281c761928\",\"identity_retry_generation\":0,\"identity_run\":true,\"identity_scope\":\"gitlab-identity-attest-v1\",\"identity_source_revision\":\"4b027b7a50ebf477a36746b88d0f034cc6a7d454\"}}"
     message: Identity foundation boundary refused an unreviewed mutation.
     reason: Forbidden
-  - expression: object.metadata.name != "identity-source-43bad232454e5fb0698b" ||
+  - expression: object.metadata.name != "identity-source-a3cd3cb767ad59076ac0" ||
       (!has(object.binaryData) && object.immutable == true && object.data.size() ==
       27 && object.data.all(k, k in ["file-0","file-1","file-10","file-11","file-12","file-13","file-14","file-15","file-16","file-17","file-18","file-19","file-2","file-20","file-21","file-22","file-23","file-24","file-25","file-26","file-3","file-4","file-5","file-6","file-7","file-8","file-9"]))
     message: Identity foundation boundary refused an unreviewed mutation.
     reason: Forbidden
-  - expression: object.metadata.name != "identity-source-43bad232454e5fb0698b" ||
+  - expression: object.metadata.name != "identity-source-a3cd3cb767ad59076ac0" ||
       object.data["file-0"] == "#!/usr/bin/env bash\nset -euo pipefail\numask 077\n[[
       $# == 8 && $7 == --bundle-sha256 && $8 =~ ^[a-f0-9]{64}$ ]] || exit 2\nactual=$(sha256sum
       /opt/provenance.sha256); [[ ${actual%% *} == \"$8\" ]] || exit 2\n(cd /opt &&
@@ -71,7 +71,7 @@ spec:
       \"${@:1:6}\"\n"
     message: Identity foundation boundary refused an unreviewed mutation.
     reason: Forbidden
-  - expression: object.metadata.name != "identity-source-43bad232454e5fb0698b" ||
+  - expression: object.metadata.name != "identity-source-a3cd3cb767ad59076ac0" ||
       object.data["file-1"] == "#!/usr/bin/env python3\n\"\"\"Refresh only the fixed
       issuer projection; never fetch, authenticate or log bodies.\"\"\"\nimport importlib.util,os,stat,sys,tempfile\nfrom
       pathlib import Path\nCONTRACT='/opt/platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/phases/contract.py'\nPROJECTION=Path('/identity-evidence')\ndef
@@ -95,7 +95,7 @@ spec:
       permitted.')\n"
     message: Identity foundation boundary refused an unreviewed mutation.
     reason: Forbidden
-  - expression: 'object.metadata.name != "identity-source-43bad232454e5fb0698b" ||
+  - expression: 'object.metadata.name != "identity-source-a3cd3cb767ad59076ac0" ||
       object.data["file-10"] == "- ansible.builtin.set_fact: {phase_substage: issuer-observation-refresh}\n-
       name: Refresh only the fixed issuer-owned projection; no writer Kubernetes token\n  ansible.builtin.command:\n    argv:
       [/opt/perkforge/bin/refresh-identity-evidence, ''{{ phase_inputs }}'', ''{{
@@ -144,7 +144,7 @@ spec:
       member_results + [{\"subject\":selected_subject,\"stage\":selected_stage}] }}''\n"'
     message: Identity foundation boundary refused an unreviewed mutation.
     reason: Forbidden
-  - expression: 'object.metadata.name != "identity-source-43bad232454e5fb0698b" ||
+  - expression: 'object.metadata.name != "identity-source-a3cd3cb767ad59076ac0" ||
       object.data["file-11"] == "#!/usr/bin/env python3\n\"\"\"Validate protected
       prior ownership metadata, never decide native permissions.\"\"\"\nimport json,re,sys\nfrom
       pathlib import Path\nfrom contract import inputs,envelope,read,safe,age,UUID,ROLES\n\ndef
@@ -182,7 +182,7 @@ spec:
       SystemExit(''Invalid protected membership state; no native changes permitted.'')\n"'
     message: Identity foundation boundary refused an unreviewed mutation.
     reason: Forbidden
-  - expression: 'object.metadata.name != "identity-source-43bad232454e5fb0698b" ||
+  - expression: 'object.metadata.name != "identity-source-a3cd3cb767ad59076ac0" ||
       object.data["file-12"] == "# The fixed executor owns context serialization and
       trusted issuer-only projection.\n- name: Apply one finite explicitly selected
       membership observation\n  hosts: localhost\n  connection: local\n  gather_facts:
@@ -224,7 +224,7 @@ spec:
       {}\n        verified_state: {}\n"'
     message: Identity foundation boundary refused an unreviewed mutation.
     reason: Forbidden
-  - expression: object.metadata.name != "identity-source-43bad232454e5fb0698b" ||
+  - expression: object.metadata.name != "identity-source-a3cd3cb767ad59076ac0" ||
       object.data["file-13"] == "#!/usr/bin/env python3\n\"\"\"Validate only the fixed
       private staging interface before loading Ansible.\"\"\"\nimport os,re,sys\nfrom
       pathlib import Path\nfrom contract import inputs,safe\n\ndef validate(phase,input_file,work):\n
@@ -242,7 +242,7 @@ spec:
       phase staging verified.')\n"
     message: Identity foundation boundary refused an unreviewed mutation.
     reason: Forbidden
-  - expression: object.metadata.name != "identity-source-43bad232454e5fb0698b" ||
+  - expression: object.metadata.name != "identity-source-a3cd3cb767ad59076ac0" ||
       object.data["file-14"] == "#!/usr/bin/env python3\n\"\"\"Reuse the reviewed
       exact Linux lock-owner proof for the whole writer phase.\"\"\"\nimport os,sys\nfrom
       pathlib import Path\nsys.path.insert(0,str(Path(__file__).resolve().parents[1]))\nfrom
@@ -253,7 +253,7 @@ spec:
       no native changes permitted.')\n"
     message: Identity foundation boundary refused an unreviewed mutation.
     reason: Forbidden
-  - expression: 'object.metadata.name != "identity-source-43bad232454e5fb0698b" ||
+  - expression: 'object.metadata.name != "identity-source-a3cd3cb767ad59076ac0" ||
       object.data["file-15"] == "# Exact precreated object only. No create/delete,
       no Secret access, no data adoption.\n- ansible.builtin.set_fact:\n    receipt_url:
       ''{{ identity_kubernetes_origin }}/api/v1/namespaces/{{ identity_receipt_namespace
@@ -298,7 +298,7 @@ spec:
       + ''/envelope.json'')\n"'
     message: Identity foundation boundary refused an unreviewed mutation.
     reason: Forbidden
-  - expression: 'object.metadata.name != "identity-source-43bad232454e5fb0698b" ||
+  - expression: 'object.metadata.name != "identity-source-a3cd3cb767ad59076ac0" ||
       object.data["file-16"] == "#!/usr/bin/env bash\nset -euo pipefail\numask 077\nif
       [[ ${1:-} != --apply && ${1:-} != --validate ]]; then printf ''%s\\n'' ''INERT:
       explicit phase execution required''; exit 0; fi\n[[ $# == 3 ]] || exit 2\nhere=$(CDPATH=''''
@@ -314,7 +314,7 @@ spec:
       fi\n exit 1\nfi\n"'
     message: Identity foundation boundary refused an unreviewed mutation.
     reason: Forbidden
-  - expression: 'object.metadata.name != "identity-source-43bad232454e5fb0698b" ||
+  - expression: 'object.metadata.name != "identity-source-a3cd3cb767ad59076ac0" ||
       object.data["file-17"] == "#!/usr/bin/env bash\nset -euo pipefail\numask 077\nif
       [[ ${1:-} != --apply && ${1:-} != --validate ]]; then printf ''%s\\n'' ''INERT:
       explicit phase execution required''; exit 0; fi\n[[ $# == 4 ]] || exit 2\nhere=$(CDPATH=''''
@@ -334,7 +334,7 @@ spec:
       fi\n exit 1\nfi\n"'
     message: Identity foundation boundary refused an unreviewed mutation.
     reason: Forbidden
-  - expression: 'object.metadata.name != "identity-source-43bad232454e5fb0698b" ||
+  - expression: 'object.metadata.name != "identity-source-a3cd3cb767ad59076ac0" ||
       object.data["file-18"] == "#!/usr/bin/env python3\n\"\"\"Read exact canonical
       group membership; never configure Keycloak or grant access.\"\"\"\nimport argparse,datetime
       as dt,hashlib,json,os,re,ssl,stat,urllib.request\nfrom pathlib import Path\nimport
@@ -399,7 +399,7 @@ spec:
       SystemExit(''Canonical identity snapshot unavailable; no native mutation performed.'')\n"'
     message: Identity foundation boundary refused an unreviewed mutation.
     reason: Forbidden
-  - expression: 'object.metadata.name != "identity-source-43bad232454e5fb0698b" ||
+  - expression: 'object.metadata.name != "identity-source-a3cd3cb767ad59076ac0" ||
       object.data["file-19"] == "#!/usr/bin/env python3\n\"\"\"Read-only native identity
       verification, not account or membership management.\"\"\"\nimport argparse\nimport
       datetime as dt\nimport json\nimport os\nimport re\nimport ssl\nimport stat\nimport
@@ -485,7 +485,7 @@ spec:
       SystemExit(''Identity verification failed; no native mutation performed.'')\n"'
     message: Identity foundation boundary refused an unreviewed mutation.
     reason: Forbidden
-  - expression: object.metadata.name != "identity-source-43bad232454e5fb0698b" ||
+  - expression: object.metadata.name != "identity-source-a3cd3cb767ad59076ac0" ||
       object.data["file-2"] == "#!/usr/bin/env python3\n\"\"\"Finite native launcher;
       fixed mounts, literal schemas, isolated credential sets.\"\"\"\nimport argparse,datetime,fcntl,hashlib,importlib.util,json,os,pathlib,shutil,stat,subprocess,sys,tempfile\nBASE=pathlib.Path('/opt/platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment')\nsys.path.insert(0,str(BASE/'phases'));import
       contract\nsys.path.insert(0,str(BASE));import verify_group_paths as guard\nfrom
@@ -505,7 +505,7 @@ spec:
       or set(body)!=({'identity','group'} if a.phase=='foundation' else {'identity'}):raise
       ValueError('wrapper fields')\n w=Path(tempfile.mkdtemp(prefix='phase-',dir='/tmp'));os.chmod(w,0o700)\n
       lock=None\n try:\n  write(w/'phase-inputs.json',json.dumps(body['identity']).encode())\n  d=contract.inputs(str(w/'phase-inputs.json'),'attest'
-      if a.phase=='foundation' else a.phase)\n  revisions=json.loads(bounded('/opt/revisions.json',4096))\n  if
+      if a.phase=='foundation' else a.phase)\n  revisions=json.loads(projection('/opt','revisions.json',4096))\n  if
       revisions!={'enrollment':d['identity_source_revision'],'platform':d['identity_platform_revision']}
       or d['identity_invocation']!=a.invocation:raise ValueError('source/attempt')\n  if
       a.phase=='foundation':\n   write(w/'group-inputs.json',json.dumps(body['group']).encode());g=guard.validate_inputs(str(w/'group-inputs.json'))\n   if
@@ -533,7 +533,7 @@ spec:
       or failed; no completion claim.')\n"
     message: Identity foundation boundary refused an unreviewed mutation.
     reason: Forbidden
-  - expression: 'object.metadata.name != "identity-source-43bad232454e5fb0698b" ||
+  - expression: 'object.metadata.name != "identity-source-a3cd3cb767ad59076ac0" ||
       object.data["file-20"] == "#!/usr/bin/env bash\nset -euo pipefail\n# Arguments
       contain paths only, never credential values. No action by default.\nif [[ ${1:-}
       != --apply && ${1:-} != --validate ]]; then\n  printf ''%s\\n'' ''INERT: explicit
@@ -548,7 +548,7 @@ spec:
       -e \"gitlab_group_receipt_file=$3\"\n"'
     message: Identity foundation boundary refused an unreviewed mutation.
     reason: Forbidden
-  - expression: 'object.metadata.name != "identity-source-43bad232454e5fb0698b" ||
+  - expression: 'object.metadata.name != "identity-source-a3cd3cb767ad59076ac0" ||
       object.data["file-21"] == "#!/usr/bin/env python3\n\"\"\"Local path/lock verification
       only. Never reads credentials or calls an API.\"\"\"\nimport argparse,fcntl,os,stat,re,json\nfrom
       pathlib import Path\n\ndef safe(path,optional=False,limit=65536,private=True):\n
@@ -612,7 +612,7 @@ spec:
       transaction lock verified.'')\n"'
     message: Identity foundation boundary refused an unreviewed mutation.
     reason: Forbidden
-  - expression: 'object.metadata.name != "identity-source-43bad232454e5fb0698b" ||
+  - expression: 'object.metadata.name != "identity-source-a3cd3cb767ad59076ac0" ||
       object.data["file-22"] == "# Bounded native tenant-group membership only; never
       a whole-person offboard.\n- name: Reconcile one approved GitLab tenant-group
       membership\n  hosts: localhost\n  connection: local\n  gather_facts: false\n  vars:\n    gitlab_membership_run:
@@ -743,7 +743,7 @@ spec:
       {}\n        cacheable: false\n      no_log: true\n"'
     message: Identity foundation boundary refused an unreviewed mutation.
     reason: Forbidden
-  - expression: 'object.metadata.name != "identity-source-43bad232454e5fb0698b" ||
+  - expression: 'object.metadata.name != "identity-source-a3cd3cb767ad59076ac0" ||
       object.data["file-23"] == "#!/usr/bin/env bash\nset -euo pipefail\nif [[ ${1:-}
       != --apply ]]; then printf ''%s\\n'' ''INERT: --apply WRITER ATTESTATION GROUP_RECEIPT
       INPUTS GRANT_RECEIPT required''; exit 0; fi\n[[ $# == 6 ]] || exit 2\nhere=$(CDPATH=''''
@@ -755,7 +755,7 @@ spec:
       -e \"gitlab_native_membership_inputs_file=$5\" -e \"gitlab_native_grant_receipt_file=$6\"\n"'
     message: Identity foundation boundary refused an unreviewed mutation.
     reason: Forbidden
-  - expression: object.metadata.name != "identity-source-43bad232454e5fb0698b" ||
+  - expression: object.metadata.name != "identity-source-a3cd3cb767ad59076ac0" ||
       object.data["file-24"] == "#!/usr/bin/env python3\n\"\"\"Validate literal metadata
       and shared context lock before Ansible interpretation.\"\"\"\nimport argparse,json,os,re,sys,datetime
       as dt\nfrom pathlib import Path\nsys.path.insert(0,str(Path(__file__).resolve().parents[1]/'enrollment'))\nfrom
@@ -804,16 +804,16 @@ spec:
       membership inputs or context lock; no API access permitted.')\n"
     message: Identity foundation boundary refused an unreviewed mutation.
     reason: Forbidden
-  - expression: object.metadata.name != "identity-source-43bad232454e5fb0698b" ||
-      object.data["file-25"] == "ea81649893bf6854a0320dd61acceb1fb5dcfc7771be3eb111a16ae72b71820a  perkforge/bin/launch\n8d49d9f6a9685e4299aa507318dc7beb1772099d82f4eb1ecbf3a23a39f8b68b  perkforge/bin/refresh-identity-evidence\n7c2035ffc37326ad827b584b8f6249d67e398fbbb5d5dc4211a004c2c072697c  perkforge/bin/run-phase.py\n4574b7b3b5cf14660eb0726dc90568089453f8d3b3afcd68b79aa536aec9a4e2  platform/big-bang-bootstrap/configuration/authorization/contexts/portal.yaml\n0f3c738e3a69fef5bc0695633e99251a00effc8de658ab1787adc576f131b0d1  platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/ensure-groups.yaml\nd7d20ad373db9aef2037909bde7d62b8e3f430b5184f1cc7f04d40cca65fbd84  platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/ensure-one-group.yaml\nfa8fbf7788f3a6aa6916c90b53fbdfb213b2a3c9315b4d4ec892205af739d7a7  platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/identity_context.py\n94bde1013bf80f5db763624c2c4de9268d3c41daf1663bbe24157af15ac0c19a  platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/phases/attest-one.yaml\n5a62830f689148cd3230a04d3a80d43fac19da58f61bb04925567aa82387c45c  platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/phases/attest.yaml\ne243c12234095edf50a659c801d163e36d7dc9e81d431fa588b14e8a2aa01012  platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/phases/contract.py\n42e878aba1ccf6336edba3e2f08b60a09b5b40ce83c8bd0584e9a3039906e8b2  platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/phases/member-one.yaml\n83f067fe1f7fd87056ac8bb5c95e5a6ce027533dc23a208dfb13c44c1ec8e769  platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/phases/membership-state.py\n8b8478c294135a5dd209b7a65abab93dd910c02c539aa61002cc3f0d67c8f224  platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/phases/memberships.yaml\n5fd8d59bdafed84375154beab829a8f5d55ac8cdde608af796aaf22fe0171221  platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/phases/paths.py\n47641bf80f58fd964a7839985df908466daaa304d667c0873d5964816c143b45  platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/phases/phase-lock.py\n4df0fb2e6b69ed9d70967a9654fc79611522f8b390161cc1ad4f64a8e24912a7  platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/phases/publish.yaml\n151a734be14807e4fec0dc4b45e664322b5cb0935a933dd089ccc74b9b12712a  platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/phases/run-attestor.sh\nd80c54657315a60298d04d4cc99b10a5e24ed3c40c05549abf1af49669d51199  platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/phases/run-memberships.sh\ne9d27d56aaac96377d6b1fd3c17a9bcefcc889bf68b0c12a05d966da20a254a1  platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/read-keycloak-context.py\n66495bd36cb8a12267bd5988d8006929f10b1f9fa3b762b68d9e16f733a2aa21  platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/resolve-subject.py\n7b2c4b65170341eda05ffef30457ffa02b9cec88bba5552e5aa5388065a78d0d  platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/run-groups.sh\n833ee8e0ddfa21982767f52dd286bc72211bbd0514b63bd43f95bfcc8a1c76dd  platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/verify_group_paths.py\n8236fd3f15e831dbca7017483038fbe296dea18cc122f9c774559363e89e14a7  platform/big-bang-bootstrap/configuration/packages/gitlab/reconcile-membership.yaml\na2f9aa0afa9ad78fa2f348fb9622b60f31126d79b4b5088665cf71b8c5d2e895  platform/big-bang-bootstrap/configuration/packages/gitlab/run-membership.sh\n15bf468e3f294090c3857fc46ad87141fc72a9bd5db10a59d107f4a0dc262f50  platform/big-bang-bootstrap/configuration/packages/gitlab/verification/membership_inputs.py\n15250421a9bd65445a97f8d757f54ebba19b9174a2d26949d17a720d54527793  revisions.json\n"
+  - expression: object.metadata.name != "identity-source-a3cd3cb767ad59076ac0" ||
+      object.data["file-25"] == "ea81649893bf6854a0320dd61acceb1fb5dcfc7771be3eb111a16ae72b71820a  perkforge/bin/launch\n8d49d9f6a9685e4299aa507318dc7beb1772099d82f4eb1ecbf3a23a39f8b68b  perkforge/bin/refresh-identity-evidence\nad55e0c53546b48e8c27dc82ac703d206baa9730f0c9e02c5f278a4f12411e09  perkforge/bin/run-phase.py\n4574b7b3b5cf14660eb0726dc90568089453f8d3b3afcd68b79aa536aec9a4e2  platform/big-bang-bootstrap/configuration/authorization/contexts/portal.yaml\n0f3c738e3a69fef5bc0695633e99251a00effc8de658ab1787adc576f131b0d1  platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/ensure-groups.yaml\nd7d20ad373db9aef2037909bde7d62b8e3f430b5184f1cc7f04d40cca65fbd84  platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/ensure-one-group.yaml\nfa8fbf7788f3a6aa6916c90b53fbdfb213b2a3c9315b4d4ec892205af739d7a7  platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/identity_context.py\n94bde1013bf80f5db763624c2c4de9268d3c41daf1663bbe24157af15ac0c19a  platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/phases/attest-one.yaml\n5a62830f689148cd3230a04d3a80d43fac19da58f61bb04925567aa82387c45c  platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/phases/attest.yaml\ne243c12234095edf50a659c801d163e36d7dc9e81d431fa588b14e8a2aa01012  platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/phases/contract.py\n42e878aba1ccf6336edba3e2f08b60a09b5b40ce83c8bd0584e9a3039906e8b2  platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/phases/member-one.yaml\n83f067fe1f7fd87056ac8bb5c95e5a6ce027533dc23a208dfb13c44c1ec8e769  platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/phases/membership-state.py\n8b8478c294135a5dd209b7a65abab93dd910c02c539aa61002cc3f0d67c8f224  platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/phases/memberships.yaml\n5fd8d59bdafed84375154beab829a8f5d55ac8cdde608af796aaf22fe0171221  platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/phases/paths.py\n47641bf80f58fd964a7839985df908466daaa304d667c0873d5964816c143b45  platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/phases/phase-lock.py\n4df0fb2e6b69ed9d70967a9654fc79611522f8b390161cc1ad4f64a8e24912a7  platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/phases/publish.yaml\n151a734be14807e4fec0dc4b45e664322b5cb0935a933dd089ccc74b9b12712a  platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/phases/run-attestor.sh\nd80c54657315a60298d04d4cc99b10a5e24ed3c40c05549abf1af49669d51199  platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/phases/run-memberships.sh\ne9d27d56aaac96377d6b1fd3c17a9bcefcc889bf68b0c12a05d966da20a254a1  platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/read-keycloak-context.py\n66495bd36cb8a12267bd5988d8006929f10b1f9fa3b762b68d9e16f733a2aa21  platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/resolve-subject.py\n7b2c4b65170341eda05ffef30457ffa02b9cec88bba5552e5aa5388065a78d0d  platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/run-groups.sh\n833ee8e0ddfa21982767f52dd286bc72211bbd0514b63bd43f95bfcc8a1c76dd  platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/verify_group_paths.py\n8236fd3f15e831dbca7017483038fbe296dea18cc122f9c774559363e89e14a7  platform/big-bang-bootstrap/configuration/packages/gitlab/reconcile-membership.yaml\na2f9aa0afa9ad78fa2f348fb9622b60f31126d79b4b5088665cf71b8c5d2e895  platform/big-bang-bootstrap/configuration/packages/gitlab/run-membership.sh\n15bf468e3f294090c3857fc46ad87141fc72a9bd5db10a59d107f4a0dc262f50  platform/big-bang-bootstrap/configuration/packages/gitlab/verification/membership_inputs.py\n4a349d8bf7b4acb4df5a4456d4bd6e1b0215e62c56a90fdb1979456607bc89c7  revisions.json\n"
     message: Identity foundation boundary refused an unreviewed mutation.
     reason: Forbidden
-  - expression: 'object.metadata.name != "identity-source-43bad232454e5fb0698b" ||
-      object.data["file-26"] == "{\"enrollment\": \"5621e9b05bd94566c1bfdc6bcf8b75b0404e8ff0\",
+  - expression: 'object.metadata.name != "identity-source-a3cd3cb767ad59076ac0" ||
+      object.data["file-26"] == "{\"enrollment\": \"4b027b7a50ebf477a36746b88d0f034cc6a7d454\",
       \"platform\": \"b904017158100944a81129899e8fc64a3ed976b8\"}"'
     message: Identity foundation boundary refused an unreviewed mutation.
     reason: Forbidden
-  - expression: 'object.metadata.name != "identity-source-43bad232454e5fb0698b" ||
+  - expression: 'object.metadata.name != "identity-source-a3cd3cb767ad59076ac0" ||
       object.data["file-3"] == "# Platform-owned desired context, approved for the
       Portal pilot.\n# Inactive: names are desired state, not discovered native IDs
       or live grants.\npaas_context:\n  schema_version: 1\n  id: portal\n  activation:
@@ -828,7 +828,7 @@ spec:
       Developer\n        tenant-viewer: Reporter\n"'
     message: Identity foundation boundary refused an unreviewed mutation.
     reason: Forbidden
-  - expression: 'object.metadata.name != "identity-source-43bad232454e5fb0698b" ||
+  - expression: 'object.metadata.name != "identity-source-a3cd3cb767ad59076ac0" ||
       object.data["file-4"] == "# Explicit platform-owned enrollment step; no project,
       user or membership mutations.\n- name: Ensure exact private tenant GitLab group
       foundation\n  hosts: localhost\n  connection: local\n  gather_facts: false\n  vars:\n    gitlab_group_run:
@@ -936,7 +936,7 @@ spec:
       false\n      no_log: true\n"'
     message: Identity foundation boundary refused an unreviewed mutation.
     reason: Forbidden
-  - expression: 'object.metadata.name != "identity-source-43bad232454e5fb0698b" ||
+  - expression: 'object.metadata.name != "identity-source-a3cd3cb767ad59076ac0" ||
       object.data["file-5"] == "# Included only after full two-path ownership preflight.
       Re-read immediately before mutation.\n- ansible.builtin.uri:\n    url: ''{{
       gitlab_native_origin }}/api/v4/groups/{{ group_path | replace(\"/\",\"%2F\")
@@ -966,7 +966,7 @@ spec:
       | to_nice_json }}''\n"'
     message: Identity foundation boundary refused an unreviewed mutation.
     reason: Forbidden
-  - expression: 'object.metadata.name != "identity-source-43bad232454e5fb0698b" ||
+  - expression: 'object.metadata.name != "identity-source-a3cd3cb767ad59076ac0" ||
       object.data["file-6"] == "\"\"\"Pure, versioned identity naming/authority contract;
       no I/O or native actions.\"\"\"\nimport hashlib\nimport json\nimport re\n\n\ndef
       derive(context):\n    if not isinstance(context, str) or not re.fullmatch(r''[a-z][a-z0-9-]{0,30}'',
@@ -1005,7 +1005,7 @@ spec:
       {{ capabilities = [\"create\", \"update\", \"read\"] }}\\n'')\n"'
     message: Identity foundation boundary refused an unreviewed mutation.
     reason: Forbidden
-  - expression: 'object.metadata.name != "identity-source-43bad232454e5fb0698b" ||
+  - expression: 'object.metadata.name != "identity-source-a3cd3cb767ad59076ac0" ||
       object.data["file-7"] == "- ansible.builtin.copy:\n    dest: ''{{ phase_work
       }}/subject-inputs.json''\n    mode: ''0600''\n    content: \"{{ {''context'':identity_context,''subject'':selected_member.subject,''source_revision'':identity_source_revision,''origin'':identity_gitlab_origin,''ca_file'':phase_lab_ca}
       | to_json }}\"\n- ansible.builtin.command:\n    argv: [python3, ''{{ playbook_dir
@@ -1016,7 +1016,7 @@ spec:
       | from_json] }}''\n"'
     message: Identity foundation boundary refused an unreviewed mutation.
     reason: Forbidden
-  - expression: 'object.metadata.name != "identity-source-43bad232454e5fb0698b" ||
+  - expression: 'object.metadata.name != "identity-source-a3cd3cb767ad59076ac0" ||
       object.data["file-8"] == "# Runtime entry is the fixed reviewed wrapper; never
       expose arbitrary extra-vars.\n- name: Execute one bounded isolated identity
       observation and publication\n  hosts: localhost\n  connection: local\n  gather_facts:
@@ -1070,7 +1070,7 @@ spec:
       []\n        receipt_before: {}\n        receipt_after: {}\n"'
     message: Identity foundation boundary refused an unreviewed mutation.
     reason: Forbidden
-  - expression: object.metadata.name != "identity-source-43bad232454e5fb0698b" ||
+  - expression: object.metadata.name != "identity-source-a3cd3cb767ad59076ac0" ||
       object.data["file-9"] == "#!/usr/bin/env python3\n\"\"\"Literal finite-phase
       contract validation; no native mutation or credential output.\"\"\"\nimport
       argparse,datetime as dt,hashlib,json,os,re,sys\nfrom pathlib import Path\nsys.path.insert(0,str(Path(__file__).resolve().parents[1]))\nfrom

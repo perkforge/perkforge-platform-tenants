@@ -438,7 +438,7 @@ data:
     \ else {'identity'}):raise ValueError('wrapper fields')\n w=Path(tempfile.mkdtemp(prefix='phase-',dir='/tmp'));os.chmod(w,0o700)\n\
     \ lock=None\n try:\n  write(w/'phase-inputs.json',json.dumps(body['identity']).encode())\n\
     \  d=contract.inputs(str(w/'phase-inputs.json'),'attest' if a.phase=='foundation'\
-    \ else a.phase)\n  revisions=json.loads(bounded('/opt/revisions.json',4096))\n\
+    \ else a.phase)\n  revisions=json.loads(projection('/opt','revisions.json',4096))\n\
     \  if revisions!={'enrollment':d['identity_source_revision'],'platform':d['identity_platform_revision']}\
     \ or d['identity_invocation']!=a.invocation:raise ValueError('source/attempt')\n\
     \  if a.phase=='foundation':\n   write(w/'group-inputs.json',json.dumps(body['group']).encode());g=guard.validate_inputs(str(w/'group-inputs.json'))\n\
@@ -758,7 +758,7 @@ data:
 
     8d49d9f6a9685e4299aa507318dc7beb1772099d82f4eb1ecbf3a23a39f8b68b  perkforge/bin/refresh-identity-evidence
 
-    7c2035ffc37326ad827b584b8f6249d67e398fbbb5d5dc4211a004c2c072697c  perkforge/bin/run-phase.py
+    ad55e0c53546b48e8c27dc82ac703d206baa9730f0c9e02c5f278a4f12411e09  perkforge/bin/run-phase.py
 
     4574b7b3b5cf14660eb0726dc90568089453f8d3b3afcd68b79aa536aec9a4e2  platform/big-bang-bootstrap/configuration/authorization/contexts/portal.yaml
 
@@ -804,10 +804,10 @@ data:
 
     15bf468e3f294090c3857fc46ad87141fc72a9bd5db10a59d107f4a0dc262f50  platform/big-bang-bootstrap/configuration/packages/gitlab/verification/membership_inputs.py
 
-    15250421a9bd65445a97f8d757f54ebba19b9174a2d26949d17a720d54527793  revisions.json
+    4a349d8bf7b4acb4df5a4456d4bd6e1b0215e62c56a90fdb1979456607bc89c7  revisions.json
 
     '
-  file-26: '{"enrollment": "5621e9b05bd94566c1bfdc6bcf8b75b0404e8ff0", "platform":
+  file-26: '{"enrollment": "4b027b7a50ebf477a36746b88d0f034cc6a7d454", "platform":
     "b904017158100944a81129899e8fc64a3ed976b8"}'
   file-3: "# Platform-owned desired context, approved for the Portal pilot.\n# Inactive:\
     \ names are desired state, not discovered native IDs or live grants.\npaas_context:\n\
@@ -1125,5 +1125,5 @@ data:
 immutable: true
 kind: ConfigMap
 metadata:
-  name: identity-source-43bad232454e5fb0698b
+  name: identity-source-a3cd3cb767ad59076ac0
   namespace: tenant-identity-attestor
