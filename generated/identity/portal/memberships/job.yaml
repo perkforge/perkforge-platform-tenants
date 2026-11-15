@@ -1,11 +1,11 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: identity-portal-memberships-74a1fd77a43038f5
+  name: identity-portal-memberships-54819c8b56bfc3e8
   namespace: tenant-identity-writer
   annotations: &id001
-    platform.perkforge.io/invocation: 89fa3d6348444b25ede774bebe27287c083b5932d4ea192b4dc5826a7e6191c5
-    platform.perkforge.io/attempt: 74a1fd77a43038f577050abc6df5e601b2f6f5e87147de9e855925194120a78c
+    platform.perkforge.io/invocation: 3d08188c5f24e69af33ee7e38f05bfbdb3bd3ff3d66a1d794488bb140c030c9c
+    platform.perkforge.io/attempt: 54819c8b56bfc3e8e1e19b306cb445f9ca56f526a59f1f4aa684679359245e6d
 spec:
   backoffLimit: 0
   activeDeadlineSeconds: 300
@@ -46,11 +46,11 @@ spec:
         - --phase
         - memberships
         - --invocation
-        - 89fa3d6348444b25ede774bebe27287c083b5932d4ea192b4dc5826a7e6191c5
+        - 3d08188c5f24e69af33ee7e38f05bfbdb3bd3ff3d66a1d794488bb140c030c9c
         - --inputs-sha256
-        - cb5a1ec86fda2679dccc70fd02c4994405fa0f1c86272763d247f59c16a6af40
+        - e28c6d77d9fd9e36b217aa960306b28886e048cb70c4ca7e28450af93666a707
         - --bundle-sha256
-        - a3cd3cb767ad59076ac03482f93871e050e078c66ccb7cedc0fa735b2e8dfb51
+        - 763db8699537d09e25650d7e31338b68056b65c72c2d89033f6452bdab96dbb1
         resources: &id002
           limits:
             cpu: 500m
@@ -86,7 +86,7 @@ spec:
       volumes:
       - name: source
         configMap:
-          name: identity-source-a3cd3cb767ad59076ac0
+          name: identity-source-763db8699537d09e2565
           defaultMode: 365
           items:
           - key: file-0
@@ -145,7 +145,7 @@ spec:
             path: revisions.json
       - name: inputs
         configMap:
-          name: identity-portal-memberships-74a1fd77a43038f5-inputs
+          name: identity-portal-memberships-54819c8b56bfc3e8-inputs
       - name: credentials
         secret:
           secretName: group-writer

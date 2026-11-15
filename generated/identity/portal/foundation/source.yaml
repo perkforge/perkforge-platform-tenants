@@ -193,33 +193,34 @@ data:
   file-15: "# Exact precreated object only. No create/delete, no Secret access, no\
     \ data adoption.\n- ansible.builtin.set_fact:\n    receipt_url: '{{ identity_kubernetes_origin\
     \ }}/api/v1/namespaces/{{ identity_receipt_namespace }}/configmaps/{{ identity_receipt_name\
-    \ }}'\n    receipt_headers: {Authorization: 'Bearer {{ lookup(\"file\",phase_api_token)\
-    \ | trim }}'}\n- ansible.builtin.uri:\n    url: '{{ receipt_url }}'\n    headers:\
-    \ '{{ receipt_headers }}'\n    validate_certs: true\n    ca_path: '{{ phase_api_ca\
-    \ }}'\n    use_proxy: false\n    use_netrc: false\n    follow_redirects: none\n\
-    \    unredirected_headers: [Authorization]\n    timeout: 10\n  register: receipt_before\n\
-    - ansible.builtin.assert:\n    that:\n    - receipt_before.json.metadata.uid ==\
-    \ identity_receipt_uid\n    - receipt_before.json.metadata.name == identity_receipt_name\n\
-    \    - receipt_before.json.metadata.namespace == identity_receipt_namespace\n\
+    \ }}'\n    publication_predecessor: '{{ identity_previous_attestation_invocation\
+    \ | default(identity_previous_invocation) }}'\n    receipt_headers: {Authorization:\
+    \ 'Bearer {{ lookup(\"file\",phase_api_token) | trim }}'}\n- ansible.builtin.uri:\n\
+    \    url: '{{ receipt_url }}'\n    headers: '{{ receipt_headers }}'\n    validate_certs:\
+    \ true\n    ca_path: '{{ phase_api_ca }}'\n    use_proxy: false\n    use_netrc:\
+    \ false\n    follow_redirects: none\n    unredirected_headers: [Authorization]\n\
+    \    timeout: 10\n  register: receipt_before\n- ansible.builtin.assert:\n    that:\n\
+    \    - receipt_before.json.metadata.uid == identity_receipt_uid\n    - receipt_before.json.metadata.name\
+    \ == identity_receipt_name\n    - receipt_before.json.metadata.namespace == identity_receipt_namespace\n\
     \    - receipt_before.json.metadata.resourceVersion is match('^[0-9]+$')\n   \
     \ - receipt_before.json.metadata.labels['app.kubernetes.io/managed-by'] == 'perkforge-identity'\n\
     \    - receipt_before.json.metadata.labels['perkforge.dev/context'] == identity_context\n\
     \    - receipt_before.json.metadata.annotations['perkforge.dev/desired-invocation']\
     \ == identity_invocation\n    - receipt_before.json.data | default({}) | list\
     \ | difference(['receipt.json']) | length == 0\n    - (receipt_before.json.data\
-    \ | default({})).get('receipt.json','') | length <= 262144\n- name: First attempt\
-    \ cannot adopt existing data; later attempts require exact predecessor\n  ansible.builtin.assert:\n\
-    \    that: (receipt_before.json.data | default({})).get('receipt.json','') ==\
-    \ ''\n  when: identity_previous_invocation == ''\n- ansible.builtin.set_fact:\n\
+    \ | default({})).get('receipt.json','') | length <= 262144\n- name: Selected empty\
+    \ publication predecessor cannot adopt data; nonempty requires exact predecessor\n\
+    \  ansible.builtin.assert:\n    that: (receipt_before.json.data | default({})).get('receipt.json','')\
+    \ == ''\n  when: publication_predecessor == ''\n- ansible.builtin.set_fact:\n\
     \    prior_envelope: '{{ receipt_before.json.data[\"receipt.json\"] | from_json\
-    \ }}'\n  when: identity_previous_invocation != ''\n- ansible.builtin.assert:\n\
-    \    that:\n    - prior_envelope.invocation == identity_previous_invocation\n\
-    \    - prior_envelope.context == identity_context\n    - prior_envelope.receipt_uid\
-    \ == identity_receipt_uid\n  when: identity_previous_invocation != ''\n- name:\
-    \ CAS only the owned data after UID, version and desired-attempt checks\n  ansible.builtin.uri:\n\
-    \    url: '{{ receipt_url }}'\n    method: PATCH\n    headers: '{{ receipt_headers\
-    \ | combine({\"Content-Type\":\"application/json-patch+json\"}) }}'\n    body_format:\
-    \ json\n    body:\n    - {op: test, path: /metadata/uid, value: '{{ identity_receipt_uid\
+    \ }}'\n  when: publication_predecessor != ''\n- ansible.builtin.assert:\n    that:\n\
+    \    - prior_envelope.invocation == publication_predecessor\n    - prior_envelope.context\
+    \ == identity_context\n    - prior_envelope.receipt_uid == identity_receipt_uid\n\
+    \  when: publication_predecessor != ''\n- name: CAS only the owned data after\
+    \ UID, version and desired-attempt checks\n  ansible.builtin.uri:\n    url: '{{\
+    \ receipt_url }}'\n    method: PATCH\n    headers: '{{ receipt_headers | combine({\"\
+    Content-Type\":\"application/json-patch+json\"}) }}'\n    body_format: json\n\
+    \    body:\n    - {op: test, path: /metadata/uid, value: '{{ identity_receipt_uid\
     \ }}'}\n    - {op: test, path: /metadata/resourceVersion, value: '{{ receipt_before.json.metadata.resourceVersion\
     \ }}'}\n    - {op: test, path: /metadata/annotations/perkforge.dev~1desired-invocation,\
     \ value: '{{ identity_invocation }}'}\n    - op: add\n      path: /data\n    \
@@ -406,7 +407,7 @@ data:
     \ inode, never preserve an apparently successful receipt.\n    fd = os.open(args.receipt,\
     \ os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)\n    owned = os.fstat(fd)\n\
     \    try:\n        token = read_private(args.token, 4096).decode('ascii').strip()\n\
-    \        if not re.fullmatch(r'[A-Za-z0-9_-]{8,4096}', token):\n            raise\
+    \        if not re.fullmatch(r'[A-Za-z0-9_.-]{8,4096}', token):\n            raise\
     \ ValueError('invalid reader token encoding')\n        result = resolve(data,\
     \ token)\n        encoded = (json.dumps(result, sort_keys=True) + '\\n').encode()\n\
     \        with os.fdopen(fd, 'wb', closefd=False) as stream:\n            stream.write(encoded)\n\
@@ -770,9 +771,9 @@ data:
 
     94bde1013bf80f5db763624c2c4de9268d3c41daf1663bbe24157af15ac0c19a  platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/phases/attest-one.yaml
 
-    5a62830f689148cd3230a04d3a80d43fac19da58f61bb04925567aa82387c45c  platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/phases/attest.yaml
+    97eeb4d808aeaf3355850a0d86ca70576b86390e70e45c2aaab642945829a5c6  platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/phases/attest.yaml
 
-    e243c12234095edf50a659c801d163e36d7dc9e81d431fa588b14e8a2aa01012  platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/phases/contract.py
+    e3dac87e5091f64f4e292f98b9d2f55a1b6679f28c00f880f429302124631b27  platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/phases/contract.py
 
     42e878aba1ccf6336edba3e2f08b60a09b5b40ce83c8bd0584e9a3039906e8b2  platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/phases/member-one.yaml
 
@@ -784,7 +785,7 @@ data:
 
     47641bf80f58fd964a7839985df908466daaa304d667c0873d5964816c143b45  platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/phases/phase-lock.py
 
-    4df0fb2e6b69ed9d70967a9654fc79611522f8b390161cc1ad4f64a8e24912a7  platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/phases/publish.yaml
+    2556755eba4be10fd890a00a12e5632f77c7c30b6dd37eadebb474abe4475284  platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/phases/publish.yaml
 
     151a734be14807e4fec0dc4b45e664322b5cb0935a933dd089ccc74b9b12712a  platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/phases/run-attestor.sh
 
@@ -792,7 +793,7 @@ data:
 
     e9d27d56aaac96377d6b1fd3c17a9bcefcc889bf68b0c12a05d966da20a254a1  platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/read-keycloak-context.py
 
-    66495bd36cb8a12267bd5988d8006929f10b1f9fa3b762b68d9e16f733a2aa21  platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/resolve-subject.py
+    dfdf637b397e60e3b1ffcc46aea884a544baf3ef6a6fd7c31b130044fa546454  platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/resolve-subject.py
 
     7b2c4b65170341eda05ffef30457ffa02b9cec88bba5552e5aa5388065a78d0d  platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/run-groups.sh
 
@@ -804,11 +805,11 @@ data:
 
     15bf468e3f294090c3857fc46ad87141fc72a9bd5db10a59d107f4a0dc262f50  platform/big-bang-bootstrap/configuration/packages/gitlab/verification/membership_inputs.py
 
-    4a349d8bf7b4acb4df5a4456d4bd6e1b0215e62c56a90fdb1979456607bc89c7  revisions.json
+    b35ab29615eb5a481a5b08ce74521e3ea99714c267c96d4b57b840fb72c11e18  revisions.json
 
     '
-  file-26: '{"enrollment": "4b027b7a50ebf477a36746b88d0f034cc6a7d454", "platform":
-    "b904017158100944a81129899e8fc64a3ed976b8"}'
+  file-26: '{"enrollment": "3f3d630e70a5f6db7282779cae059202229cb517", "platform":
+    "95ef0f103a89fe71b7e5aff93d0f3dd2ce31947c"}'
   file-3: "# Platform-owned desired context, approved for the Portal pilot.\n# Inactive:\
     \ names are desired state, not discovered native IDs or live grants.\npaas_context:\n\
     \  schema_version: 1\n  id: portal\n  activation: false\n  keycloak:\n    realm:\
@@ -1043,13 +1044,14 @@ data:
     \        dest: '{{ phase_work }}/envelope.json'\n        mode: '0600'\n      \
     \  content: \"{{ {'schema':1,'context':identity_context,'source_revision':identity_source_revision,'platform_revision':identity_platform_revision,'contract_sha256':identity_contract_sha256,'invocation':identity_invocation,'previous_invocation':identity_previous_invocation,'retry_generation':identity_retry_generation,'receipt_uid':identity_receipt_uid,'captured_at':now(utc=true,fmt='%Y-%m-%dT%H:%M:%SZ'),'snapshot':observed_snapshot,'identities':observed_identities}\
     \ | combine({'context_digest':identity_context_digest} if identity_context_digest\
-    \ is defined else {}) | to_json }}\"\n    - ansible.builtin.command:\n       \
-    \ argv: [python3, '{{ playbook_dir }}/contract.py', --phase, attest, --inputs,\
-    \ '{{ phase_inputs }}', --envelope, '{{ phase_work }}/envelope.json']\n      changed_when:\
-    \ false\n    - ansible.builtin.set_fact: {phase_substage: issuer-receipt-cas}\n\
-    \    - ansible.builtin.include_tasks: publish.yaml\n    - ansible.builtin.copy:\n\
-    \        dest: '{{ phase_work }}/result.json'\n        mode: '0600'\n        content:\
-    \ \"{{ {'phase':'AttestationPublished','invocation':identity_invocation,'pending_identity_count':observed_identities\
+    \ is defined else {}) | combine({'previous_attestation_invocation':identity_previous_attestation_invocation}\
+    \ if identity_previous_attestation_invocation is defined else {}) | to_json }}\"\
+    \n    - ansible.builtin.command:\n        argv: [python3, '{{ playbook_dir }}/contract.py',\
+    \ --phase, attest, --inputs, '{{ phase_inputs }}', --envelope, '{{ phase_work\
+    \ }}/envelope.json']\n      changed_when: false\n    - ansible.builtin.set_fact:\
+    \ {phase_substage: issuer-receipt-cas}\n    - ansible.builtin.include_tasks: publish.yaml\n\
+    \    - ansible.builtin.copy:\n        dest: '{{ phase_work }}/result.json'\n \
+    \       mode: '0600'\n        content: \"{{ {'phase':'AttestationPublished','invocation':identity_invocation,'pending_identity_count':observed_identities\
     \ | rejectattr('stage','equalto','IdentityVerified') | list | length,'membership_ready':false}\
     \ | to_json }}\"\n    rescue:\n    - ansible.builtin.copy:\n        dest: '{{\
     \ phase_work }}/result.json'\n        mode: '0600'\n        content: \"{{ {'phase':'AttestationFailed','substage':phase_substage\
@@ -1072,6 +1074,7 @@ data:
     \ not 0<=(dt.datetime.now(dt.timezone.utc)-t).total_seconds()<=300:raise ValueError('stale\
     \ evidence')\ndef inputs(path,phase):\n d=read(path)\n patterns={'identity_context':r'[a-z][a-z0-9-]{0,30}','identity_source_revision':r'[a-f0-9]{40}','identity_platform_revision':r'[a-f0-9]{40}','identity_contract_sha256':r'[a-f0-9]{64}','identity_invocation':r'[a-f0-9]{64}','identity_previous_invocation':r'(?:[a-f0-9]{64})?','identity_gitlab_origin':r'https://[A-Za-z0-9.-]+(?::[0-9]+)?','identity_keycloak_origin':r'https://[A-Za-z0-9.-]+(?::[0-9]+)?(?:/auth)?','identity_keycloak_realm':r'[A-Za-z0-9_-]{1,64}','identity_kubernetes_origin':r'https://[A-Za-z0-9.-]+(?::[0-9]+)?','identity_receipt_uid':UUID,'identity_receipt_namespace':r'[a-z][a-z0-9-]{0,62}','identity_receipt_name':r'[a-z][a-z0-9-]{0,30}-identity-evidence'}\n\
     \ if isinstance(d,dict) and 'identity_context_digest' in d:patterns['identity_context_digest']=r'[a-f0-9]{64}'\n\
+    \ if isinstance(d,dict) and 'identity_previous_attestation_invocation' in d:patterns['identity_previous_attestation_invocation']=r'(?:[a-f0-9]{64})?'\n\
     \ if not isinstance(d,dict) or set(d)!=set(patterns)|{'identity_run','identity_scope','identity_retry_generation','identity_group_ids','identity_membership_recovery_verified'}:raise\
     \ ValueError('unexpected fields')\n for k,p in patterns.items():\n  if not isinstance(d[k],str)\
     \ or not re.fullmatch(p,d[k]):raise ValueError('nonliteral field')\n if type(d['identity_membership_recovery_verified'])\
@@ -1082,9 +1085,11 @@ data:
     \ or d['identity_receipt_name']!=selected['evidence_name']:raise ValueError('context\
     \ binding')\n if d.get('identity_context_digest')!=selected['digest'] and not\
     \ (d['identity_context']=='portal' and 'identity_context_digest' not in d):raise\
-    \ ValueError('context digest')\n if type(d['identity_retry_generation']) is not\
-    \ int or not 0<=d['identity_retry_generation']<=1000000:raise ValueError('retry\
-    \ generation')\n if d['identity_previous_invocation']=='' and d['identity_retry_generation']!=0:raise\
+    \ ValueError('context digest')\n if d.get('identity_previous_attestation_invocation',d['identity_previous_invocation'])\
+    \ and not d['identity_previous_invocation']:raise ValueError('attestation predecessor\
+    \ requires prior attempt')\n if type(d['identity_retry_generation']) is not int\
+    \ or not 0<=d['identity_retry_generation']<=1000000:raise ValueError('retry generation')\n\
+    \ if d['identity_previous_invocation']=='' and d['identity_retry_generation']!=0:raise\
     \ ValueError('prior attempt required')\n g=d['identity_group_ids']\n if not isinstance(g,dict)\
     \ or set(g)!=ROLES or any(not isinstance(v,str) or not re.fullmatch(UUID,v) for\
     \ v in g.values()) or len(set(g.values()))!=3:raise ValueError('group IDs')\n\
@@ -1093,6 +1098,7 @@ data:
     \ if expected!=d['identity_invocation']:raise ValueError('invocation digest')\n\
     \ return d\ndef envelope(d,path):\n e=read(path)\n binding={'schema':1,'context':d['identity_context'],'source_revision':d['identity_source_revision'],'platform_revision':d['identity_platform_revision'],'contract_sha256':d['identity_contract_sha256'],'invocation':d['identity_invocation'],'previous_invocation':d['identity_previous_invocation'],'retry_generation':d['identity_retry_generation'],'receipt_uid':d['identity_receipt_uid']}\n\
     \ if 'identity_context_digest' in d:binding['context_digest']=d['identity_context_digest']\n\
+    \ if 'identity_previous_attestation_invocation' in d:binding['previous_attestation_invocation']=d['identity_previous_attestation_invocation']\n\
     \ if not isinstance(e,dict) or set(e)!=set(binding)|{'captured_at','snapshot','identities'}\
     \ or any(e.get(k)!=v for k,v in binding.items()):raise ValueError('envelope binding')\n\
     \ age(e['captured_at']);s=e['snapshot']\n sb={'schema':1,'stage':'SnapshotVerified','context':binding['context'],'source_revision':binding['source_revision'],'contract_sha256':binding['contract_sha256'],'origin':d['identity_keycloak_origin']}\n\
@@ -1125,5 +1131,5 @@ data:
 immutable: true
 kind: ConfigMap
 metadata:
-  name: identity-source-a3cd3cb767ad59076ac0
+  name: identity-source-763db8699537d09e2565
   namespace: tenant-identity-writer

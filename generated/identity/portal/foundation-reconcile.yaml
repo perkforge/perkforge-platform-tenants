@@ -16,11 +16,11 @@ spec:
   wait: true
   commonMetadata:
     annotations:
-      platform.perkforge.io/invocation: 89fa3d6348444b25ede774bebe27287c083b5932d4ea192b4dc5826a7e6191c5
-      platform.perkforge.io/attempt: 74a1fd77a43038f577050abc6df5e601b2f6f5e87147de9e855925194120a78c
+      platform.perkforge.io/invocation: 3d08188c5f24e69af33ee7e38f05bfbdb3bd3ff3d66a1d794488bb140c030c9c
+      platform.perkforge.io/attempt: 54819c8b56bfc3e8e1e19b306cb445f9ca56f526a59f1f4aa684679359245e6d
   healthChecks:
   - apiVersion: batch/v1
     kind: Job
-    name: identity-portal-foundation-74a1fd77a43038f5
+    name: identity-portal-foundation-54819c8b56bfc3e8
     namespace: tenant-identity-writer
   suspend: false
