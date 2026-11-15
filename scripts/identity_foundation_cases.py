@@ -32,6 +32,8 @@ for phase in ('foundation','attest','memberships'):
  cases.append({'Name':phase+'-declaration','Policy':'identity-declaration-scope','Object':k,'Username':user,'Allowed':True})
  for label,mutation in [('sa',lambda s:s.update(serviceAccountName='foreign-admin')),('source',lambda s:s['sourceRef'].update(namespace='foreign')),('patch',lambda s:s.update(patches=[{'patch':'foreign'}])),('wait',lambda s:s.update(wait=False))]:
   bad=copy.deepcopy(k);mutation(bad['spec']);cases.append({'Name':phase+'-declaration-'+label,'Policy':'identity-declaration-scope','Object':bad,'Username':user,'Allowed':False})
+bad=copy.deepcopy(g['memberships-reconcile.yaml']);bad['spec']['suspend']=False
+cases.append({'Name':'membership-release-before-policy-update','Policy':'identity-declaration-scope','Object':bad,'Username':'system:serviceaccount:flux-system:identity-declaration-reconciler','Allowed':False})
 old={'apiVersion':'v1','kind':'ConfigMap','metadata':{'uid':'22222222-2222-4222-8222-222222222222','name':'portal-identity-evidence','namespace':'tenant-identity-writer','labels':{'app.kubernetes.io/managed-by':'perkforge-identity','perkforge.dev/context':'portal'},'annotations':{'perkforge.dev/desired-invocation':'old'}},'data':{'receipt.json':'old'}}
 issuer='system:serviceaccount:tenant-identity-attestor:identity-attestor';intent='system:serviceaccount:flux-system:identity-declaration-reconciler'
 new=copy.deepcopy(old);new['data']['receipt.json']='new'
@@ -45,7 +47,9 @@ cases.append({'Name':'missing-evidence-no-adoption','Policy':'identity-evidence-
 from private_receipts import plan
 H=plan(I)
 cases.append({'Name':'private-init','Policy':'identity-pods-tenant-identity-writer','Object':H['pod'],'Allowed':True})
-for field,value in [('command',['false']),('image','foreign')]:
+defaulted=copy.deepcopy(H['pod']);defaulted['spec']['containers'][0].pop('args')
+cases.append({'Name':'private-init-omitted-empty-args','Policy':'identity-pods-tenant-identity-writer','Object':defaulted,'Allowed':True})
+for field,value in [('command',['false']),('image','foreign'),('args',['foreign'])]:
  bad=copy.deepcopy(H['pod']);bad['spec']['containers'][0][field]=value;cases.append({'Name':'private-init-'+field,'Policy':'identity-pods-tenant-identity-writer','Object':bad,'Allowed':False})
 for key in ('configMap','inputs','gate'):
  cases.append({'Name':'private-init-'+key,'Policy':'identity-config-tenant-identity-writer','Object':H[key],'Username':I['operatorUser'],'Allowed':True})

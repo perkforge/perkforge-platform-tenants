@@ -17,8 +17,9 @@ def unique(p):
  return d
 def render(d):
  if d=={'schemaVersion':1,'context':'portal','enabled':False}:return {'kustomization.yaml':{'apiVersion':'kustomize.config.k8s.io/v1beta1','kind':'Kustomization','resources':[]}}
- required={'schemaVersion','context','enabled','foundationApproved','sourceName','sourcePath','enrollmentRevision','platformRevision','invocation','retryGeneration','image','sourceBundleName','sourceBundleSHA256','sourceBundle','sourceItems','workerNode','receiptClaim','writerSecret','attestorSecret','pullSecret','resources','phaseInputs'}
+ required={'schemaVersion','context','enabled','foundationApproved','membershipReleased','sourceName','sourcePath','enrollmentRevision','platformRevision','invocation','retryGeneration','image','sourceBundleName','sourceBundleSHA256','sourceBundle','sourceItems','workerNode','receiptClaim','writerSecret','attestorSecret','pullSecret','resources','phaseInputs'}
  if set(d)!=required or d['schemaVersion']!=1 or d['context']!='portal' or d['enabled'] is not True or d['foundationApproved'] is not True:raise ValueError('explicit approved Portal declaration required')
+ if type(d['membershipReleased']) is not bool:raise ValueError('explicit membership release gate')
  if d['image']!=IMAGE:raise ValueError('unverified image')
  for k in ('enrollmentRevision','platformRevision'):match(d[k],r'[0-9a-f]{40}')
  for k in ('invocation','sourceBundleSHA256'):match(d[k],r'[0-9a-f]{64}')
@@ -52,7 +53,7 @@ def render(d):
  if any(int(r['requests'][k].rstrip('Mi' if k=='memory' else 'm'))>int(r['limits'][k].rstrip('Mi' if k=='memory' else 'm')) for k in ('cpu','memory')):raise ValueError('resource order')
  if set(d['phaseInputs'])!=set(PHASES):raise ValueError('three explicit phase inputs')
  # Full declaration identity changes the Job name, including input bytes/placement/bundle.
- attempt=digest(d); out={}; refs=[]
+ attempt=digest({k:v for k,v in d.items() if k!='membershipReleased'}); out={}; refs=[]
  for i,phase in enumerate(PHASES):
   ns='tenant-identity-attestor' if phase=='attest' else 'tenant-identity-writer'
   name='identity-portal-'+phase+'-'+attempt[:16]; ks='identity-portal-'+phase
@@ -81,6 +82,7 @@ def render(d):
    out[phase+'/source.yaml']=bundle['configMaps'][1 if phase=='attest' else 0];phase_resources.insert(0,'source.yaml')
   out[phase+'/kustomization.yaml']={'apiVersion':'kustomize.config.k8s.io/v1beta1','kind':'Kustomization','resources':phase_resources}
   spec={'interval':'5m','timeout':'6m','path':d['sourcePath']+'/'+phase,'sourceRef':{'kind':'GitRepository','name':d['sourceName']},'serviceAccountName':'identity-attestor-reconciler' if phase=='attest' else 'identity-group-reconciler','prune':False,'force':False,'wait':True,'commonMetadata':{'annotations':annotations},'healthChecks':[{'apiVersion':'batch/v1','kind':'Job','name':name,'namespace':ns}]}
+  if phase=='memberships':spec['suspend']=not d['membershipReleased']
   if i:
    spec['dependsOn']=[{'name':'identity-portal-'+PHASES[i-1],'readyExpr':"dep.spec.commonMetadata.annotations['platform.perkforge.io/invocation'] == self.spec.commonMetadata.annotations['platform.perkforge.io/invocation'] && dep.spec.commonMetadata.annotations['platform.perkforge.io/attempt'] == self.spec.commonMetadata.annotations['platform.perkforge.io/attempt'] && dep.metadata.generation == dep.status.observedGeneration && dep.status.conditions.exists(e, e.type == 'Ready' && e.status == 'True')"}]
   if phase=='attest':

@@ -3,7 +3,7 @@ import base64,copy,hashlib,pathlib,subprocess,unittest
 from finite_identity import render,IMAGE,digest
 class Tests(unittest.TestCase):
  def sample(self):
-  d={'schemaVersion':1,'context':'portal','enabled':True,'foundationApproved':True,'sourceName':'cluster-config','sourcePath':'./generated/identity/portal','enrollmentRevision':'a'*40,'platformRevision':'b'*40,'invocation':'c'*64,'retryGeneration':0,'image':IMAGE,'sourceItems':[{'key':'file-'+str(i),'path':x} for i,x in enumerate(['perkforge/bin/launch','perkforge/bin/run-phase.py','perkforge/bin/refresh-identity-evidence','revisions.json','provenance.sha256'])],'sourceBundleSHA256':'d'*64,'sourceBundleName':'identity-source-'+('d'*20),'workerNode':'synthetic-worker','receiptClaim':'identity-receipts','writerSecret':'group-writer','attestorSecret':'isolated-attestor','pullSecret':'private-registry','resources':{'requests':{'cpu':'100m','memory':'256Mi'},'limits':{'cpu':'500m','memory':'512Mi'}},'phaseInputs':{'foundation':{}}}
+  d={'schemaVersion':1,'context':'portal','enabled':True,'foundationApproved':True,'membershipReleased':False,'sourceName':'cluster-config','sourcePath':'./generated/identity/portal','enrollmentRevision':'a'*40,'platformRevision':'b'*40,'invocation':'c'*64,'retryGeneration':0,'image':IMAGE,'sourceItems':[{'key':'file-'+str(i),'path':x} for i,x in enumerate(['perkforge/bin/launch','perkforge/bin/run-phase.py','perkforge/bin/refresh-identity-evidence','revisions.json','provenance.sha256'])],'sourceBundleSHA256':'d'*64,'sourceBundleName':'identity-source-'+('d'*20),'workerNode':'synthetic-worker','receiptClaim':'identity-receipts','writerSecret':'group-writer','attestorSecret':'isolated-attestor','pullSecret':'private-registry','resources':{'requests':{'cpu':'100m','memory':'256Mi'},'limits':{'cpu':'500m','memory':'512Mi'}},'phaseInputs':{'foundation':{}}}
   for phase in ('foundation','attest','memberships'):d['phaseInputs'][phase]={'identity':{'identity_context':'portal','identity_invocation':d['invocation'],'identity_retry_generation':0,'identity_source_revision':d['enrollmentRevision'],'identity_platform_revision':d['platformRevision'],'identity_scope':'gitlab-identity-'+('attest' if phase=='foundation' else phase)+'-v1','identity_run':True}}
   d['phaseInputs']['foundation']['group']={}
   for p in ('foundation','attest','memberships'):d['phaseInputs'][p]['identity']['identity_receipt_uid']='22222222-2222-4222-8222-222222222222'
@@ -26,6 +26,13 @@ class Tests(unittest.TestCase):
   d['retryGeneration']=1
   for phase in ('foundation','attest','memberships'):d['phaseInputs'][phase]['identity']['identity_retry_generation']=1
   b=render(d);self.assertNotEqual(a['foundation/job.yaml']['metadata']['name'],b['foundation/job.yaml']['metadata']['name'])
+ def test_membership_gate_preserves_attempt(self):
+  d=self.sample();held=render(d);self.assertTrue(held['memberships-reconcile.yaml']['spec']['suspend'])
+  d['membershipReleased']=True;released=render(d);self.assertFalse(released['memberships-reconcile.yaml']['spec']['suspend'])
+  for key in held:
+   if key!='memberships-reconcile.yaml':self.assertEqual(held[key],released[key])
+  for phase in ('foundation','attest'):
+   self.assertNotIn('suspend',held[phase+'-reconcile.yaml']['spec'])
  def test_credentials_separated(self):
   a=render(self.sample())
   for phase in ('foundation','attest','memberships'):

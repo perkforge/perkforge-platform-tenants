@@ -26,7 +26,8 @@ def pod_checks(p,prefix='object.spec.template.spec'):
  for k in ('hostNetwork','hostPID','hostIPC','shareProcessNamespace'):checks.append('(!has('+x+'.'+k+') || '+x+'.'+k+' == false)')
  for k in ('nodeName','initContainers','ephemeralContainers','hostAliases','dnsConfig','runtimeClassName','affinity','tolerations','topologySpreadConstraints','resourceClaims','os'):checks.append('!has('+x+'.'+k+')')
  checks.append('!has(dyn('+x+').overhead)')
- for k in ('name','image','command','args'):checks.append(c+'.'+k+' == '+cel(v[k]))
+ for k in ('name','image','command'):checks.append(c+'.'+k+' == '+cel(v[k]))
+ checks.append('(!has('+c+'.args) || '+c+'.args.size() == 0)' if v['args']==[] else c+'.args == '+cel(v['args']))
  for k in ('env','envFrom','lifecycle','livenessProbe','readinessProbe','startupProbe','ports','workingDir','volumeDevices','restartPolicy','restartPolicyRules'):checks.append('!has('+c+'.'+k+')')
  for field,value in (('terminationMessagePath','/dev/termination-log'),('terminationMessagePolicy','File')):checks.append('(!has('+c+'.'+field+') || '+c+'.'+field+' == '+cel(value)+')')
  for field in ('stdin','stdinOnce','tty'):checks.append('(!has('+c+'.'+field+') || '+c+'.'+field+' == false)')
@@ -121,6 +122,7 @@ def build(d,network,custody,initializer=None):
  for child in children:
   q=child['spec'];checks=['object.metadata.name == '+cel(child['metadata']['name'])]
   for key in ('interval','timeout','path','serviceAccountName','prune','force','wait'):checks.append('object.spec.'+key+' == '+cel(q[key]))
+  checks.append('object.spec.suspend == '+cel(q['suspend']) if 'suspend' in q else '(!has(object.spec.suspend) || object.spec.suspend == false)')
   checks += ['object.spec.commonMetadata.annotations == '+cel(q['commonMetadata']['annotations']),'!has(object.spec.commonMetadata.labels)','object.spec.healthChecks.size() == 1']
   checks += ['object.spec.healthChecks[0].'+k+' == '+cel(v) for k,v in q['healthChecks'][0].items()]
   checks += ['object.spec.sourceRef.kind == "GitRepository"','object.spec.sourceRef.name == '+cel(q['sourceRef']['name']),'!has(object.spec.sourceRef.namespace)']

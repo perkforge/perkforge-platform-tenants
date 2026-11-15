@@ -98,3 +98,22 @@ before selecting it. This prototype cannot infer those facts from a node name.
 Current phase mounts only the group-writer credential; future admin attestor
 execution requires its own separately reviewed boundary, not both tokens in this
 same container by default.
+
+### First issuer receipt acceptance gate
+
+An enabled declaration must explicitly set `membershipReleased: false` for the
+initial acceptance stage. Only the membership Kustomization is suspended;
+foundation and attestor still run through the same revision-aware dependency
+chain. After the real issuer receipt exists, verify that metadata-only SSA under
+the declaration identity preserves its nonempty bytes and exact UID. Do not seed
+a synthetic receipt into the live first-attempt object.
+
+Release is a reviewed source change to `membershipReleased: true`, paired with the
+exact declaration admission expectation update. This scheduling-only flag is
+excluded from the attempt hash: Job names, inputs, invocation, evidence binding
+and all phase commands stay unchanged, so releasing membership does not replay
+foundation or attestation. Every other declaration field remains hash-bound.
+The admission rule rejects a release before its exact policy expectation changes.
+Do not manually unsuspend the object or treat a suspended phase as onboarding
+completion. Refresh expired evidence through an explicit new attempt when needed;
+this gate does not extend the five-minute receipt freshness requirement.
