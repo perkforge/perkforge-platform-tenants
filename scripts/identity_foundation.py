@@ -25,12 +25,12 @@ def pod_checks(p,prefix='object.spec.template.spec'):
  x=prefix;c=x+'.containers[0]';v=p['containers'][0]
  checks=[x+'.containers.size() == 1',x+'.serviceAccountName == '+cel(p['serviceAccountName']),x+'.automountServiceAccountToken == false',x+'.restartPolicy == "Never"',x+'.nodeSelector == '+cel(p['nodeSelector'])]
  for k in ('hostNetwork','hostPID','hostIPC','shareProcessNamespace'):checks.append('(!has('+x+'.'+k+') || '+x+'.'+k+' == false)')
- for k in ('nodeName','ephemeralContainers','hostAliases','dnsConfig','runtimeClassName','affinity','tolerations','topologySpreadConstraints','resourceClaims','os'):checks.append('!has('+x+'.'+k+')')
+ for k in ('nodeName','initContainers','ephemeralContainers','hostAliases','dnsConfig','runtimeClassName','affinity','tolerations','topologySpreadConstraints','resourceClaims','os'):
+  if k!='initContainers' or k not in p:checks.append('!has('+x+'.'+k+')')
  if 'initContainers' in p:
   if len(p['initContainers'])!=1:raise ValueError('single fixed init container')
   q=copy.deepcopy(p);q['containers']=q.pop('initContainers')
   checks += [z.replace(x+'.containers',x+'.initContainers') for z in pod_checks(q,prefix) if x+'.containers' in z]
- else:checks.append('!has('+x+'.initContainers)')
  checks.append('!has(dyn('+x+').overhead)')
  for k in ('name','image','command'):checks.append(c+'.'+k+' == '+cel(v[k]))
  checks.append('(!has('+c+'.args) || '+c+'.args.size() == 0)' if v['args']==[] else c+'.args == '+cel(v['args']))
