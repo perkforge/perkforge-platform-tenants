@@ -11,6 +11,11 @@ from test_private_receipts import Private
 I=Private().fixture()[0];I.update(claim=D['receiptClaim'],node=D['workerNode'],pullSecret=D['pullSecret'])
 if os.environ.get('IDENTITY_TARGET_PROFILE_FIXTURE'):
  D['targetProfile']=json.load(open(os.environ['IDENTITY_TARGET_PROFILE_FIXTURE']));I['storageProfile']=D['targetProfile']['storage']
+if os.environ.get('IDENTITY_CONTEXT_FIXTURE'):
+ from identity_context_fixture import alternate
+ D,I,custody=alternate(D,I,custody,os.environ['IDENTITY_CONTEXT_FIXTURE'])
+from identity_context_binding import selection
+B=selection(D)
 policies=[o for o in build(D,network,custody,I) if o['kind']=='ValidatingAdmissionPolicy'];g=render(D);cases=[]
 for phase in ('foundation','attest','memberships'):
  j=g[phase+'/job.yaml'];policy='identity-jobs-'+j['metadata']['namespace'];cases.append({'Name':phase,'Policy':policy,'Object':j,'Allowed':True})
@@ -30,32 +35,32 @@ for phase in ('foundation','attest'):
  for label,mutate in [('bytes',lambda x:x['data'].update({next(iter(x['data'])):'tampered'})),('extra-key',lambda x:x['data'].update(extra='foreign')),('missing-key',lambda x:x['data'].pop(next(iter(x['data'])))),('foreign-name',lambda x:x['metadata'].update(name='foreign'))]:
   bad=copy.deepcopy(c);mutate(bad);cases.append({'Name':phase+'-'+label,'Policy':pn,'Object':bad,'Allowed':False})
 for phase in ('foundation','attest','memberships'):
- k=g[phase+'-reconcile.yaml'];user='system:serviceaccount:flux-system:identity-declaration-reconciler'
- cases.append({'Name':phase+'-declaration','Policy':'identity-declaration-scope','Object':k,'Username':user,'Allowed':True})
+ k=g[phase+'-reconcile.yaml'];user='system:serviceaccount:flux-system:'+B['declaration_reconciler']
+ cases.append({'Name':phase+'-declaration','Policy':B['declaration_policy'],'Object':k,'Username':user,'Allowed':True})
  for label,mutation in [('sa',lambda s:s.update(serviceAccountName='foreign-admin')),('source',lambda s:s['sourceRef'].update(namespace='foreign')),('patch',lambda s:s.update(patches=[{'patch':'foreign'}])),('wait',lambda s:s.update(wait=False))]:
-  bad=copy.deepcopy(k);mutation(bad['spec']);cases.append({'Name':phase+'-declaration-'+label,'Policy':'identity-declaration-scope','Object':bad,'Username':user,'Allowed':False})
+  bad=copy.deepcopy(k);mutation(bad['spec']);cases.append({'Name':phase+'-declaration-'+label,'Policy':B['declaration_policy'],'Object':bad,'Username':user,'Allowed':False})
 bad=copy.deepcopy(g['memberships-reconcile.yaml']);bad['spec']['suspend']=False
-cases.append({'Name':'membership-release-before-policy-update','Policy':'identity-declaration-scope','Object':bad,'Username':'system:serviceaccount:flux-system:identity-declaration-reconciler','Allowed':False})
-old={'apiVersion':'v1','kind':'ConfigMap','metadata':{'uid':'22222222-2222-4222-8222-222222222222','name':'portal-identity-evidence','namespace':'tenant-identity-writer','labels':{'app.kubernetes.io/managed-by':'perkforge-identity','perkforge.dev/context':'portal'},'annotations':{'perkforge.dev/desired-invocation':'old'}},'data':{'receipt.json':'old'}}
-issuer='system:serviceaccount:tenant-identity-attestor:identity-attestor';intent='system:serviceaccount:flux-system:identity-declaration-reconciler'
+cases.append({'Name':'membership-release-before-policy-update','Policy':B['declaration_policy'],'Object':bad,'Username':'system:serviceaccount:flux-system:'+B['declaration_reconciler'],'Allowed':False})
+old={'apiVersion':'v1','kind':'ConfigMap','metadata':{'uid':'22222222-2222-4222-8222-222222222222','name':B['evidence_name'],'namespace':B['writer_namespace'],'labels':{'app.kubernetes.io/managed-by':'perkforge-identity','perkforge.dev/context':'portal'},'annotations':{'perkforge.dev/desired-invocation':'old'}},'data':{'receipt.json':'old'}}
+issuer='system:serviceaccount:'+B['attestor_namespace']+':identity-attestor';intent='system:serviceaccount:flux-system:'+B['declaration_reconciler']
 new=copy.deepcopy(old);new['data']['receipt.json']='new'
-cases.append({'Name':'issuer-data-only','Policy':'identity-evidence-fields','Object':new,'OldObject':old,'Operation':'UPDATE','Username':issuer,'Allowed':True})
+cases.append({'Name':'issuer-data-only','Policy':B['evidence_policy'],'Object':new,'OldObject':old,'Operation':'UPDATE','Username':issuer,'Allowed':True})
 for label,mutation in [('uid',lambda o:o['metadata'].update(uid='33333333-3333-4333-8333-333333333333')),('intent',lambda o:o['metadata']['annotations'].update({'perkforge.dev/desired-invocation':'foreign'})),('owner',lambda o:o['metadata'].update(finalizers=['foreign'])),('extra',lambda o:o['data'].update(extra='foreign'))]:
- bad=copy.deepcopy(new);mutation(bad);cases.append({'Name':'issuer-'+label,'Policy':'identity-evidence-fields','Object':bad,'OldObject':old,'Operation':'UPDATE','Username':issuer,'Allowed':False})
+ bad=copy.deepcopy(new);mutation(bad);cases.append({'Name':'issuer-'+label,'Policy':B['evidence_policy'],'Object':bad,'OldObject':old,'Operation':'UPDATE','Username':issuer,'Allowed':False})
 new=copy.deepcopy(old);new['metadata']['annotations']={'perkforge.dev/desired-invocation':D['invocation']}
-cases.append({'Name':'intent-preserves-issuer','Policy':'identity-evidence-fields','Object':new,'OldObject':old,'Operation':'UPDATE','Username':intent,'Allowed':True})
-bad=copy.deepcopy(new);bad['data']={};cases.append({'Name':'intent-cannot-erase','Policy':'identity-evidence-fields','Object':bad,'OldObject':old,'Operation':'UPDATE','Username':intent,'Allowed':False})
-cases.append({'Name':'missing-evidence-no-adoption','Policy':'identity-evidence-fields','Object':new,'Operation':'CREATE','Username':intent,'Allowed':False})
+cases.append({'Name':'intent-preserves-issuer','Policy':B['evidence_policy'],'Object':new,'OldObject':old,'Operation':'UPDATE','Username':intent,'Allowed':True})
+bad=copy.deepcopy(new);bad['data']={};cases.append({'Name':'intent-cannot-erase','Policy':B['evidence_policy'],'Object':bad,'OldObject':old,'Operation':'UPDATE','Username':intent,'Allowed':False})
+cases.append({'Name':'missing-evidence-no-adoption','Policy':B['evidence_policy'],'Object':new,'Operation':'CREATE','Username':intent,'Allowed':False})
 from private_receipts import plan
 H=plan(I)
-cases.append({'Name':'private-init','Policy':'identity-pods-tenant-identity-writer','Object':H['pod'],'Allowed':True})
+cases.append({'Name':'private-init','Policy':'identity-pods-'+B['writer_namespace'],'Object':H['pod'],'Allowed':True})
 defaulted=copy.deepcopy(H['pod']);defaulted['spec']['containers'][0].pop('args')
-cases.append({'Name':'private-init-omitted-empty-args','Policy':'identity-pods-tenant-identity-writer','Object':defaulted,'Allowed':True})
+cases.append({'Name':'private-init-omitted-empty-args','Policy':'identity-pods-'+B['writer_namespace'],'Object':defaulted,'Allowed':True})
 for field,value in [('command',['false']),('image','foreign'),('args',['foreign'])]:
- bad=copy.deepcopy(H['pod']);bad['spec']['containers'][0][field]=value;cases.append({'Name':'private-init-'+field,'Policy':'identity-pods-tenant-identity-writer','Object':bad,'Allowed':False})
+ bad=copy.deepcopy(H['pod']);bad['spec']['containers'][0][field]=value;cases.append({'Name':'private-init-'+field,'Policy':'identity-pods-'+B['writer_namespace'],'Object':bad,'Allowed':False})
 for key in ('configMap','inputs','gate'):
- cases.append({'Name':'private-init-'+key,'Policy':'identity-config-tenant-identity-writer','Object':H[key],'Username':I['operatorUser'],'Allowed':True})
-cases.append({'Name':'private-gate-foreign','Policy':'identity-config-tenant-identity-writer','Object':H['gate'],'Username':'foreign','Allowed':False})
+ cases.append({'Name':'private-init-'+key,'Policy':'identity-config-'+B['writer_namespace'],'Object':H[key],'Username':I['operatorUser'],'Allowed':True})
+cases.append({'Name':'private-gate-foreign','Policy':'identity-config-'+B['writer_namespace'],'Object':H['gate'],'Username':'foreign','Allowed':False})
 schemas={}
 crd_path=os.environ.get('IDENTITY_FLUX_CRD') or (os.path.join(os.environ['NEXTCLOUD_CRD_DIR'],'kustomization.yaml') if os.environ.get('NEXTCLOUD_CRD_DIR') else None)
 if crd_path:

@@ -1,7 +1,7 @@
 # Portal identity target profile v1
 
-This is a build-once, explicitly configured **Portal pilot** profile, not arbitrary
-tenant/provider support. The same pinned executable bundle and maintained image run
+This is a build-once, explicitly configured supported environment profile, not
+arbitrary provider support. Current live rollout remains the Portal pilot. The same pinned executable bundle and maintained image run
 in both source fixtures. The alternate fixture is synthetic, not a deployed cluster.
 No source change activates a namespace, credential, controller grant or Job.
 
@@ -57,10 +57,10 @@ The initializer additionally requires `storageProfile` equal to the declaration'
   private0700 receipt directory, no writer API token, isolated reader/writer,
   exact source bytes, bounded TTL/deadline and no retries/polling controller.
   Changing these requires compatibility/security review, not a free-form knob.
-- Fixed first-slice product contract: context `portal`, isolated namespace/SA/evidence
-  conventions, canonical Portal provider bindings and max-three-subject pilot.
-  Other contexts are rejected. Environment portability does **not** generalize the
-  Keycloak FGAP/custody/issuer contract or authorize another tenant.
+- Context naming and provider bindings consume the single reviewed shared ABI; see
+  CONTEXT-CONTRACT.md. The current live rollout is still Portal only and each attempt
+  is limited to three subjects. Environment portability does not authorize another
+  tenant or imply that its provider/credential setup has been performed.
 
 ## Compatibility, retry and cleanup
 

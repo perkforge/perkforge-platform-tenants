@@ -1,11 +1,13 @@
 import copy,json,subprocess,unittest,tempfile,pathlib,yaml
 from test_identity_foundation import F
 from identity_foundation import build as foundation
+from identity_context_binding import selection as context_selection
+B=context_selection(F['D'])
 from identity_gitops_ownership import build,sha
 
 def sample():
  objects=foundation(F['D'],F['network'],F['custody'])
- selection={'scope':'identity-foundation-gitops-v1','foundationSHA256':sha(objects),'runtimeNamespaces':['tenant-identity-writer','tenant-identity-attestor'],'controlNamespace':'flux-system','platformServiceAccount':'platform-reconciler','sourceName':'platform-config','sourceNamespace':'flux-system','sourcePath':'./generated/identity-foundation','namePrefix':'identity-foundation'}
+ selection={'scope':'identity-foundation-gitops-v1','foundationSHA256':sha(objects),'runtimeNamespaces':[B['writer_namespace'],B['attestor_namespace']],'controlNamespace':'flux-system','platformServiceAccount':'platform-reconciler','sourceName':'platform-config','sourceNamespace':'flux-system','sourcePath':'./generated/identity-foundation','namePrefix':'identity-foundation'}
  return objects,selection
 class Ownership(unittest.TestCase):
  def test_default_inert(self):
@@ -16,7 +18,7 @@ class Ownership(unittest.TestCase):
   rules=[r for o in p['bootstrapGrants'] for r in o.get('rules',[])]
   self.assertTrue(all('create' not in r['verbs'] and 'delete' not in r['verbs'] and 'secrets' not in r['resources'] for r in rules))
   es=[r for r in rules if 'escalate' in r['verbs']];self.assertEqual(sum(len(r['resourceNames']) for r in es),7)
-  self.assertTrue(all('identity-declaration-reconciler' not in r['resourceNames'] for r in es))
+  self.assertTrue(all(B['declaration_reconciler'] not in r['resourceNames'] for r in es))
   self.assertTrue(all(not any(x.startswith('identity-foundation-owned-') for x in r['resourceNames']) for r in rules))
   kinds=[o['kind'] for files in p['stages'].values() for o in files.values()]
   for kind in ['Secret','PersistentVolumeClaim','Namespace','Pod','Job']:self.assertNotIn(kind,kinds)
@@ -44,9 +46,11 @@ class Ownership(unittest.TestCase):
   c['foundationSHA256']=sha(objects)
   with self.assertRaisesRegex(ValueError,'disjoint'):build(objects,c)
  def test_independent_context_namespace_selection(self):
-  objects,c=sample();replacement={'tenant-identity-writer':'sample-identity-writer','tenant-identity-attestor':'sample-identity-attestor'}
+  objects,c=sample();replacement={B['writer_namespace']:'sample-identity-writer',B['attestor_namespace']:'sample-identity-attestor'}
   # Rendered object handoff, not a second tenant-name implementation.
-  objects=json.loads(json.dumps(objects).replace('tenant-identity-writer','sample-identity-writer').replace('tenant-identity-attestor','sample-identity-attestor'))
+  encoded=json.dumps(objects)
+  for old,new in replacement.items():encoded=encoded.replace(old,new)
+  objects=json.loads(encoded)
   c['runtimeNamespaces']=list(replacement.values());c['namePrefix']='sample-identity';c['foundationSHA256']=sha(objects);p=build(objects,c)
   self.assertEqual({o['metadata']['namespace'] for o in p['bootstrapGrants'] if o['kind']=='Role'},set(c['runtimeNamespaces']+['flux-system']))
   self.assertTrue(all(o['metadata']['name'].startswith('sample-identity-') for o in p['bootstrapGuards']+p['bootstrapGrants']))
