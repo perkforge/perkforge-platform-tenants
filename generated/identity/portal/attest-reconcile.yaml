@@ -23,6 +23,7 @@ spec:
     kind: Job
     name: identity-portal-attest-b9c6ab787d54ba27
     namespace: tenant-identity-attestor
+  suspend: true
   dependsOn:
   - name: identity-portal-foundation
     readyExpr: dep.spec.commonMetadata.annotations['platform.perkforge.io/invocation']
