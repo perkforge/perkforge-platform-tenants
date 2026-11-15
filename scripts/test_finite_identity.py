@@ -33,6 +33,8 @@ class Tests(unittest.TestCase):
    secrets=[v['secret']['secretName'] for v in pod['volumes'] if 'secret' in v]
    self.assertEqual(secrets,['isolated-attestor' if phase=='attest' else 'group-writer'])
    self.assertEqual(any(v['name']=='api' for v in pod['volumes']),phase=='attest')
+   self.assertEqual(pod['securityContext']['fsGroupChangePolicy'],'OnRootMismatch')
+   if phase!='attest':self.assertEqual(next(m for m in pod['containers'][0]['volumeMounts'] if m['name']=='receipts')['subPath'],'private')
  def test_changed_source_refuses_same_digest(self):
   d=self.sample();d["sourceBundle"]["configMaps"][0]["data"]["file-0"]="different"
   with self.assertRaises(ValueError):render(d)

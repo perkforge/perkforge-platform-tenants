@@ -32,7 +32,7 @@ def pod_checks(p,prefix='object.spec.template.spec'):
  checks += ['(!has('+x+'.schedulerName) || '+x+'.schedulerName == \"default-scheduler\")','(!has('+x+'.priorityClassName) || '+x+'.priorityClassName == \"\")','(!has('+x+'.priority) || '+x+'.priority == 0)']
  for k in ('runAsUser','runAsGroup','runAsNonRoot','seccompProfile','seLinuxOptions','appArmorProfile','procMount'):checks.append('!has('+c+'.securityContext.'+k+')')
  for k in ('seLinuxOptions','supplementalGroups','sysctls','appArmorProfile'):checks.append('!has('+x+'.securityContext.'+k+')')
- checks += [c+'.securityContext.allowPrivilegeEscalation == false',c+'.securityContext.readOnlyRootFilesystem == true',c+'.securityContext.capabilities.drop == ["ALL"]','(!has('+c+'.securityContext.capabilities.add) || '+c+'.securityContext.capabilities.add.size() == 0)','(!has('+c+'.securityContext.privileged) || '+c+'.securityContext.privileged == false)',x+'.securityContext.runAsNonRoot == true',x+'.securityContext.runAsUser == 1001',x+'.securityContext.runAsGroup == 1001',x+'.securityContext.fsGroup == 1001',x+'.securityContext.seccompProfile.type == "RuntimeDefault"',c+'.resources.requests == '+cel(v['resources']['requests']),c+'.resources.limits == '+cel(v['resources']['limits'])]
+ checks += [c+'.securityContext.allowPrivilegeEscalation == false',c+'.securityContext.readOnlyRootFilesystem == true',c+'.securityContext.capabilities.drop == ["ALL"]','(!has('+c+'.securityContext.capabilities.add) || '+c+'.securityContext.capabilities.add.size() == 0)','(!has('+c+'.securityContext.privileged) || '+c+'.securityContext.privileged == false)',x+'.securityContext.runAsNonRoot == true',x+'.securityContext.runAsUser == 1001',x+'.securityContext.runAsGroup == 1001',x+'.securityContext.fsGroup == 1001',x+'.securityContext.fsGroupChangePolicy == "OnRootMismatch"',x+'.securityContext.seccompProfile.type == "RuntimeDefault"',c+'.resources.requests == '+cel(v['resources']['requests']),c+'.resources.limits == '+cel(v['resources']['limits'])]
  checks += [x+'.imagePullSecrets.size() == 1',x+'.imagePullSecrets[0].name == '+cel(p['imagePullSecrets'][0]['name']),x+'.volumes.size() == '+str(len(p['volumes'])),c+'.volumeMounts.size() == '+str(len(v['volumeMounts']))]
  # Compare explicit source/mount leaves, not permissive name-only allowlists.
  def leaves(value,path):
@@ -46,10 +46,11 @@ def pod_checks(p,prefix='object.spec.template.spec'):
  for i,volume in enumerate(p['volumes']):checks+=leaves(volume,x+'.volumes['+str(i)+']')
  for i,mount in enumerate(v['volumeMounts']):
   q=c+'.volumeMounts['+str(i)+']';checks+=leaves(mount,q)
-  for k in ('subPath','subPathExpr','mountPropagation'):checks+=['!has('+q+'.'+k+')']
+  for k in ('subPath','subPathExpr','mountPropagation'):
+   if k not in mount:checks+=['!has('+q+'.'+k+')']
  return checks
 
-def build(d,network,custody):
+def build(d,network,custody,initializer=None):
  generated=render(d)
  if not d.get('enabled'):return []
  if set(network)!={'ingressHosts','apiHosts','apiCA','traefikBackend'} or network['traefikBackend'] is not True:raise ValueError('explicit target endpoints required')
@@ -65,6 +66,11 @@ def build(d,network,custody):
  for k,fields in expected.items():
   if set(custody[k])!={'record','properties'} or set(custody[k]['properties'])!=fields or not re.fullmatch(r'identity/[a-z0-9/-]+',custody[k]['record']):raise ValueError('exact scoped record')
   if any(not re.fullmatch(r'[a-z][a-z0-9_-]{0,40}',v) for v in custody[k]['properties'].values()):raise ValueError('property')
+ init=None
+ if initializer is not None:
+  from private_receipts import plan
+  if (initializer['claim'],initializer['node'],initializer['pullSecret'])!=(d['receiptClaim'],d['workerNode'],d['pullSecret']):raise ValueError('initializer declaration mismatch')
+  init=plan(initializer)
  out=[]
  for ns,worker,reconciler in ((WRITER,'identity-group-worker','identity-group-reconciler'),(ATTESTOR,'identity-attestor','identity-attestor-reconciler')):
   n=obj('v1','Namespace',ns);n['metadata']['labels'].update({'pod-security.kubernetes.io/enforce':'restricted','pod-security.kubernetes.io/enforce-version':'latest'});out += [n,sa(worker,ns),sa(reconciler,'flux-system')]
@@ -79,12 +85,17 @@ def build(d,network,custody):
    checks=[x for x in checks if x!='!has(object.spec.tolerations)']
    checks += ["(!has(object.spec.tolerations) || (object.spec.tolerations.size() <= 2 && object.spec.tolerations.all(t, t.key in ['node.kubernetes.io/not-ready','node.kubernetes.io/unreachable'] && t.operator == 'Exists' && t.effect == 'NoExecute' && t.tolerationSeconds == 300)))",'object.metadata.ownerReferences.size() == 1','object.metadata.ownerReferences[0].apiVersion == "batch/v1"','object.metadata.ownerReferences[0].kind == "Job"','object.metadata.ownerReferences[0].controller == true','object.metadata.ownerReferences[0].name == '+cel(j['metadata']['name']),'object.metadata.generateName == '+cel(j['metadata']['name']+'-'),'object.metadata.annotations == '+cel(j['spec']['template']['metadata']['annotations'])]
    pod_clauses.append('('+' && '.join(checks)+')')
+  if init and ns==WRITER:
+   h=init['pod'];checks=pod_checks(h['spec'],'object.spec');checks=[x for x in checks if x!='!has(object.spec.tolerations)'];checks += ['object.metadata.name == '+cel(h['metadata']['name']),'object.metadata.annotations == '+cel(h['metadata']['annotations']),'object.metadata.labels == '+cel(h['metadata']['labels']),'!has(object.metadata.ownerReferences)','object.spec.activeDeadlineSeconds == 300','(!has(object.spec.tolerations) || (object.spec.tolerations.size() <= 2 && object.spec.tolerations.all(t, t.key in ["node.kubernetes.io/not-ready","node.kubernetes.io/unreachable"] && t.operator == "Exists" && t.effect == "NoExecute" && t.tolerationSeconds == 300)))'];pod_clauses.append('('+' && '.join(checks)+')')
   out+=policy('identity-pods-'+ns,'','v1','pods',ns,[' || '.join(pod_clauses)],operations=('CREATE',))
   clauses=['(object.metadata.name == \"kube-root-ca.crt\" && object.data == '+cel({'ca.crt':network['apiCA']})+' && !has(object.binaryData))','(object.metadata.name == \"identity-openbao-ca\" && object.immutable == true && object.data == '+cel({'ca.crt':custody['publicCA']})+' && !has(object.binaryData))']
   for cm in cms:
    checks=['object.metadata.name == '+cel(cm['metadata']['name']),'object.immutable == true']
    checks+=['object.data == '+cel(cm['data']),'!has(object.binaryData)']
    clauses.append('('+' && '.join(checks)+')')
+  if init and ns==WRITER:
+   for c in (init['configMap'],init['inputs']):clauses.append('(object.metadata.name == '+cel(c['metadata']['name'])+' && object.immutable == true && object.data == '+cel(c['data'])+' && !has(object.binaryData))')
+   gate=init['gate'];clauses.append('(object.metadata.name == '+cel(gate['metadata']['name'])+' && request.userInfo.username == '+cel(initializer['operatorUser'])+' && !has(object.binaryData) && object.data.size() <= 1 && object.data.all(k, k == "approval.json" && object.data[k].size() <= 4096))')
   # Evidence gets its own actor/field policy; credential placeholders are Secrets.
   cmexpr=' || '.join(clauses)
   if ns==WRITER:cmexpr='object.metadata.name == "portal-identity-evidence" || '+cmexpr
@@ -93,7 +104,7 @@ def build(d,network,custody):
   dns={'to':[{'namespaceSelector':{'matchLabels':{'kubernetes.io/metadata.name':'kube-system'}},'podSelector':{'matchLabels':{'k8s-app':'kube-dns'}}}],'ports':[{'protocol':'UDP','port':53},{'protocol':'TCP','port':53}]}
   egress=[dns,{'to':[{'ipBlock':{'cidr':ip}} for ip in network['ingressHosts']],'ports':[{'protocol':'TCP','port':443}]},{'to':[{'namespaceSelector':{'matchLabels':{'kubernetes.io/metadata.name':'kube-system'}},'podSelector':{'matchLabels':{'app.kubernetes.io/name':'rke2-traefik','app.kubernetes.io/instance':'rke2-traefik-kube-system'}}}],'ports':[{'protocol':'TCP','port':8443}]}]
   if ns==ATTESTOR:egress += [{'to':[{'ipBlock':{'cidr':ip}} for ip in network['apiHosts']],'ports':[{'protocol':'TCP','port':443}]}]
-  out.append(obj('networking.k8s.io/v1','NetworkPolicy','identity-worker-egress',ns,spec={'podSelector':{},'policyTypes':['Egress'],'egress':egress}))
+  out.append(obj('networking.k8s.io/v1','NetworkPolicy','identity-worker-egress',ns,spec={'podSelector':{'matchLabels':{'platform.perkforge.io/identity-phase':'true'}},'policyTypes':['Egress'],'egress':egress}))
  out.append(sa('identity-declaration-reconciler','flux-system'))
  children=[generated[p+'-reconcile.yaml'] for p in PHASES]
  out += role('identity-declaration-reconciler','flux-system',[rule('kustomize.toolkit.fluxcd.io',['kustomizations'],['create']),rule('kustomize.toolkit.fluxcd.io',['kustomizations'],['get','patch','update'],[c['metadata']['name'] for c in children])],'identity-declaration-reconciler','flux-system')
@@ -133,9 +144,9 @@ def build(d,network,custody):
   unique[key]=o
  return list(unique.values())
 if __name__=='__main__':
- p=argparse.ArgumentParser();p.add_argument('--declaration',type=pathlib.Path,required=True);p.add_argument('--network',type=pathlib.Path);p.add_argument('--custody',type=pathlib.Path);p.add_argument('--output',type=pathlib.Path);p.add_argument('--render',action='store_true');a=p.parse_args()
+ p=argparse.ArgumentParser();p.add_argument('--declaration',type=pathlib.Path,required=True);p.add_argument('--network',type=pathlib.Path);p.add_argument('--custody',type=pathlib.Path);p.add_argument('--initializer',type=pathlib.Path);p.add_argument('--output',type=pathlib.Path);p.add_argument('--render',action='store_true');a=p.parse_args()
  if not a.render:print('INERT: source planning only.');raise SystemExit(0)
- d=json.loads(a.declaration.read_text());network=json.loads(a.network.read_text()) if a.network else {};custody=json.loads(a.custody.read_text()) if a.custody else {};objects=build(d,network,custody)
+ d=json.loads(a.declaration.read_text());network=json.loads(a.network.read_text()) if a.network else {};custody=json.loads(a.custody.read_text()) if a.custody else {};objects=build(d,network,custody,json.loads(a.initializer.read_text()) if a.initializer else None)
  if not a.output:raise SystemExit('Explicit offline output required.')
  a.output.mkdir(parents=True,exist_ok=False)
  for i,o in enumerate(objects):(a.output/(str(i).zfill(3)+'-'+o['kind'].lower()+'.yaml')).write_text(yaml.safe_dump(o,sort_keys=False))

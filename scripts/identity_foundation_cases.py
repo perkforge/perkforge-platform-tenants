@@ -7,7 +7,9 @@ if os.environ.get('IDENTITY_BUNDLE_FIXTURE'):
  b=json.load(open(os.environ['IDENTITY_BUNDLE_FIXTURE']));D.update(sourceBundle=b,sourceItems=b['items'],sourceBundleSHA256=b['sha256'],sourceBundleName='identity-source-'+b['sha256'][:20])
 network={'ingressHosts':['192.0.2.1/32'],'apiHosts':['192.0.2.2/32'],'apiCA':'-----BEGIN CERTIFICATE-----\nSYNTHETIC-API\n-----END CERTIFICATE-----','traefikBackend':True}
 custody={'server':'https://bao.example.test','publicCA':'-----BEGIN CERTIFICATE-----\nSYNTHETIC\n-----END CERTIFICATE-----','writer':{'record':'identity/gitlab/tenants-writer-v1','properties':{'group-writer':'token'}},'reader':{'record':'identity/gitlab/tenant-reader-v1','properties':{'gitlab-reader':'token'}},'keycloak':{'record':'identity/keycloak/portal-membership-reader-v1','properties':{'kc-client-id':'client_id','kc-client-secret':'client_secret'}}}
-policies=[o for o in build(D,network,custody) if o['kind']=='ValidatingAdmissionPolicy'];g=render(D);cases=[]
+from test_private_receipts import Private
+I=Private().fixture()[0];I.update(claim=D['receiptClaim'],node=D['workerNode'],pullSecret=D['pullSecret'])
+policies=[o for o in build(D,network,custody,I) if o['kind']=='ValidatingAdmissionPolicy'];g=render(D);cases=[]
 for phase in ('foundation','attest','memberships'):
  j=g[phase+'/job.yaml'];policy='identity-jobs-'+j['metadata']['namespace'];cases.append({'Name':phase,'Policy':policy,'Object':j,'Allowed':True})
  for name,mutate in [('image',lambda p:p['containers'][0].update(image='foreign')),('sidecar',lambda p:p['containers'].append(copy.deepcopy(p['containers'][0]))),('token',lambda p:p.update(automountServiceAccountToken=True)),('command',lambda p:p['containers'][0].update(command=['bash','-c','false'])),('hostpath',lambda p:p['volumes'].append({'name':'host','hostPath':{'path':'/'}})),('envfrom',lambda p:p['containers'][0].update(envFrom=[{'secretRef':{'name':'foreign'}}])),('termination-secret',lambda p:p['containers'][0].update(terminationMessagePath='/credentials/group-writer')),('priority',lambda p:p.update(priorityClassName='system-node-critical')),('container-root',lambda p:p['containers'][0]['securityContext'].update(runAsUser=0))]:
@@ -34,6 +36,14 @@ new=copy.deepcopy(old);new['metadata']['annotations']={'perkforge.dev/desired-in
 cases.append({'Name':'intent-preserves-issuer','Policy':'identity-evidence-fields','Object':new,'OldObject':old,'Operation':'UPDATE','Username':intent,'Allowed':True})
 bad=copy.deepcopy(new);bad['data']={};cases.append({'Name':'intent-cannot-erase','Policy':'identity-evidence-fields','Object':bad,'OldObject':old,'Operation':'UPDATE','Username':intent,'Allowed':False})
 cases.append({'Name':'missing-evidence-no-adoption','Policy':'identity-evidence-fields','Object':new,'Operation':'CREATE','Username':intent,'Allowed':False})
+from private_receipts import plan
+H=plan(I)
+cases.append({'Name':'private-init','Policy':'identity-pods-tenant-identity-writer','Object':H['pod'],'Allowed':True})
+for field,value in [('command',['false']),('image','foreign')]:
+ bad=copy.deepcopy(H['pod']);bad['spec']['containers'][0][field]=value;cases.append({'Name':'private-init-'+field,'Policy':'identity-pods-tenant-identity-writer','Object':bad,'Allowed':False})
+for key in ('configMap','inputs','gate'):
+ cases.append({'Name':'private-init-'+key,'Policy':'identity-config-tenant-identity-writer','Object':H[key],'Username':I['operatorUser'],'Allowed':True})
+cases.append({'Name':'private-gate-foreign','Policy':'identity-config-tenant-identity-writer','Object':H['gate'],'Username':'foreign','Allowed':False})
 schemas={}
 crd_path=os.environ.get('IDENTITY_FLUX_CRD') or (os.path.join(os.environ['NEXTCLOUD_CRD_DIR'],'kustomization.yaml') if os.environ.get('NEXTCLOUD_CRD_DIR') else None)
 if crd_path:
