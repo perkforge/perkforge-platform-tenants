@@ -9,6 +9,8 @@ network={'ingressHosts':['192.0.2.1/32'],'apiHosts':['192.0.2.2/32'],'apiBackend
 custody={'server':'https://bao.example.test','publicCA':'-----BEGIN CERTIFICATE-----\nSYNTHETIC\n-----END CERTIFICATE-----','writer':{'record':'identity/gitlab/tenants-writer-v1','properties':{'group-writer':'token'}},'reader':{'record':'identity/gitlab/tenant-reader-v1','properties':{'gitlab-reader':'token'}},'keycloak':{'record':'identity/keycloak/portal-membership-reader-v1','properties':{'kc-client-id':'client_id','kc-client-secret':'client_secret'}}}
 from test_private_receipts import Private
 I=Private().fixture()[0];I.update(claim=D['receiptClaim'],node=D['workerNode'],pullSecret=D['pullSecret'])
+if os.environ.get('IDENTITY_TARGET_PROFILE_FIXTURE'):
+ D['targetProfile']=json.load(open(os.environ['IDENTITY_TARGET_PROFILE_FIXTURE']));I['storageProfile']=D['targetProfile']['storage']
 policies=[o for o in build(D,network,custody,I) if o['kind']=='ValidatingAdmissionPolicy'];g=render(D);cases=[]
 for phase in ('foundation','attest','memberships'):
  j=g[phase+'/job.yaml'];policy='identity-jobs-'+j['metadata']['namespace'];cases.append({'Name':phase,'Policy':policy,'Object':j,'Allowed':True})

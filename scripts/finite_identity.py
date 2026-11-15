@@ -2,6 +2,7 @@
 """Deterministic declared identity -> native finite Flux jobs. No API/credential access."""
 import argparse,base64,hashlib,json,pathlib,re,sys
 import yaml
+from identity_target_profile import validate as target_profile,attempt_input
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 IMAGE='registry1.dso.mil/ironbank/opensource/ansible/ansible@sha256:3308322cc09f20a813c00e9087c166a3d97dbb7789c059f1020f3c0b092fdf02'
 PHASES=('foundation','attest','memberships')
@@ -17,9 +18,10 @@ def unique(p):
  return d
 def render(d):
  if d=={'schemaVersion':1,'context':'portal','enabled':False}:return {'kustomization.yaml':{'apiVersion':'kustomize.config.k8s.io/v1beta1','kind':'Kustomization','resources':[]}}
- required={'schemaVersion','context','enabled','foundationApproved','membershipReleased','sourceName','sourcePath','enrollmentRevision','platformRevision','invocation','retryGeneration','image','sourceBundleName','sourceBundleSHA256','sourceBundle','sourceItems','workerNode','receiptClaim','writerSecret','attestorSecret','pullSecret','resources','phaseInputs'}
+ required={'targetProfile','schemaVersion','context','enabled','foundationApproved','membershipReleased','sourceName','sourcePath','enrollmentRevision','platformRevision','invocation','retryGeneration','image','sourceBundleName','sourceBundleSHA256','sourceBundle','sourceItems','workerNode','receiptClaim','writerSecret','attestorSecret','pullSecret','resources','phaseInputs'}
  if set(d)!=required or d['schemaVersion']!=1 or d['context']!='portal' or d['enabled'] is not True or d['foundationApproved'] is not True:raise ValueError('explicit approved Portal declaration required')
  if type(d['membershipReleased']) is not bool:raise ValueError('explicit membership release gate')
+ profile=target_profile(d['targetProfile'])
  if d['image']!=IMAGE:raise ValueError('unverified image')
  for k in ('enrollmentRevision','platformRevision'):match(d[k],r'[0-9a-f]{40}')
  for k in ('invocation','sourceBundleSHA256'):match(d[k],r'[0-9a-f]{64}')
@@ -53,7 +55,7 @@ def render(d):
  if any(int(r['requests'][k].rstrip('Mi' if k=='memory' else 'm'))>int(r['limits'][k].rstrip('Mi' if k=='memory' else 'm')) for k in ('cpu','memory')):raise ValueError('resource order')
  if set(d['phaseInputs'])!=set(PHASES):raise ValueError('three explicit phase inputs')
  # Full declaration identity changes the Job name, including input bytes/placement/bundle.
- attempt=digest({k:v for k,v in d.items() if k!='membershipReleased'}); out={}; refs=[]
+ attempt=digest(attempt_input(d)); out={}; refs=[]
  for i,phase in enumerate(PHASES):
   ns='tenant-identity-attestor' if phase=='attest' else 'tenant-identity-writer'
   name='identity-portal-'+phase+'-'+attempt[:16]; ks='identity-portal-'+phase
@@ -68,7 +70,7 @@ def render(d):
   volumes=[{'name':'source','configMap':{'name':d['sourceBundleName'],'defaultMode':365,'items':items}}, {'name':'inputs','configMap':{'name':cm}}, {'name':'credentials','secret':{'secretName':d['attestorSecret'] if phase=='attest' else d['writerSecret'],'defaultMode':288}}, {'name':'tmp','emptyDir':{'sizeLimit':'128Mi'}}]
   mounts=[{'name':'source','mountPath':'/opt','readOnly':True},{'name':'inputs','mountPath':'/inputs','readOnly':True},{'name':'credentials','mountPath':'/credentials','readOnly':True},{'name':'tmp','mountPath':'/tmp'}]
   if phase=='attest':
-   volumes += [{'name':'api','projected':{'sources':[{'serviceAccountToken':{'path':'token','expirationSeconds':600,'audience':'https://kubernetes.default.svc.cluster.local'}},{'configMap':{'name':'kube-root-ca.crt','items':[{'key':'ca.crt','path':'ca.crt'}]}}]}}]
+   volumes += [{'name':'api','projected':{'sources':[{'serviceAccountToken':{'path':'token','expirationSeconds':600,'audience':profile['apiAudience']}},{'configMap':{'name':'kube-root-ca.crt','items':[{'key':'ca.crt','path':'ca.crt'}]}}]}}]
    mounts += [{'name':'api','mountPath':'/identity-api','readOnly':True}]
   else:
    volumes += [{'name':'receipts','persistentVolumeClaim':{'claimName':d['receiptClaim']}}];mounts += [{'name':'receipts','mountPath':'/receipts','subPath':'private'}]

@@ -2,10 +2,12 @@
 """Offline exact helper plan and read-only runtime identity gate. No apply/delete API."""
 import argparse,hashlib,json,pathlib,re,copy,subprocess,time
 from finite_identity import IMAGE
+from identity_target_profile import storage,initializer_identity
 NS='tenant-identity-writer'
 BUDGET={'requests':{'cpu':'100m','memory':'256Mi'},'limits':{'cpu':'500m','memory':'512Mi'}}
 def validate(i):
- if set(i)!={'clusterUID','claim','claimUID','pv','pvUID','volumeHandle','node','pullSecret','operatorUser'}:raise ValueError('exact inputs')
+ if set(i)!={'storageProfile','clusterUID','claim','claimUID','pv','pvUID','volumeHandle','node','pullSecret','operatorUser'}:raise ValueError('exact inputs')
+ storage(i['storageProfile'])
  if not re.fullmatch('[A-Za-z0-9:._@/-]{1,160}',i['operatorUser']):raise ValueError('exact operator identity')
  for k in ('clusterUID','claimUID'):
   if not re.fullmatch('[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}',i[k]):raise ValueError('UID required')
@@ -20,7 +22,7 @@ def guard(i,cluster,pvc,pv,pods,helper_uid=None):
  if s.get('volumeMode','Filesystem')!='Filesystem' or s.get('dataSource') is not None or s.get('dataSourceRef') is not None:raise ValueError('fresh filesystem only')
  if (m['name'],m['namespace'],m['uid'])!=(i['claim'],NS,i['claimUID']) or m.get('deletionTimestamp'):raise ValueError('claim identity')
  if m.get('labels',{}).get('platform.perkforge.io/owner')!='tenant-identity-foundation-v1':raise ValueError('claim owner')
- if pvc['status']['phase']!='Bound' or s['volumeName']!=i['pv'] or s['storageClassName']!='longhorn' or s['accessModes']!=['ReadWriteOnce'] or s['resources']['requests']['storage']!='1Gi':raise ValueError('claim spec')
+ if pvc['status']['phase']!='Bound' or s['volumeName']!=i['pv'] or s['storageClassName']!=i['storageProfile']['className'] or s['accessModes']!=['ReadWriteOnce'] or s['resources']['requests']['storage']!=i['storageProfile']['size']:raise ValueError('claim spec')
  if pv['metadata']['name']!=i['pv'] or pv['metadata']['uid']!=i['pvUID'] or pv['metadata'].get('deletionTimestamp'):raise ValueError('PV identity')
  p=pv['spec'];r=p['claimRef'];c=p['csi']
  if (r['name'],r['namespace'],r['uid'])!=(i['claim'],NS,i['claimUID']) or c['driver']!='driver.longhorn.io' or c['volumeHandle']!=i['volumeHandle'] or p['persistentVolumeReclaimPolicy']!='Retain':raise ValueError('PV binding')
@@ -35,7 +37,7 @@ def pending_guard(i,cluster,pvc,pods):
  if s.get('volumeMode','Filesystem')!='Filesystem' or s.get('dataSource') is not None or s.get('dataSourceRef') is not None:raise ValueError('fresh filesystem only')
  if cluster['metadata']['uid']!=i['clusterUID'] or (m['name'],m['namespace'],m['uid'])!=(i['claim'],NS,i['claimUID']):raise ValueError('prebind identity')
  if m.get('deletionTimestamp') or m.get('labels',{}).get('platform.perkforge.io/owner')!='tenant-identity-foundation-v1':raise ValueError('prebind ownership')
- if pvc['status']['phase'] not in ('Pending','Bound') or s['storageClassName']!='longhorn' or s['accessModes']!=['ReadWriteOnce'] or s['resources']['requests']['storage']!='1Gi':raise ValueError('prebind spec')
+ if pvc['status']['phase'] not in ('Pending','Bound') or s['storageClassName']!=i['storageProfile']['className'] or s['accessModes']!=['ReadWriteOnce'] or s['resources']['requests']['storage']!=i['storageProfile']['size']:raise ValueError('prebind spec')
  if any(p['metadata']['namespace']==NS and any(v.get('persistentVolumeClaim',{}).get('claimName')==i['claim'] for v in p['spec'].get('volumes',[])) for p in pods):raise ValueError('prebind consumer')
  return True
 
@@ -75,7 +77,7 @@ def cleanup_proof(i,cluster,pvc,pv,pods,volumeattachments,longhorn):
  return True
 
 def plan(i):
- validate(i);script=(pathlib.Path(__file__).resolve().parents[1]/'executor/initialize-private-receipts.py').read_text();sha=hashlib.sha256(script.encode()).hexdigest();name='identity-private-init-'+hashlib.sha256(json.dumps({k:v for k,v in i.items() if k not in ('pv','pvUID','volumeHandle')},sort_keys=True).encode()).hexdigest()[:16]
+ validate(i);script=(pathlib.Path(__file__).resolve().parents[1]/'executor/initialize-private-receipts.py').read_text();sha=hashlib.sha256(script.encode()).hexdigest();name='identity-private-init-'+hashlib.sha256(json.dumps(initializer_identity(i),sort_keys=True).encode()).hexdigest()[:16]
  cm={'apiVersion':'v1','kind':'ConfigMap','metadata':{'name':'identity-private-init-'+sha[:20],'namespace':NS},'immutable':True,'data':{'initialize.py':script}}
  pod={'apiVersion':'v1','kind':'Pod','metadata':{'name':name,'namespace':NS,'labels':{'platform.perkforge.io/owner':'identity-private-init-v1'},'annotations':{'platform.perkforge.io/claim-uid':i['claimUID'],'platform.perkforge.io/source-sha256':sha}},'spec':{'serviceAccountName':'identity-group-worker','automountServiceAccountToken':False,'nodeSelector':{'kubernetes.io/hostname':i['node']},'restartPolicy':'Never','activeDeadlineSeconds':300,'imagePullSecrets':[{'name':i['pullSecret']}],'securityContext':{'runAsUser':1001,'runAsGroup':1001,'runAsNonRoot':True,'fsGroup':1001,'fsGroupChangePolicy':'OnRootMismatch','seccompProfile':{'type':'RuntimeDefault'}},'containers':[{'name':'initialize','image':IMAGE,'command':['/home/python/python-env/bin/python3','-B','/source/initialize.py'],'args':[],'resources':BUDGET,'securityContext':{'allowPrivilegeEscalation':False,'readOnlyRootFilesystem':True,'capabilities':{'drop':['ALL']}},'volumeMounts':[{'name':'receipts','mountPath':'/volume'},{'name':'source','mountPath':'/source','readOnly':True}]}],'volumes':[{'name':'receipts','persistentVolumeClaim':{'claimName':i['claim']}},{'name':'source','configMap':{'name':cm['metadata']['name']}}]}}
  inputs={'apiVersion':'v1','kind':'ConfigMap','metadata':{'name':name+'-inputs','namespace':NS},'immutable':True,'data':{'initialization.json':json.dumps({'claimUID':i['claimUID'],'sourceSHA256':sha},sort_keys=True)}}

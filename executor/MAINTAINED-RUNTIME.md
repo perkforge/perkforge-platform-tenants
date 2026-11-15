@@ -92,3 +92,10 @@ memory153MB was not a peak measurement. No three-subject full-launcher or thrott
 production sizing claim. The existing worker scheduler headroom was65m/110m; do not
 silently lower requests to fit. Placement/budget and final300s phase deadline need
 explicit actual runtime preflight. No unrelated workload movement is authorized.
+
+## Adopter configuration boundary
+
+Enabled source now requires a complete versioned `targetProfile`; see
+[adopter profile schema, examples, support matrix and ownership boundaries](ADOPTER-PROFILE.md).
+The current Portal context and reviewed image/security ABI remain intentionally
+fixed. Environment-profile tests are not proof of arbitrary tenant/provider support.

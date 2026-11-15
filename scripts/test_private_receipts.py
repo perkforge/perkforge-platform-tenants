@@ -1,8 +1,9 @@
+from identity_target_profile import PILOT
 import copy,json,pathlib,sys,unittest
 from private_receipts import plan,guard,pending_guard,release_patch,cleanup_proof,BUDGET
 class Private(unittest.TestCase):
  def fixture(self):
-  i=dict(clusterUID='11111111-1111-4111-8111-111111111111',claim='identity-receipts',claimUID='22222222-2222-4222-8222-222222222222',pv='pvc-example',pvUID='33333333-3333-4333-8333-333333333333',volumeHandle='pvc-example',node='worker-2',pullSecret='private-registry',operatorUser='synthetic-operator')
+  i=dict(storageProfile=copy.deepcopy(PILOT['storage']),clusterUID='11111111-1111-4111-8111-111111111111',claim='identity-receipts',claimUID='22222222-2222-4222-8222-222222222222',pv='pvc-example',pvUID='33333333-3333-4333-8333-333333333333',volumeHandle='pvc-example',node='worker-2',pullSecret='private-registry',operatorUser='synthetic-operator')
   c={'metadata':{'uid':i['clusterUID']}};p={'metadata':{'name':i['claim'],'namespace':'tenant-identity-writer','uid':i['claimUID'],'labels':{'platform.perkforge.io/owner':'tenant-identity-foundation-v1'}},'spec':{'volumeName':i['pv'],'storageClassName':'longhorn','accessModes':['ReadWriteOnce'],'resources':{'requests':{'storage':'1Gi'}}},'status':{'phase':'Bound'}};v={'metadata':{'name':i['pv'],'uid':i['pvUID']},'spec':{'claimRef':{'name':i['claim'],'namespace':'tenant-identity-writer','uid':i['claimUID']},'csi':{'driver':'driver.longhorn.io','volumeHandle':i['volumeHandle']},'persistentVolumeReclaimPolicy':'Retain'}}
   return i,c,p,v
  def test_guards(self):

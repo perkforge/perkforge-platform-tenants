@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "apiAudience": "https://kubernetes.adopter.example",
+  "dns": {
+    "namespaceLabels": {
+      "kubernetes.io/metadata.name": "dns-system"
+    },
+    "podLabels": {
+      "app": "coredns"
+    },
+    "port": 5353
+  },
+  "ingress": {
+    "namespaceLabels": {
+      "kubernetes.io/metadata.name": "ingress-system"
+    },
+    "podLabels": {
+      "app": "ingress-controller"
+    },
+    "frontendPort": 443,
+    "backendPort": 9443
+  },
+  "api": {
+    "servicePort": 443,
+    "backendPort": 7443
+  },
+  "storage": {
+    "provider": "longhorn-v1",
+    "className": "retained-longhorn",
+    "size": "2Gi"
+  }
+}
