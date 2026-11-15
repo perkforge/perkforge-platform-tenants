@@ -24,12 +24,15 @@ else:
 t=(R/'scripts/test_native_finite_container.py').read_text().replace('tenant-identity-writer','tenant-identity-atlas-writer').replace('portal','atlas')
 t=t.replace("d['identity_invocation']=invocation(d)","import sys;sys.path.insert(0,'/opt/platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment');from identity_context import derive\nd['identity_context_digest']=derive('atlas')['digest']\nd['identity_invocation']=invocation(d)")
 if args.atomic_writer:
+ def replace_once(text,old,new):
+  if text.count(old)!=1:raise ValueError('AtomicWriter fixture seam drift')
+  return text.replace(old,new)
  helper=(R/'scripts/atomic_writer_fixture.py').read_text()
  t=helper+'\n'+t
- t=t.replace(" for f in P('/credentials').iterdir():f.unlink()",'')
- t=t.replace(" for n,b in creds.items():(P('/credentials')/n).write_text(b)\n (P('/credentials')/'lab-ca.crt').write_bytes(P('/fixture/ca.crt').read_bytes())", " publish('/credentials',dict(creds,**{'lab-ca.crt':P('/fixture/ca.crt').read_bytes()}))")
- t=t.replace("P('/inputs/inputs.json').write_bytes(raw)","publish('/inputs',{'inputs.json':raw})")
- t=t.replace("P('/identity-evidence/receipt.json').write_text(state['data']['receipt.json'])","publish('/identity-evidence',{'receipt.json':state['data']['receipt.json']})")
+ t=replace_once(t," for f in P('/credentials').iterdir():f.unlink()",'')
+ t=replace_once(t," for n,b in creds.items():(P('/credentials')/n).write_text(b)\n (P('/credentials')/'lab-ca.crt').write_bytes(P('/fixture/ca.crt').read_bytes())", " publish('/credentials',dict(creds,**{'lab-ca.crt':P('/fixture/ca.crt').read_bytes()}))")
+ t=replace_once(t,"P('/inputs/inputs.json').write_bytes(raw)","publish('/inputs',{'inputs.json':raw})")
+ t=replace_once(t,"P('/identity-evidence/receipt.json').write_text(state['data']['receipt.json'])","publish('/identity-evidence',{'receipt.json':state['data']['receipt.json']})")
 if args.supervised_source:
  spec=__import__('importlib.util',fromlist=['']).spec_from_file_location('runtime_profile',args.supervised_source/'scripts/finite_identity.py');runtime=__import__('importlib.util',fromlist=['']).module_from_spec(spec);spec.loader.exec_module(runtime)
  needle="cmd=['bash','/opt/perkforge/bin/launch',"
