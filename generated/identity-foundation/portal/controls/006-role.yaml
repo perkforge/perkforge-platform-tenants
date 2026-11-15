@@ -20,7 +20,7 @@ rules:
   - get
   - patch
   resourceNames:
-  - identity-portal-attest-45382250184caa3d
+  - identity-portal-attest-b9c6ab787d54ba27
 - apiGroups:
   - batch
   resources:
@@ -51,5 +51,5 @@ rules:
   - patch
   - update
   resourceNames:
-  - identity-portal-attest-45382250184caa3d-inputs
+  - identity-portal-attest-b9c6ab787d54ba27-inputs
   - identity-source-43bad232454e5fb0698b

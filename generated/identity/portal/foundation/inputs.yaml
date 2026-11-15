@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: identity-portal-foundation-45382250184caa3d-inputs
+  name: identity-portal-foundation-b9c6ab787d54ba27-inputs
   namespace: tenant-identity-writer
 immutable: true
 data:

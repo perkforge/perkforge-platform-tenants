@@ -20,8 +20,8 @@ rules:
   - get
   - patch
   resourceNames:
-  - identity-portal-foundation-45382250184caa3d
-  - identity-portal-memberships-45382250184caa3d
+  - identity-portal-foundation-b9c6ab787d54ba27
+  - identity-portal-memberships-b9c6ab787d54ba27
 - apiGroups:
   - batch
   resources:
@@ -52,6 +52,6 @@ rules:
   - patch
   - update
   resourceNames:
-  - identity-portal-foundation-45382250184caa3d-inputs
-  - identity-portal-memberships-45382250184caa3d-inputs
+  - identity-portal-foundation-b9c6ab787d54ba27-inputs
+  - identity-portal-memberships-b9c6ab787d54ba27-inputs
   - identity-source-43bad232454e5fb0698b

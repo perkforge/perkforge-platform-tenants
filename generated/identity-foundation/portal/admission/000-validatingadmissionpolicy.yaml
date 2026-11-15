@@ -25,14 +25,14 @@ spec:
   - name: exact-namespace
     expression: request.namespace == "tenant-identity-writer"
   validations:
-  - expression: (object.metadata.name == "identity-portal-foundation-45382250184caa3d"
-      && object.metadata.annotations == {"platform.perkforge.io/invocation":"5d92796ed2fcc186e8a770a13f69916eed814ed1d0bd6e9eb1fa67e61e84bca4","platform.perkforge.io/attempt":"45382250184caa3d280b5dfb25898fa10fbc919fd547dbbaa65213b95b94f6b3"}
+  - expression: (object.metadata.name == "identity-portal-foundation-b9c6ab787d54ba27"
+      && object.metadata.annotations == {"platform.perkforge.io/invocation":"5d92796ed2fcc186e8a770a13f69916eed814ed1d0bd6e9eb1fa67e61e84bca4","platform.perkforge.io/attempt":"b9c6ab787d54ba270c582d321ce2afb6874293adfb0c40aa3983554fa6bc72ff"}
       && object.spec.completions == 1 && object.spec.parallelism == 1 && object.spec.backoffLimit
       == 0 && object.spec.activeDeadlineSeconds == 300 && !has(object.spec.ttlSecondsAfterFinished)
       && (!has(object.spec.suspend) || object.spec.suspend == false) && (!has(object.spec.completionMode)
       || object.spec.completionMode == "NonIndexed") && !has(object.spec.podFailurePolicy)
       && !has(object.spec.successPolicy) && object.spec.template.metadata.annotations
-      == {"platform.perkforge.io/invocation":"5d92796ed2fcc186e8a770a13f69916eed814ed1d0bd6e9eb1fa67e61e84bca4","platform.perkforge.io/attempt":"45382250184caa3d280b5dfb25898fa10fbc919fd547dbbaa65213b95b94f6b3"}
+      == {"platform.perkforge.io/invocation":"5d92796ed2fcc186e8a770a13f69916eed814ed1d0bd6e9eb1fa67e61e84bca4","platform.perkforge.io/attempt":"b9c6ab787d54ba270c582d321ce2afb6874293adfb0c40aa3983554fa6bc72ff"}
       && object.spec.template.spec.containers.size() == 1 && object.spec.template.spec.serviceAccountName
       == "identity-group-worker" && object.spec.template.spec.automountServiceAccountToken
       == false && object.spec.template.spec.restartPolicy == "Never" && object.spec.template.spec.nodeSelector
@@ -41,14 +41,60 @@ spec:
       || object.spec.template.spec.hostPID == false) && (!has(object.spec.template.spec.hostIPC)
       || object.spec.template.spec.hostIPC == false) && (!has(object.spec.template.spec.shareProcessNamespace)
       || object.spec.template.spec.shareProcessNamespace == false) && !has(object.spec.template.spec.nodeName)
-      && !has(object.spec.template.spec.initContainers) && !has(object.spec.template.spec.ephemeralContainers)
-      && !has(object.spec.template.spec.hostAliases) && !has(object.spec.template.spec.dnsConfig)
-      && !has(object.spec.template.spec.runtimeClassName) && !has(object.spec.template.spec.affinity)
-      && !has(object.spec.template.spec.tolerations) && !has(object.spec.template.spec.topologySpreadConstraints)
-      && !has(object.spec.template.spec.resourceClaims) && !has(object.spec.template.spec.os)
+      && !has(object.spec.template.spec.ephemeralContainers) && !has(object.spec.template.spec.hostAliases)
+      && !has(object.spec.template.spec.dnsConfig) && !has(object.spec.template.spec.runtimeClassName)
+      && !has(object.spec.template.spec.affinity) && !has(object.spec.template.spec.tolerations)
+      && !has(object.spec.template.spec.topologySpreadConstraints) && !has(object.spec.template.spec.resourceClaims)
+      && !has(object.spec.template.spec.os) && object.spec.template.spec.initContainers.size()
+      == 1 && object.spec.template.spec.initContainers[0].name == "private-tmp" &&
+      object.spec.template.spec.initContainers[0].image == "registry1.dso.mil/ironbank/opensource/ansible/ansible@sha256:3308322cc09f20a813c00e9087c166a3d97dbb7789c059f1020f3c0b092fdf02"
+      && object.spec.template.spec.initContainers[0].command == ["/home/python/python-env/bin/python3","-c","import
+      os,stat\nos.umask(0o077)\nf=os.open('/work',os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW)\ns=os.fstat(f)\nif
+      s.st_uid!=0 or s.st_gid!=1001 or stat.S_IMODE(s.st_mode)!=0o2777 or os.listdir(f):\n
+      raise SystemExit('UnsafeTemporaryRoot')\nos.mkdir('private',0o700,dir_fd=f)\ncreated=os.stat('private',dir_fd=f,follow_symlinks=False)\nc=os.open('private',os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW,dir_fd=f)\ns=os.fstat(c)\nif
+      (s.st_dev,s.st_ino)!=(created.st_dev,created.st_ino) or s.st_uid!=1001 or s.st_gid!=1001
+      or stat.S_IMODE(s.st_mode) not in (0o700,0o2700) or os.listdir(c):\n raise SystemExit('UnsafeCreatedTemporaryDirectory')\n#
+      Only this invocation's exclusively created child; never repair an existing path.\nos.fchmod(c,0o700)\ns=os.fstat(c)\nif
+      s.st_uid!=1001 or s.st_gid!=1001 or stat.S_IMODE(s.st_mode)!=0o700 or os.listdir(c):\n
+      raise SystemExit('UnsafePrivateTemporaryDirectory')\nos.close(c);os.close(f)\n"]
+      && (!has(object.spec.template.spec.initContainers[0].args) || object.spec.template.spec.initContainers[0].args.size()
+      == 0) && !has(object.spec.template.spec.initContainers[0].env) && !has(object.spec.template.spec.initContainers[0].envFrom)
+      && !has(object.spec.template.spec.initContainers[0].lifecycle) && !has(object.spec.template.spec.initContainers[0].livenessProbe)
+      && !has(object.spec.template.spec.initContainers[0].readinessProbe) && !has(object.spec.template.spec.initContainers[0].startupProbe)
+      && !has(object.spec.template.spec.initContainers[0].ports) && !has(object.spec.template.spec.initContainers[0].workingDir)
+      && !has(object.spec.template.spec.initContainers[0].volumeDevices) && !has(object.spec.template.spec.initContainers[0].restartPolicy)
+      && !has(object.spec.template.spec.initContainers[0].restartPolicyRules) && (!has(object.spec.template.spec.initContainers[0].terminationMessagePath)
+      || object.spec.template.spec.initContainers[0].terminationMessagePath == "/dev/termination-log")
+      && (!has(object.spec.template.spec.initContainers[0].terminationMessagePolicy)
+      || object.spec.template.spec.initContainers[0].terminationMessagePolicy == "File")
+      && (!has(object.spec.template.spec.initContainers[0].stdin) || object.spec.template.spec.initContainers[0].stdin
+      == false) && (!has(object.spec.template.spec.initContainers[0].stdinOnce) ||
+      object.spec.template.spec.initContainers[0].stdinOnce == false) && (!has(object.spec.template.spec.initContainers[0].tty)
+      || object.spec.template.spec.initContainers[0].tty == false) && !has(object.spec.template.spec.initContainers[0].securityContext.runAsUser)
+      && !has(object.spec.template.spec.initContainers[0].securityContext.runAsGroup)
+      && !has(object.spec.template.spec.initContainers[0].securityContext.runAsNonRoot)
+      && !has(object.spec.template.spec.initContainers[0].securityContext.seccompProfile)
+      && !has(object.spec.template.spec.initContainers[0].securityContext.seLinuxOptions)
+      && !has(object.spec.template.spec.initContainers[0].securityContext.appArmorProfile)
+      && !has(object.spec.template.spec.initContainers[0].securityContext.procMount)
+      && object.spec.template.spec.initContainers[0].securityContext.allowPrivilegeEscalation
+      == false && object.spec.template.spec.initContainers[0].securityContext.readOnlyRootFilesystem
+      == true && object.spec.template.spec.initContainers[0].securityContext.capabilities.drop
+      == ["ALL"] && (!has(object.spec.template.spec.initContainers[0].securityContext.capabilities.add)
+      || object.spec.template.spec.initContainers[0].securityContext.capabilities.add.size()
+      == 0) && (!has(object.spec.template.spec.initContainers[0].securityContext.privileged)
+      || object.spec.template.spec.initContainers[0].securityContext.privileged ==
+      false) && dyn(object.spec.template.spec.initContainers[0].resources).requests
+      == {"cpu":"100m","memory":"256Mi"} && dyn(object.spec.template.spec.initContainers[0].resources).limits
+      == {"cpu":"500m","memory":"512Mi"} && object.spec.template.spec.initContainers[0].volumeMounts.size()
+      == 1 && object.spec.template.spec.initContainers[0].volumeMounts[0].name ==
+      "tmp" && object.spec.template.spec.initContainers[0].volumeMounts[0].mountPath
+      == "/work" && !has(object.spec.template.spec.initContainers[0].volumeMounts[0].subPath)
+      && !has(object.spec.template.spec.initContainers[0].volumeMounts[0].subPathExpr)
+      && !has(object.spec.template.spec.initContainers[0].volumeMounts[0].mountPropagation)
       && !has(dyn(object.spec.template.spec).overhead) && object.spec.template.spec.containers[0].name
       == "reconcile" && object.spec.template.spec.containers[0].image == "registry1.dso.mil/ironbank/opensource/ansible/ansible@sha256:3308322cc09f20a813c00e9087c166a3d97dbb7789c059f1020f3c0b092fdf02"
-      && object.spec.template.spec.containers[0].command == ["/bin/bash","/opt/perkforge/bin/launch"]
+      && object.spec.template.spec.containers[0].command == ["/usr/bin/timeout","--signal=TERM","--kill-after=10s","270s","/bin/bash","/opt/perkforge/bin/launch"]
       && object.spec.template.spec.containers[0].args == ["--phase","foundation","--invocation","5d92796ed2fcc186e8a770a13f69916eed814ed1d0bd6e9eb1fa67e61e84bca4","--inputs-sha256","f7c4dd708c691653a5432df0c69164fd01ce06cd771db5b702fc20154cf1e2da","--bundle-sha256","43bad232454e5fb0698b417270dfbd329efa64cef34862c98af97dba0a311aaa"]
       && !has(object.spec.template.spec.containers[0].env) && !has(object.spec.template.spec.containers[0].envFrom)
       && !has(object.spec.template.spec.containers[0].lifecycle) && !has(object.spec.template.spec.containers[0].livenessProbe)
@@ -148,7 +194,7 @@ spec:
       && object.spec.template.spec.volumes[0].configMap.items[26].key == "file-26"
       && object.spec.template.spec.volumes[0].configMap.items[26].path == "revisions.json"
       && object.spec.template.spec.volumes[1].name == "inputs" && object.spec.template.spec.volumes[1].configMap.name
-      == "identity-portal-foundation-45382250184caa3d-inputs" && object.spec.template.spec.volumes[2].name
+      == "identity-portal-foundation-b9c6ab787d54ba27-inputs" && object.spec.template.spec.volumes[2].name
       == "credentials" && object.spec.template.spec.volumes[2].secret.secretName ==
       "group-writer" && object.spec.template.spec.volumes[2].secret.defaultMode ==
       288 && object.spec.template.spec.volumes[3].name == "tmp" && dyn(object.spec.template.spec.volumes[3].emptyDir).sizeLimit
@@ -173,22 +219,22 @@ spec:
       !has(object.spec.template.spec.containers[0].volumeMounts[2].mountPropagation)
       && object.spec.template.spec.containers[0].volumeMounts[3].name == "tmp" &&
       object.spec.template.spec.containers[0].volumeMounts[3].mountPath == "/tmp"
-      && !has(object.spec.template.spec.containers[0].volumeMounts[3].subPath) &&
-      !has(object.spec.template.spec.containers[0].volumeMounts[3].subPathExpr) &&
-      !has(object.spec.template.spec.containers[0].volumeMounts[3].mountPropagation)
+      && object.spec.template.spec.containers[0].volumeMounts[3].subPath == "private"
+      && !has(object.spec.template.spec.containers[0].volumeMounts[3].subPathExpr)
+      && !has(object.spec.template.spec.containers[0].volumeMounts[3].mountPropagation)
       && object.spec.template.spec.containers[0].volumeMounts[4].name == "receipts"
       && object.spec.template.spec.containers[0].volumeMounts[4].mountPath == "/receipts"
       && object.spec.template.spec.containers[0].volumeMounts[4].subPath == "private"
       && !has(object.spec.template.spec.containers[0].volumeMounts[4].subPathExpr)
       && !has(object.spec.template.spec.containers[0].volumeMounts[4].mountPropagation))
-      || (object.metadata.name == "identity-portal-memberships-45382250184caa3d" &&
-      object.metadata.annotations == {"platform.perkforge.io/invocation":"5d92796ed2fcc186e8a770a13f69916eed814ed1d0bd6e9eb1fa67e61e84bca4","platform.perkforge.io/attempt":"45382250184caa3d280b5dfb25898fa10fbc919fd547dbbaa65213b95b94f6b3"}
+      || (object.metadata.name == "identity-portal-memberships-b9c6ab787d54ba27" &&
+      object.metadata.annotations == {"platform.perkforge.io/invocation":"5d92796ed2fcc186e8a770a13f69916eed814ed1d0bd6e9eb1fa67e61e84bca4","platform.perkforge.io/attempt":"b9c6ab787d54ba270c582d321ce2afb6874293adfb0c40aa3983554fa6bc72ff"}
       && object.spec.completions == 1 && object.spec.parallelism == 1 && object.spec.backoffLimit
       == 0 && object.spec.activeDeadlineSeconds == 300 && !has(object.spec.ttlSecondsAfterFinished)
       && (!has(object.spec.suspend) || object.spec.suspend == false) && (!has(object.spec.completionMode)
       || object.spec.completionMode == "NonIndexed") && !has(object.spec.podFailurePolicy)
       && !has(object.spec.successPolicy) && object.spec.template.metadata.annotations
-      == {"platform.perkforge.io/invocation":"5d92796ed2fcc186e8a770a13f69916eed814ed1d0bd6e9eb1fa67e61e84bca4","platform.perkforge.io/attempt":"45382250184caa3d280b5dfb25898fa10fbc919fd547dbbaa65213b95b94f6b3"}
+      == {"platform.perkforge.io/invocation":"5d92796ed2fcc186e8a770a13f69916eed814ed1d0bd6e9eb1fa67e61e84bca4","platform.perkforge.io/attempt":"b9c6ab787d54ba270c582d321ce2afb6874293adfb0c40aa3983554fa6bc72ff"}
       && object.spec.template.spec.containers.size() == 1 && object.spec.template.spec.serviceAccountName
       == "identity-group-worker" && object.spec.template.spec.automountServiceAccountToken
       == false && object.spec.template.spec.restartPolicy == "Never" && object.spec.template.spec.nodeSelector
@@ -197,14 +243,60 @@ spec:
       || object.spec.template.spec.hostPID == false) && (!has(object.spec.template.spec.hostIPC)
       || object.spec.template.spec.hostIPC == false) && (!has(object.spec.template.spec.shareProcessNamespace)
       || object.spec.template.spec.shareProcessNamespace == false) && !has(object.spec.template.spec.nodeName)
-      && !has(object.spec.template.spec.initContainers) && !has(object.spec.template.spec.ephemeralContainers)
-      && !has(object.spec.template.spec.hostAliases) && !has(object.spec.template.spec.dnsConfig)
-      && !has(object.spec.template.spec.runtimeClassName) && !has(object.spec.template.spec.affinity)
-      && !has(object.spec.template.spec.tolerations) && !has(object.spec.template.spec.topologySpreadConstraints)
-      && !has(object.spec.template.spec.resourceClaims) && !has(object.spec.template.spec.os)
+      && !has(object.spec.template.spec.ephemeralContainers) && !has(object.spec.template.spec.hostAliases)
+      && !has(object.spec.template.spec.dnsConfig) && !has(object.spec.template.spec.runtimeClassName)
+      && !has(object.spec.template.spec.affinity) && !has(object.spec.template.spec.tolerations)
+      && !has(object.spec.template.spec.topologySpreadConstraints) && !has(object.spec.template.spec.resourceClaims)
+      && !has(object.spec.template.spec.os) && object.spec.template.spec.initContainers.size()
+      == 1 && object.spec.template.spec.initContainers[0].name == "private-tmp" &&
+      object.spec.template.spec.initContainers[0].image == "registry1.dso.mil/ironbank/opensource/ansible/ansible@sha256:3308322cc09f20a813c00e9087c166a3d97dbb7789c059f1020f3c0b092fdf02"
+      && object.spec.template.spec.initContainers[0].command == ["/home/python/python-env/bin/python3","-c","import
+      os,stat\nos.umask(0o077)\nf=os.open('/work',os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW)\ns=os.fstat(f)\nif
+      s.st_uid!=0 or s.st_gid!=1001 or stat.S_IMODE(s.st_mode)!=0o2777 or os.listdir(f):\n
+      raise SystemExit('UnsafeTemporaryRoot')\nos.mkdir('private',0o700,dir_fd=f)\ncreated=os.stat('private',dir_fd=f,follow_symlinks=False)\nc=os.open('private',os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW,dir_fd=f)\ns=os.fstat(c)\nif
+      (s.st_dev,s.st_ino)!=(created.st_dev,created.st_ino) or s.st_uid!=1001 or s.st_gid!=1001
+      or stat.S_IMODE(s.st_mode) not in (0o700,0o2700) or os.listdir(c):\n raise SystemExit('UnsafeCreatedTemporaryDirectory')\n#
+      Only this invocation's exclusively created child; never repair an existing path.\nos.fchmod(c,0o700)\ns=os.fstat(c)\nif
+      s.st_uid!=1001 or s.st_gid!=1001 or stat.S_IMODE(s.st_mode)!=0o700 or os.listdir(c):\n
+      raise SystemExit('UnsafePrivateTemporaryDirectory')\nos.close(c);os.close(f)\n"]
+      && (!has(object.spec.template.spec.initContainers[0].args) || object.spec.template.spec.initContainers[0].args.size()
+      == 0) && !has(object.spec.template.spec.initContainers[0].env) && !has(object.spec.template.spec.initContainers[0].envFrom)
+      && !has(object.spec.template.spec.initContainers[0].lifecycle) && !has(object.spec.template.spec.initContainers[0].livenessProbe)
+      && !has(object.spec.template.spec.initContainers[0].readinessProbe) && !has(object.spec.template.spec.initContainers[0].startupProbe)
+      && !has(object.spec.template.spec.initContainers[0].ports) && !has(object.spec.template.spec.initContainers[0].workingDir)
+      && !has(object.spec.template.spec.initContainers[0].volumeDevices) && !has(object.spec.template.spec.initContainers[0].restartPolicy)
+      && !has(object.spec.template.spec.initContainers[0].restartPolicyRules) && (!has(object.spec.template.spec.initContainers[0].terminationMessagePath)
+      || object.spec.template.spec.initContainers[0].terminationMessagePath == "/dev/termination-log")
+      && (!has(object.spec.template.spec.initContainers[0].terminationMessagePolicy)
+      || object.spec.template.spec.initContainers[0].terminationMessagePolicy == "File")
+      && (!has(object.spec.template.spec.initContainers[0].stdin) || object.spec.template.spec.initContainers[0].stdin
+      == false) && (!has(object.spec.template.spec.initContainers[0].stdinOnce) ||
+      object.spec.template.spec.initContainers[0].stdinOnce == false) && (!has(object.spec.template.spec.initContainers[0].tty)
+      || object.spec.template.spec.initContainers[0].tty == false) && !has(object.spec.template.spec.initContainers[0].securityContext.runAsUser)
+      && !has(object.spec.template.spec.initContainers[0].securityContext.runAsGroup)
+      && !has(object.spec.template.spec.initContainers[0].securityContext.runAsNonRoot)
+      && !has(object.spec.template.spec.initContainers[0].securityContext.seccompProfile)
+      && !has(object.spec.template.spec.initContainers[0].securityContext.seLinuxOptions)
+      && !has(object.spec.template.spec.initContainers[0].securityContext.appArmorProfile)
+      && !has(object.spec.template.spec.initContainers[0].securityContext.procMount)
+      && object.spec.template.spec.initContainers[0].securityContext.allowPrivilegeEscalation
+      == false && object.spec.template.spec.initContainers[0].securityContext.readOnlyRootFilesystem
+      == true && object.spec.template.spec.initContainers[0].securityContext.capabilities.drop
+      == ["ALL"] && (!has(object.spec.template.spec.initContainers[0].securityContext.capabilities.add)
+      || object.spec.template.spec.initContainers[0].securityContext.capabilities.add.size()
+      == 0) && (!has(object.spec.template.spec.initContainers[0].securityContext.privileged)
+      || object.spec.template.spec.initContainers[0].securityContext.privileged ==
+      false) && dyn(object.spec.template.spec.initContainers[0].resources).requests
+      == {"cpu":"100m","memory":"256Mi"} && dyn(object.spec.template.spec.initContainers[0].resources).limits
+      == {"cpu":"500m","memory":"512Mi"} && object.spec.template.spec.initContainers[0].volumeMounts.size()
+      == 1 && object.spec.template.spec.initContainers[0].volumeMounts[0].name ==
+      "tmp" && object.spec.template.spec.initContainers[0].volumeMounts[0].mountPath
+      == "/work" && !has(object.spec.template.spec.initContainers[0].volumeMounts[0].subPath)
+      && !has(object.spec.template.spec.initContainers[0].volumeMounts[0].subPathExpr)
+      && !has(object.spec.template.spec.initContainers[0].volumeMounts[0].mountPropagation)
       && !has(dyn(object.spec.template.spec).overhead) && object.spec.template.spec.containers[0].name
       == "reconcile" && object.spec.template.spec.containers[0].image == "registry1.dso.mil/ironbank/opensource/ansible/ansible@sha256:3308322cc09f20a813c00e9087c166a3d97dbb7789c059f1020f3c0b092fdf02"
-      && object.spec.template.spec.containers[0].command == ["/bin/bash","/opt/perkforge/bin/launch"]
+      && object.spec.template.spec.containers[0].command == ["/usr/bin/timeout","--signal=TERM","--kill-after=10s","270s","/bin/bash","/opt/perkforge/bin/launch"]
       && object.spec.template.spec.containers[0].args == ["--phase","memberships","--invocation","5d92796ed2fcc186e8a770a13f69916eed814ed1d0bd6e9eb1fa67e61e84bca4","--inputs-sha256","76273eb86e3833404b3d1c2cdd5239b38e0393ad9d8ebc6005b47ae8772b3b61","--bundle-sha256","43bad232454e5fb0698b417270dfbd329efa64cef34862c98af97dba0a311aaa"]
       && !has(object.spec.template.spec.containers[0].env) && !has(object.spec.template.spec.containers[0].envFrom)
       && !has(object.spec.template.spec.containers[0].lifecycle) && !has(object.spec.template.spec.containers[0].livenessProbe)
@@ -304,7 +396,7 @@ spec:
       && object.spec.template.spec.volumes[0].configMap.items[26].key == "file-26"
       && object.spec.template.spec.volumes[0].configMap.items[26].path == "revisions.json"
       && object.spec.template.spec.volumes[1].name == "inputs" && object.spec.template.spec.volumes[1].configMap.name
-      == "identity-portal-memberships-45382250184caa3d-inputs" && object.spec.template.spec.volumes[2].name
+      == "identity-portal-memberships-b9c6ab787d54ba27-inputs" && object.spec.template.spec.volumes[2].name
       == "credentials" && object.spec.template.spec.volumes[2].secret.secretName ==
       "group-writer" && object.spec.template.spec.volumes[2].secret.defaultMode ==
       288 && object.spec.template.spec.volumes[3].name == "tmp" && dyn(object.spec.template.spec.volumes[3].emptyDir).sizeLimit
@@ -331,9 +423,9 @@ spec:
       !has(object.spec.template.spec.containers[0].volumeMounts[2].mountPropagation)
       && object.spec.template.spec.containers[0].volumeMounts[3].name == "tmp" &&
       object.spec.template.spec.containers[0].volumeMounts[3].mountPath == "/tmp"
-      && !has(object.spec.template.spec.containers[0].volumeMounts[3].subPath) &&
-      !has(object.spec.template.spec.containers[0].volumeMounts[3].subPathExpr) &&
-      !has(object.spec.template.spec.containers[0].volumeMounts[3].mountPropagation)
+      && object.spec.template.spec.containers[0].volumeMounts[3].subPath == "private"
+      && !has(object.spec.template.spec.containers[0].volumeMounts[3].subPathExpr)
+      && !has(object.spec.template.spec.containers[0].volumeMounts[3].mountPropagation)
       && object.spec.template.spec.containers[0].volumeMounts[4].name == "receipts"
       && object.spec.template.spec.containers[0].volumeMounts[4].mountPath == "/receipts"
       && object.spec.template.spec.containers[0].volumeMounts[4].subPath == "private"

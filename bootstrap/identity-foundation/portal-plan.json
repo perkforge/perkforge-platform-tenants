@@ -611,7 +611,7 @@
       "namespace": "tenant-identity-attestor"
     }
   ],
-  "foundationSHA256": "aa1dbc2afc7248d7bac296c489f5ee21abf14bcdcdab121181580d32a6317adc",
+  "foundationSHA256": "788e75e3e56e1fdcfbe7709ed7fbebcc8b80675b2b63952410d070e568268a74",
   "preconditions": [
     "exact native cluster/UID inventory",
     "root installs guards first; observedGeneration and zero warnings",

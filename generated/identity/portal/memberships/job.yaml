@@ -1,11 +1,11 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: identity-portal-memberships-45382250184caa3d
+  name: identity-portal-memberships-b9c6ab787d54ba27
   namespace: tenant-identity-writer
   annotations: &id001
     platform.perkforge.io/invocation: 5d92796ed2fcc186e8a770a13f69916eed814ed1d0bd6e9eb1fa67e61e84bca4
-    platform.perkforge.io/attempt: 45382250184caa3d280b5dfb25898fa10fbc919fd547dbbaa65213b95b94f6b3
+    platform.perkforge.io/attempt: b9c6ab787d54ba270c582d321ce2afb6874293adfb0c40aa3983554fa6bc72ff
 spec:
   backoffLimit: 0
   activeDeadlineSeconds: 300
@@ -36,6 +36,10 @@ spec:
       - name: reconcile
         image: registry1.dso.mil/ironbank/opensource/ansible/ansible@sha256:3308322cc09f20a813c00e9087c166a3d97dbb7789c059f1020f3c0b092fdf02
         command:
+        - /usr/bin/timeout
+        - --signal=TERM
+        - --kill-after=10s
+        - 270s
         - /bin/bash
         - /opt/perkforge/bin/launch
         args:
@@ -47,7 +51,7 @@ spec:
         - 76273eb86e3833404b3d1c2cdd5239b38e0393ad9d8ebc6005b47ae8772b3b61
         - --bundle-sha256
         - 43bad232454e5fb0698b417270dfbd329efa64cef34862c98af97dba0a311aaa
-        resources:
+        resources: &id002
           limits:
             cpu: 500m
             memory: 512Mi
@@ -72,6 +76,7 @@ spec:
           readOnly: true
         - name: tmp
           mountPath: /tmp
+          subPath: private
         - name: receipts
           mountPath: /receipts
           subPath: private
@@ -140,7 +145,7 @@ spec:
             path: revisions.json
       - name: inputs
         configMap:
-          name: identity-portal-memberships-45382250184caa3d-inputs
+          name: identity-portal-memberships-b9c6ab787d54ba27-inputs
       - name: credentials
         secret:
           secretName: group-writer
@@ -154,3 +159,31 @@ spec:
       - name: evidence
         configMap:
           name: portal-identity-evidence
+      initContainers:
+      - name: private-tmp
+        image: registry1.dso.mil/ironbank/opensource/ansible/ansible@sha256:3308322cc09f20a813c00e9087c166a3d97dbb7789c059f1020f3c0b092fdf02
+        command:
+        - /home/python/python-env/bin/python3
+        - -c
+        - "import os,stat\nos.umask(0o077)\nf=os.open('/work',os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW)\n\
+          s=os.fstat(f)\nif s.st_uid!=0 or s.st_gid!=1001 or stat.S_IMODE(s.st_mode)!=0o2777\
+          \ or os.listdir(f):\n raise SystemExit('UnsafeTemporaryRoot')\nos.mkdir('private',0o700,dir_fd=f)\n\
+          created=os.stat('private',dir_fd=f,follow_symlinks=False)\nc=os.open('private',os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW,dir_fd=f)\n\
+          s=os.fstat(c)\nif (s.st_dev,s.st_ino)!=(created.st_dev,created.st_ino) or\
+          \ s.st_uid!=1001 or s.st_gid!=1001 or stat.S_IMODE(s.st_mode) not in (0o700,0o2700)\
+          \ or os.listdir(c):\n raise SystemExit('UnsafeCreatedTemporaryDirectory')\n\
+          # Only this invocation's exclusively created child; never repair an existing\
+          \ path.\nos.fchmod(c,0o700)\ns=os.fstat(c)\nif s.st_uid!=1001 or s.st_gid!=1001\
+          \ or stat.S_IMODE(s.st_mode)!=0o700 or os.listdir(c):\n raise SystemExit('UnsafePrivateTemporaryDirectory')\n\
+          os.close(c);os.close(f)\n"
+        args: []
+        resources: *id002
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+        volumeMounts:
+        - name: tmp
+          mountPath: /work
