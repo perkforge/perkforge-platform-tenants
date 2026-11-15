@@ -1,0 +1,47 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: identity-evidence-fields
+  labels:
+    platform.perkforge.io/owner: tenant-identity-foundation-v1
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+    - apiGroups:
+      - ''
+      apiVersions:
+      - v1
+      operations:
+      - CREATE
+      - UPDATE
+      resources:
+      - configmaps
+  matchConditions:
+  - name: exact-namespace
+    expression: request.namespace == "tenant-identity-writer"
+  validations:
+  - expression: 'object.metadata.name != ''portal-identity-evidence'' || (request.operation
+      == ''UPDATE'' && oldObject != null && object.metadata.uid == "522e96ed-77e1-4dc9-b57c-e8281c761928"
+      && oldObject.metadata.uid == "522e96ed-77e1-4dc9-b57c-e8281c761928" && !has(object.binaryData)
+      && (!has(object.immutable) || object.immutable == false) && ((request.userInfo.username
+      == "system:serviceaccount:tenant-identity-attestor:identity-attestor" && object.metadata.annotations
+      == oldObject.metadata.annotations && object.metadata.labels == oldObject.metadata.labels
+      && object.data.size() == 1 && ''receipt.json'' in object.data && object.data[''receipt.json''].size()
+      <= 262144) || (request.userInfo.username == "system:serviceaccount:flux-system:identity-declaration-reconciler"
+      && object.metadata.labels == oldObject.metadata.labels && has(object.data) ==
+      has(oldObject.data) && (!has(object.data) || object.data == oldObject.data)
+      && object.metadata.annotations == {''perkforge.dev/desired-invocation'': "5d92796ed2fcc186e8a770a13f69916eed814ed1d0bd6e9eb1fa67e61e84bca4"})))'
+    message: Identity foundation boundary refused an unreviewed mutation.
+    reason: Forbidden
+  - expression: object.metadata.name != 'portal-identity-evidence' || (oldObject !=
+      null && has(object.metadata.ownerReferences) == has(oldObject.metadata.ownerReferences)
+      && (!has(object.metadata.ownerReferences) || object.metadata.ownerReferences
+      == oldObject.metadata.ownerReferences))
+    message: Evidence ownership metadata is immutable.
+    reason: Forbidden
+  - expression: object.metadata.name != 'portal-identity-evidence' || (oldObject !=
+      null && has(object.metadata.finalizers) == has(oldObject.metadata.finalizers)
+      && (!has(object.metadata.finalizers) || object.metadata.finalizers == oldObject.metadata.finalizers))
+    message: Evidence ownership metadata is immutable.
+    reason: Forbidden

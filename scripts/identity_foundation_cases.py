@@ -14,6 +14,14 @@ if os.environ.get('IDENTITY_TARGET_PROFILE_FIXTURE'):
 if os.environ.get('IDENTITY_CONTEXT_FIXTURE'):
  from identity_context_fixture import alternate
  D,I,custody=alternate(D,I,custody,os.environ['IDENTITY_CONTEXT_FIXTURE'])
+# Test-only explicit selected-source override; never reads credentials or the API.
+if os.environ.get('IDENTITY_SELECTION_FIXTURE_DIR'):
+ from pathlib import Path
+ root=Path(os.environ['IDENTITY_SELECTION_FIXTURE_DIR'])
+ D=json.loads((root/'declarations/identity/portal.json').read_text())
+ selected=json.loads((root/'declarations/identity/foundation.json').read_text())
+ if D.get('enabled') is not True or selected.get('enabled') is not True:raise ValueError('enabled selected fixture required')
+ network,custody,I=selected['network'],selected['custody'],selected['initializer']
 from identity_context_binding import selection
 B=selection(D)
 policies=[o for o in build(D,network,custody,I) if o['kind']=='ValidatingAdmissionPolicy'];g=render(D);cases=[]
@@ -26,7 +34,7 @@ for phase in ('foundation','attest','memberships'):
  for label,mutate in [('request-budget',lambda p:p['containers'][0]['resources']['requests'].update(cpu='200m')),('limit-budget',lambda p:p['containers'][0]['resources']['limits'].update(memory='1024Mi')),('tmp-limit',lambda p:next(v for v in p['volumes'] if v['name']=='tmp')['emptyDir'].update(sizeLimit='256Mi')),('overhead',lambda p:p.update(overhead={'cpu':'1m'}))]:
   bad=copy.deepcopy(j);mutate(bad['spec']['template']['spec']);cases.append({'Name':phase+'-'+label,'Policy':'identity-jobs-'+j['metadata']['namespace'],'Object':bad,'Allowed':False})
 for phase in ('foundation','attest','memberships'):
- j=g[phase+'/job.yaml'];p={'apiVersion':'v1','kind':'Pod','metadata':{'namespace':j['metadata']['namespace'],'name':j['metadata']['name']+'-abcde','generateName':j['metadata']['name']+'-','ownerReferences':[{'apiVersion':'batch/v1','kind':'Job','name':j['metadata']['name'],'uid':'22222222-2222-4222-8222-222222222222','controller':True}],'annotations':j['spec']['template']['metadata']['annotations']},'spec':copy.deepcopy(j['spec']['template']['spec'])}
+ j=g[phase+'/job.yaml'];p={'apiVersion':'v1','kind':'Pod','metadata':{'namespace':j['metadata']['namespace'],'name':j['metadata']['name']+'-abcde','generateName':j['metadata']['name']+'-','ownerReferences':[{'apiVersion':'batch/v1','kind':'Job','name':j['metadata']['name'],'uid':D['phaseInputs']['attest']['identity']['identity_receipt_uid'],'controller':True}],'annotations':j['spec']['template']['metadata']['annotations']},'spec':copy.deepcopy(j['spec']['template']['spec'])}
  p['spec']['schedulerName']='default-scheduler';p['spec']['priority']=0;p['spec']['containers'][0].update(terminationMessagePath='/dev/termination-log',terminationMessagePolicy='File');p['spec']['tolerations']=[{'key':k,'operator':'Exists','effect':'NoExecute','tolerationSeconds':300} for k in ('node.kubernetes.io/not-ready','node.kubernetes.io/unreachable')]
  cases.append({'Name':phase+'-controller-pod','Policy':'identity-pods-'+j['metadata']['namespace'],'Object':p,'Allowed':True})
  bad=copy.deepcopy(p);bad['spec']['containers'].append(copy.deepcopy(bad['spec']['containers'][0]));cases.append({'Name':phase+'-injected-sidecar','Policy':'identity-pods-'+j['metadata']['namespace'],'Object':bad,'Allowed':False})
@@ -39,9 +47,9 @@ for phase in ('foundation','attest','memberships'):
  cases.append({'Name':phase+'-declaration','Policy':B['declaration_policy'],'Object':k,'Username':user,'Allowed':True})
  for label,mutation in [('sa',lambda s:s.update(serviceAccountName='foreign-admin')),('source',lambda s:s['sourceRef'].update(namespace='foreign')),('patch',lambda s:s.update(patches=[{'patch':'foreign'}])),('wait',lambda s:s.update(wait=False))]:
   bad=copy.deepcopy(k);mutation(bad['spec']);cases.append({'Name':phase+'-declaration-'+label,'Policy':B['declaration_policy'],'Object':bad,'Username':user,'Allowed':False})
-bad=copy.deepcopy(g['memberships-reconcile.yaml']);bad['spec']['suspend']=False
-cases.append({'Name':'membership-release-before-policy-update','Policy':B['declaration_policy'],'Object':bad,'Username':'system:serviceaccount:flux-system:'+B['declaration_reconciler'],'Allowed':False})
-old={'apiVersion':'v1','kind':'ConfigMap','metadata':{'uid':'22222222-2222-4222-8222-222222222222','name':B['evidence_name'],'namespace':B['writer_namespace'],'labels':{'app.kubernetes.io/managed-by':'perkforge-identity','perkforge.dev/context':'portal'},'annotations':{'perkforge.dev/desired-invocation':'old'}},'data':{'receipt.json':'old'}}
+bad=copy.deepcopy(g['memberships-reconcile.yaml']);bad['spec']['suspend']=not bad['spec']['suspend']
+cases.append({'Name':'membership-gate-before-policy-update','Policy':B['declaration_policy'],'Object':bad,'Username':'system:serviceaccount:flux-system:'+B['declaration_reconciler'],'Allowed':False})
+old={'apiVersion':'v1','kind':'ConfigMap','metadata':{'uid':D['phaseInputs']['attest']['identity']['identity_receipt_uid'],'name':B['evidence_name'],'namespace':B['writer_namespace'],'labels':{'app.kubernetes.io/managed-by':'perkforge-identity','perkforge.dev/context':D['context']},'annotations':{'perkforge.dev/desired-invocation':'old'}},'data':{'receipt.json':'old'}}
 issuer='system:serviceaccount:'+B['attestor_namespace']+':identity-attestor';intent='system:serviceaccount:flux-system:'+B['declaration_reconciler']
 new=copy.deepcopy(old);new['data']['receipt.json']='new'
 cases.append({'Name':'issuer-data-only','Policy':B['evidence_policy'],'Object':new,'OldObject':old,'Operation':'UPDATE','Username':issuer,'Allowed':True})

@@ -1,0 +1,12 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: identity-default-deny
+  labels:
+    platform.perkforge.io/owner: tenant-identity-foundation-v1
+  namespace: tenant-identity-attestor
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  - Egress

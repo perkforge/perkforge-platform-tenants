@@ -1,0 +1,15 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: identity-group-reconciler
+  labels:
+    platform.perkforge.io/owner: tenant-identity-foundation-v1
+  namespace: tenant-identity-writer
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: identity-group-reconciler
+subjects:
+- kind: ServiceAccount
+  name: identity-group-reconciler
+  namespace: flux-system

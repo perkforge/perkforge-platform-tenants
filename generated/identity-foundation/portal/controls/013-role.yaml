@@ -1,0 +1,17 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: identity-evidence-issuer
+  labels:
+    platform.perkforge.io/owner: tenant-identity-foundation-v1
+  namespace: tenant-identity-writer
+rules:
+- apiGroups:
+  - ''
+  resources:
+  - configmaps
+  verbs:
+  - get
+  - patch
+  resourceNames:
+  - portal-identity-evidence

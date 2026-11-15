@@ -1,11 +1,17 @@
 """Synthetic exact-RBAC fixtures. No API access or credentials."""
-import copy,json
+import copy,json,os,pathlib
 from test_identity_gitops_ownership import sample
 from identity_gitops_ownership import build
-objects,selection=sample();plan=build(objects,selection);cases=[]
+objects,selection=sample()
+if os.environ.get('IDENTITY_SELECTION_FIXTURE_DIR'):
+ from identity_foundation import build as foundation
+ root=pathlib.Path(os.environ['IDENTITY_SELECTION_FIXTURE_DIR'])
+ d=json.loads((root/'declarations/identity/portal.json').read_text());c=json.loads((root/'declarations/identity/foundation.json').read_text())
+ objects=foundation(d,c['network'],c['custody'],c['initializer']);selection=c['ownership']
+plan=build(objects,selection);cases=[]
 for o in objects:
  if o['kind'] not in ('Role','RoleBinding'):continue
- policy='identity-foundation-owned-'+o['kind'].lower();label=o['metadata']['namespace']+'-'+o['metadata']['name']
+ policy=selection['namePrefix']+'-owned-'+o['kind'].lower();label=o['metadata']['namespace']+'-'+o['metadata']['name']
  cases.append({'Name':label,'Policy':policy,'Object':o,'Allowed':True})
  if o['kind']=='Role':
   mutations=[('verb',lambda x:x['rules'][0]['verbs'].append('delete')),('resource',lambda x:x['rules'][0]['resources'].append('secrets')),('wildcard',lambda x:x['rules'][0].update(resourceNames=['*'])),('rule',lambda x:x['rules'].append({'apiGroups':[''],'resources':['secrets'],'verbs':['get']})),('url',lambda x:x['rules'][0].update(nonResourceURLs=['/']))]
@@ -22,7 +28,7 @@ for body in D['phaseInputs'].values():body['identity']['identity_retry_generatio
 future=foundation(D,F['network'],F['custody'])
 for o in future:
  if o['kind']!='Role' or not any(r.get('resources')==['jobs'] for r in o['rules']):continue
- label=o['metadata']['namespace'];policy='identity-foundation-owned-role'
+ label=o['metadata']['namespace'];policy=selection['namePrefix']+'-owned-role'
  cases.append({'Name':label+'-future-retry','Policy':policy,'Object':o,'Allowed':True})
  new=copy.deepcopy(o);new['rules'][5]['resourceNames'][-1]='identity-source-'+'f'*20
  cases.append({'Name':label+'-future-source','Policy':policy,'Object':new,'Allowed':True})

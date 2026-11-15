@@ -64,6 +64,7 @@ jobs:
         python3 scripts/test_identity_foundation.py
         python3 scripts/test_identity_gitops_ownership.py
         python3 scripts/test_render_identity_foundation.py
+        python3 scripts/test_identity_selected_activation.py
         python3 scripts/render_identity_foundation.py --check
         python3 scripts/test_identity_target_profile.py
         python3 scripts/test_identity_context_runtime.py

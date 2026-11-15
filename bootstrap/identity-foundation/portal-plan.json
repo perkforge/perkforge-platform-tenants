@@ -1,3 +1,623 @@
 {
-  "enabled": false
+  "bootstrapGrants": [
+    {
+      "apiVersion": "rbac.authorization.k8s.io/v1",
+      "kind": "Role",
+      "metadata": {
+        "name": "identity-portal-foundation-owner",
+        "namespace": "tenant-identity-writer"
+      },
+      "rules": [
+        {
+          "apiGroups": [
+            "networking.k8s.io"
+          ],
+          "resourceNames": [
+            "identity-default-deny",
+            "identity-worker-egress"
+          ],
+          "resources": [
+            "networkpolicies"
+          ],
+          "verbs": [
+            "get",
+            "patch"
+          ]
+        },
+        {
+          "apiGroups": [
+            ""
+          ],
+          "resourceNames": [
+            "eso-identity-writer",
+            "identity-group-worker"
+          ],
+          "resources": [
+            "serviceaccounts"
+          ],
+          "verbs": [
+            "get",
+            "patch"
+          ]
+        },
+        {
+          "apiGroups": [
+            "rbac.authorization.k8s.io"
+          ],
+          "resourceNames": [
+            "eso-identity-writer",
+            "identity-evidence-issuer",
+            "identity-group-reconciler",
+            "identity-receipt-intent"
+          ],
+          "resources": [
+            "roles"
+          ],
+          "verbs": [
+            "get",
+            "patch"
+          ]
+        },
+        {
+          "apiGroups": [
+            "rbac.authorization.k8s.io"
+          ],
+          "resourceNames": [
+            "eso-identity-writer",
+            "identity-evidence-issuer",
+            "identity-group-reconciler",
+            "identity-receipt-intent"
+          ],
+          "resources": [
+            "rolebindings"
+          ],
+          "verbs": [
+            "get",
+            "patch"
+          ]
+        },
+        {
+          "apiGroups": [
+            ""
+          ],
+          "resourceNames": [
+            "identity-openbao-ca"
+          ],
+          "resources": [
+            "configmaps"
+          ],
+          "verbs": [
+            "get",
+            "patch"
+          ]
+        },
+        {
+          "apiGroups": [
+            "external-secrets.io"
+          ],
+          "resourceNames": [
+            "eso-identity-writer"
+          ],
+          "resources": [
+            "secretstores"
+          ],
+          "verbs": [
+            "get",
+            "patch"
+          ]
+        },
+        {
+          "apiGroups": [
+            "external-secrets.io"
+          ],
+          "resourceNames": [
+            "eso-identity-writer"
+          ],
+          "resources": [
+            "externalsecrets"
+          ],
+          "verbs": [
+            "get",
+            "patch"
+          ]
+        },
+        {
+          "apiGroups": [
+            "rbac.authorization.k8s.io"
+          ],
+          "resourceNames": [
+            "eso-identity-writer",
+            "identity-evidence-issuer",
+            "identity-group-reconciler",
+            "identity-receipt-intent"
+          ],
+          "resources": [
+            "roles"
+          ],
+          "verbs": [
+            "bind",
+            "escalate"
+          ]
+        }
+      ]
+    },
+    {
+      "apiVersion": "rbac.authorization.k8s.io/v1",
+      "kind": "RoleBinding",
+      "metadata": {
+        "name": "identity-portal-foundation-owner",
+        "namespace": "tenant-identity-writer"
+      },
+      "roleRef": {
+        "apiGroup": "rbac.authorization.k8s.io",
+        "kind": "Role",
+        "name": "identity-portal-foundation-owner"
+      },
+      "subjects": [
+        {
+          "kind": "ServiceAccount",
+          "name": "platform-reconciler",
+          "namespace": "flux-system"
+        }
+      ]
+    },
+    {
+      "apiVersion": "rbac.authorization.k8s.io/v1",
+      "kind": "Role",
+      "metadata": {
+        "name": "identity-portal-foundation-owner",
+        "namespace": "tenant-identity-attestor"
+      },
+      "rules": [
+        {
+          "apiGroups": [
+            "networking.k8s.io"
+          ],
+          "resourceNames": [
+            "identity-default-deny",
+            "identity-worker-egress"
+          ],
+          "resources": [
+            "networkpolicies"
+          ],
+          "verbs": [
+            "get",
+            "patch"
+          ]
+        },
+        {
+          "apiGroups": [
+            ""
+          ],
+          "resourceNames": [
+            "eso-identity-keycloak",
+            "eso-identity-reader",
+            "identity-attestor"
+          ],
+          "resources": [
+            "serviceaccounts"
+          ],
+          "verbs": [
+            "get",
+            "patch"
+          ]
+        },
+        {
+          "apiGroups": [
+            "rbac.authorization.k8s.io"
+          ],
+          "resourceNames": [
+            "eso-identity-keycloak",
+            "eso-identity-reader",
+            "identity-attestor-reconciler"
+          ],
+          "resources": [
+            "roles"
+          ],
+          "verbs": [
+            "get",
+            "patch"
+          ]
+        },
+        {
+          "apiGroups": [
+            "rbac.authorization.k8s.io"
+          ],
+          "resourceNames": [
+            "eso-identity-keycloak",
+            "eso-identity-reader",
+            "identity-attestor-reconciler"
+          ],
+          "resources": [
+            "rolebindings"
+          ],
+          "verbs": [
+            "get",
+            "patch"
+          ]
+        },
+        {
+          "apiGroups": [
+            ""
+          ],
+          "resourceNames": [
+            "identity-openbao-ca"
+          ],
+          "resources": [
+            "configmaps"
+          ],
+          "verbs": [
+            "get",
+            "patch"
+          ]
+        },
+        {
+          "apiGroups": [
+            "external-secrets.io"
+          ],
+          "resourceNames": [
+            "eso-identity-keycloak",
+            "eso-identity-reader"
+          ],
+          "resources": [
+            "secretstores"
+          ],
+          "verbs": [
+            "get",
+            "patch"
+          ]
+        },
+        {
+          "apiGroups": [
+            "external-secrets.io"
+          ],
+          "resourceNames": [
+            "eso-identity-keycloak",
+            "eso-identity-reader"
+          ],
+          "resources": [
+            "externalsecrets"
+          ],
+          "verbs": [
+            "get",
+            "patch"
+          ]
+        },
+        {
+          "apiGroups": [
+            "rbac.authorization.k8s.io"
+          ],
+          "resourceNames": [
+            "eso-identity-keycloak",
+            "eso-identity-reader",
+            "identity-attestor-reconciler"
+          ],
+          "resources": [
+            "roles"
+          ],
+          "verbs": [
+            "bind",
+            "escalate"
+          ]
+        }
+      ]
+    },
+    {
+      "apiVersion": "rbac.authorization.k8s.io/v1",
+      "kind": "RoleBinding",
+      "metadata": {
+        "name": "identity-portal-foundation-owner",
+        "namespace": "tenant-identity-attestor"
+      },
+      "roleRef": {
+        "apiGroup": "rbac.authorization.k8s.io",
+        "kind": "Role",
+        "name": "identity-portal-foundation-owner"
+      },
+      "subjects": [
+        {
+          "kind": "ServiceAccount",
+          "name": "platform-reconciler",
+          "namespace": "flux-system"
+        }
+      ]
+    },
+    {
+      "apiVersion": "rbac.authorization.k8s.io/v1",
+      "kind": "Role",
+      "metadata": {
+        "name": "identity-portal-foundation-owner",
+        "namespace": "flux-system"
+      },
+      "rules": [
+        {
+          "apiGroups": [
+            ""
+          ],
+          "resourceNames": [
+            "identity-attestor-reconciler",
+            "identity-declaration-reconciler",
+            "identity-group-reconciler"
+          ],
+          "resources": [
+            "serviceaccounts"
+          ],
+          "verbs": [
+            "get",
+            "patch"
+          ]
+        },
+        {
+          "apiGroups": [
+            "rbac.authorization.k8s.io"
+          ],
+          "resourceNames": [
+            "identity-declaration-reconciler"
+          ],
+          "resources": [
+            "roles"
+          ],
+          "verbs": [
+            "get",
+            "patch"
+          ]
+        },
+        {
+          "apiGroups": [
+            "rbac.authorization.k8s.io"
+          ],
+          "resourceNames": [
+            "identity-declaration-reconciler"
+          ],
+          "resources": [
+            "rolebindings"
+          ],
+          "verbs": [
+            "get",
+            "patch"
+          ]
+        }
+      ]
+    },
+    {
+      "apiVersion": "rbac.authorization.k8s.io/v1",
+      "kind": "RoleBinding",
+      "metadata": {
+        "name": "identity-portal-foundation-owner",
+        "namespace": "flux-system"
+      },
+      "roleRef": {
+        "apiGroup": "rbac.authorization.k8s.io",
+        "kind": "Role",
+        "name": "identity-portal-foundation-owner"
+      },
+      "subjects": [
+        {
+          "kind": "ServiceAccount",
+          "name": "platform-reconciler",
+          "namespace": "flux-system"
+        }
+      ]
+    },
+    {
+      "apiVersion": "rbac.authorization.k8s.io/v1",
+      "kind": "ClusterRole",
+      "metadata": {
+        "name": "identity-portal-foundation-admission-owner"
+      },
+      "rules": [
+        {
+          "apiGroups": [
+            "admissionregistration.k8s.io"
+          ],
+          "resourceNames": [
+            "identity-config-tenant-identity-attestor",
+            "identity-config-tenant-identity-writer",
+            "identity-declaration-scope",
+            "identity-evidence-fields",
+            "identity-jobs-tenant-identity-attestor",
+            "identity-jobs-tenant-identity-writer",
+            "identity-pods-tenant-identity-attestor",
+            "identity-pods-tenant-identity-writer"
+          ],
+          "resources": [
+            "validatingadmissionpolicies"
+          ],
+          "verbs": [
+            "get",
+            "patch"
+          ]
+        },
+        {
+          "apiGroups": [
+            "admissionregistration.k8s.io"
+          ],
+          "resourceNames": [
+            "identity-config-tenant-identity-attestor",
+            "identity-config-tenant-identity-writer",
+            "identity-declaration-scope",
+            "identity-evidence-fields",
+            "identity-jobs-tenant-identity-attestor",
+            "identity-jobs-tenant-identity-writer",
+            "identity-pods-tenant-identity-attestor",
+            "identity-pods-tenant-identity-writer"
+          ],
+          "resources": [
+            "validatingadmissionpolicybindings"
+          ],
+          "verbs": [
+            "get",
+            "patch"
+          ]
+        }
+      ]
+    },
+    {
+      "apiVersion": "rbac.authorization.k8s.io/v1",
+      "kind": "ClusterRoleBinding",
+      "metadata": {
+        "name": "identity-portal-foundation-admission-owner"
+      },
+      "roleRef": {
+        "apiGroup": "rbac.authorization.k8s.io",
+        "kind": "ClusterRole",
+        "name": "identity-portal-foundation-admission-owner"
+      },
+      "subjects": [
+        {
+          "kind": "ServiceAccount",
+          "name": "platform-reconciler",
+          "namespace": "flux-system"
+        }
+      ]
+    }
+  ],
+  "bootstrapGuards": [
+    {
+      "apiVersion": "admissionregistration.k8s.io/v1",
+      "kind": "ValidatingAdmissionPolicy",
+      "metadata": {
+        "name": "identity-portal-foundation-owned-role"
+      },
+      "spec": {
+        "failurePolicy": "Fail",
+        "matchConditions": [
+          {
+            "expression": "(object.metadata.namespace == \"tenant-identity-writer\" && object.metadata.name == \"identity-group-reconciler\") || (object.metadata.namespace == \"tenant-identity-attestor\" && object.metadata.name == \"identity-attestor-reconciler\") || (object.metadata.namespace == \"flux-system\" && object.metadata.name == \"identity-declaration-reconciler\") || (object.metadata.namespace == \"tenant-identity-writer\" && object.metadata.name == \"identity-receipt-intent\") || (object.metadata.namespace == \"tenant-identity-writer\" && object.metadata.name == \"identity-evidence-issuer\") || (object.metadata.namespace == \"tenant-identity-writer\" && object.metadata.name == \"eso-identity-writer\") || (object.metadata.namespace == \"tenant-identity-attestor\" && object.metadata.name == \"eso-identity-reader\") || (object.metadata.namespace == \"tenant-identity-attestor\" && object.metadata.name == \"eso-identity-keycloak\")",
+            "name": "exact-owned-names"
+          }
+        ],
+        "matchConstraints": {
+          "resourceRules": [
+            {
+              "apiGroups": [
+                "rbac.authorization.k8s.io"
+              ],
+              "apiVersions": [
+                "v1"
+              ],
+              "operations": [
+                "CREATE",
+                "UPDATE"
+              ],
+              "resources": [
+                "roles"
+              ]
+            }
+          ]
+        },
+        "validations": [
+          {
+            "expression": "(object.metadata.namespace == \"tenant-identity-writer\" && object.metadata.name == \"identity-group-reconciler\" && !has(object.metadata.ownerReferences) && !has(object.metadata.finalizers) && object.rules[1].resourceNames.size() == 2 && object.rules[5].resourceNames.size() == 3 && object.rules[1].resourceNames[0].matches(\"^identity\\\\-portal\\\\-foundation\\\\-[0-9a-f]{16}$\") && object.rules[5].resourceNames[0] == object.rules[1].resourceNames[0] + \"-inputs\" && object.rules[1].resourceNames[1].matches(\"^identity\\\\-portal\\\\-memberships\\\\-[0-9a-f]{16}$\") && object.rules[5].resourceNames[1] == object.rules[1].resourceNames[1] + \"-inputs\" && object.rules[1].resourceNames[1].substring(28) == object.rules[1].resourceNames[0].substring(27) && object.rules[5].resourceNames[2].matches(\"^identity-source-[0-9a-f]{20}$\") && object.rules.size() == 6 && object.rules[0].apiGroups == [\"batch\"] && object.rules[0].resources == [\"jobs\"] && object.rules[0].verbs == [\"create\"] && !has(object.rules[0].resourceNames) && !has(object.rules[0].nonResourceURLs) && object.rules[1].apiGroups == [\"batch\"] && object.rules[1].resources == [\"jobs\"] && object.rules[1].verbs == [\"get\",\"patch\"] && !has(object.rules[1].nonResourceURLs) && object.rules[2].apiGroups == [\"batch\"] && object.rules[2].resources == [\"jobs\"] && object.rules[2].verbs == [\"list\",\"watch\"] && !has(object.rules[2].resourceNames) && !has(object.rules[2].nonResourceURLs) && object.rules[3].apiGroups == [\"\"] && object.rules[3].resources == [\"pods\"] && object.rules[3].verbs == [\"get\",\"list\",\"watch\"] && !has(object.rules[3].resourceNames) && !has(object.rules[3].nonResourceURLs) && object.rules[4].apiGroups == [\"\"] && object.rules[4].resources == [\"configmaps\"] && object.rules[4].verbs == [\"create\"] && !has(object.rules[4].resourceNames) && !has(object.rules[4].nonResourceURLs) && object.rules[5].apiGroups == [\"\"] && object.rules[5].resources == [\"configmaps\"] && object.rules[5].verbs == [\"get\",\"patch\",\"update\"] && !has(object.rules[5].nonResourceURLs)) || (object.metadata.namespace == \"tenant-identity-attestor\" && object.metadata.name == \"identity-attestor-reconciler\" && !has(object.metadata.ownerReferences) && !has(object.metadata.finalizers) && object.rules[1].resourceNames.size() == 1 && object.rules[5].resourceNames.size() == 2 && object.rules[1].resourceNames[0].matches(\"^identity\\\\-portal\\\\-attest\\\\-[0-9a-f]{16}$\") && object.rules[5].resourceNames[0] == object.rules[1].resourceNames[0] + \"-inputs\" && object.rules[5].resourceNames[1].matches(\"^identity-source-[0-9a-f]{20}$\") && object.rules.size() == 6 && object.rules[0].apiGroups == [\"batch\"] && object.rules[0].resources == [\"jobs\"] && object.rules[0].verbs == [\"create\"] && !has(object.rules[0].resourceNames) && !has(object.rules[0].nonResourceURLs) && object.rules[1].apiGroups == [\"batch\"] && object.rules[1].resources == [\"jobs\"] && object.rules[1].verbs == [\"get\",\"patch\"] && !has(object.rules[1].nonResourceURLs) && object.rules[2].apiGroups == [\"batch\"] && object.rules[2].resources == [\"jobs\"] && object.rules[2].verbs == [\"list\",\"watch\"] && !has(object.rules[2].resourceNames) && !has(object.rules[2].nonResourceURLs) && object.rules[3].apiGroups == [\"\"] && object.rules[3].resources == [\"pods\"] && object.rules[3].verbs == [\"get\",\"list\",\"watch\"] && !has(object.rules[3].resourceNames) && !has(object.rules[3].nonResourceURLs) && object.rules[4].apiGroups == [\"\"] && object.rules[4].resources == [\"configmaps\"] && object.rules[4].verbs == [\"create\"] && !has(object.rules[4].resourceNames) && !has(object.rules[4].nonResourceURLs) && object.rules[5].apiGroups == [\"\"] && object.rules[5].resources == [\"configmaps\"] && object.rules[5].verbs == [\"get\",\"patch\",\"update\"] && !has(object.rules[5].nonResourceURLs)) || (object.metadata.namespace == \"flux-system\" && object.metadata.name == \"identity-declaration-reconciler\" && !has(object.metadata.ownerReferences) && !has(object.metadata.finalizers) && object.rules.size() == 2 && object.rules[0].apiGroups == [\"kustomize.toolkit.fluxcd.io\"] && object.rules[0].resources == [\"kustomizations\"] && object.rules[0].verbs == [\"create\"] && !has(object.rules[0].resourceNames) && !has(object.rules[0].nonResourceURLs) && object.rules[1].apiGroups == [\"kustomize.toolkit.fluxcd.io\"] && object.rules[1].resources == [\"kustomizations\"] && object.rules[1].verbs == [\"get\",\"patch\",\"update\"] && object.rules[1].resourceNames == [\"identity-portal-foundation\",\"identity-portal-attest\",\"identity-portal-memberships\"] && !has(object.rules[1].nonResourceURLs)) || (object.metadata.namespace == \"tenant-identity-writer\" && object.metadata.name == \"identity-receipt-intent\" && !has(object.metadata.ownerReferences) && !has(object.metadata.finalizers) && object.rules.size() == 1 && object.rules[0].apiGroups == [\"\"] && object.rules[0].resources == [\"configmaps\"] && object.rules[0].verbs == [\"get\",\"patch\"] && object.rules[0].resourceNames == [\"portal-identity-evidence\"] && !has(object.rules[0].nonResourceURLs)) || (object.metadata.namespace == \"tenant-identity-writer\" && object.metadata.name == \"identity-evidence-issuer\" && !has(object.metadata.ownerReferences) && !has(object.metadata.finalizers) && object.rules.size() == 1 && object.rules[0].apiGroups == [\"\"] && object.rules[0].resources == [\"configmaps\"] && object.rules[0].verbs == [\"get\",\"patch\"] && object.rules[0].resourceNames == [\"portal-identity-evidence\"] && !has(object.rules[0].nonResourceURLs)) || (object.metadata.namespace == \"tenant-identity-writer\" && object.metadata.name == \"eso-identity-writer\" && !has(object.metadata.ownerReferences) && !has(object.metadata.finalizers) && object.rules.size() == 6 && object.rules[0].apiGroups == [\"\"] && object.rules[0].resources == [\"secrets\"] && object.rules[0].verbs == [\"get\",\"update\",\"patch\"] && object.rules[0].resourceNames == [\"group-writer\"] && !has(object.rules[0].nonResourceURLs) && object.rules[1].apiGroups == [\"\"] && object.rules[1].resources == [\"serviceaccounts/token\"] && object.rules[1].verbs == [\"create\"] && object.rules[1].resourceNames == [\"eso-identity-writer\"] && !has(object.rules[1].nonResourceURLs) && object.rules[2].apiGroups == [\"\"] && object.rules[2].resources == [\"configmaps\"] && object.rules[2].verbs == [\"get\"] && object.rules[2].resourceNames == [\"identity-openbao-ca\"] && !has(object.rules[2].nonResourceURLs) && object.rules[3].apiGroups == [\"external-secrets.io\"] && object.rules[3].resources == [\"externalsecrets\"] && object.rules[3].verbs == [\"patch\"] && object.rules[3].resourceNames == [\"eso-identity-writer\"] && !has(object.rules[3].nonResourceURLs) && object.rules[4].apiGroups == [\"external-secrets.io\"] && object.rules[4].resources == [\"externalsecrets/status\"] && object.rules[4].verbs == [\"update\",\"patch\"] && object.rules[4].resourceNames == [\"eso-identity-writer\"] && !has(object.rules[4].nonResourceURLs) && object.rules[5].apiGroups == [\"external-secrets.io\"] && object.rules[5].resources == [\"secretstores/status\"] && object.rules[5].verbs == [\"patch\"] && object.rules[5].resourceNames == [\"eso-identity-writer\"] && !has(object.rules[5].nonResourceURLs)) || (object.metadata.namespace == \"tenant-identity-attestor\" && object.metadata.name == \"eso-identity-reader\" && !has(object.metadata.ownerReferences) && !has(object.metadata.finalizers) && object.rules.size() == 6 && object.rules[0].apiGroups == [\"\"] && object.rules[0].resources == [\"secrets\"] && object.rules[0].verbs == [\"get\",\"update\",\"patch\"] && object.rules[0].resourceNames == [\"isolated-attestor\"] && !has(object.rules[0].nonResourceURLs) && object.rules[1].apiGroups == [\"\"] && object.rules[1].resources == [\"serviceaccounts/token\"] && object.rules[1].verbs == [\"create\"] && object.rules[1].resourceNames == [\"eso-identity-reader\"] && !has(object.rules[1].nonResourceURLs) && object.rules[2].apiGroups == [\"\"] && object.rules[2].resources == [\"configmaps\"] && object.rules[2].verbs == [\"get\"] && object.rules[2].resourceNames == [\"identity-openbao-ca\"] && !has(object.rules[2].nonResourceURLs) && object.rules[3].apiGroups == [\"external-secrets.io\"] && object.rules[3].resources == [\"externalsecrets\"] && object.rules[3].verbs == [\"patch\"] && object.rules[3].resourceNames == [\"eso-identity-reader\"] && !has(object.rules[3].nonResourceURLs) && object.rules[4].apiGroups == [\"external-secrets.io\"] && object.rules[4].resources == [\"externalsecrets/status\"] && object.rules[4].verbs == [\"update\",\"patch\"] && object.rules[4].resourceNames == [\"eso-identity-reader\"] && !has(object.rules[4].nonResourceURLs) && object.rules[5].apiGroups == [\"external-secrets.io\"] && object.rules[5].resources == [\"secretstores/status\"] && object.rules[5].verbs == [\"patch\"] && object.rules[5].resourceNames == [\"eso-identity-reader\"] && !has(object.rules[5].nonResourceURLs)) || (object.metadata.namespace == \"tenant-identity-attestor\" && object.metadata.name == \"eso-identity-keycloak\" && !has(object.metadata.ownerReferences) && !has(object.metadata.finalizers) && object.rules.size() == 6 && object.rules[0].apiGroups == [\"\"] && object.rules[0].resources == [\"secrets\"] && object.rules[0].verbs == [\"get\",\"update\",\"patch\"] && object.rules[0].resourceNames == [\"isolated-attestor\"] && !has(object.rules[0].nonResourceURLs) && object.rules[1].apiGroups == [\"\"] && object.rules[1].resources == [\"serviceaccounts/token\"] && object.rules[1].verbs == [\"create\"] && object.rules[1].resourceNames == [\"eso-identity-keycloak\"] && !has(object.rules[1].nonResourceURLs) && object.rules[2].apiGroups == [\"\"] && object.rules[2].resources == [\"configmaps\"] && object.rules[2].verbs == [\"get\"] && object.rules[2].resourceNames == [\"identity-openbao-ca\"] && !has(object.rules[2].nonResourceURLs) && object.rules[3].apiGroups == [\"external-secrets.io\"] && object.rules[3].resources == [\"externalsecrets\"] && object.rules[3].verbs == [\"patch\"] && object.rules[3].resourceNames == [\"eso-identity-keycloak\"] && !has(object.rules[3].nonResourceURLs) && object.rules[4].apiGroups == [\"external-secrets.io\"] && object.rules[4].resources == [\"externalsecrets/status\"] && object.rules[4].verbs == [\"update\",\"patch\"] && object.rules[4].resourceNames == [\"eso-identity-keycloak\"] && !has(object.rules[4].nonResourceURLs) && object.rules[5].apiGroups == [\"external-secrets.io\"] && object.rules[5].resources == [\"secretstores/status\"] && object.rules[5].verbs == [\"patch\"] && object.rules[5].resourceNames == [\"eso-identity-keycloak\"] && !has(object.rules[5].nonResourceURLs))",
+            "message": "Owned identity RBAC template drift requires root-reviewed guard update.",
+            "reason": "Forbidden"
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "admissionregistration.k8s.io/v1",
+      "kind": "ValidatingAdmissionPolicyBinding",
+      "metadata": {
+        "name": "identity-portal-foundation-owned-role"
+      },
+      "spec": {
+        "policyName": "identity-portal-foundation-owned-role",
+        "validationActions": [
+          "Deny"
+        ]
+      }
+    },
+    {
+      "apiVersion": "admissionregistration.k8s.io/v1",
+      "kind": "ValidatingAdmissionPolicy",
+      "metadata": {
+        "name": "identity-portal-foundation-owned-rolebinding"
+      },
+      "spec": {
+        "failurePolicy": "Fail",
+        "matchConditions": [
+          {
+            "expression": "(object.metadata.namespace == \"tenant-identity-writer\" && object.metadata.name == \"identity-group-reconciler\") || (object.metadata.namespace == \"tenant-identity-attestor\" && object.metadata.name == \"identity-attestor-reconciler\") || (object.metadata.namespace == \"flux-system\" && object.metadata.name == \"identity-declaration-reconciler\") || (object.metadata.namespace == \"tenant-identity-writer\" && object.metadata.name == \"identity-receipt-intent\") || (object.metadata.namespace == \"tenant-identity-writer\" && object.metadata.name == \"identity-evidence-issuer\") || (object.metadata.namespace == \"tenant-identity-writer\" && object.metadata.name == \"eso-identity-writer\") || (object.metadata.namespace == \"tenant-identity-attestor\" && object.metadata.name == \"eso-identity-reader\") || (object.metadata.namespace == \"tenant-identity-attestor\" && object.metadata.name == \"eso-identity-keycloak\")",
+            "name": "exact-owned-names"
+          }
+        ],
+        "matchConstraints": {
+          "resourceRules": [
+            {
+              "apiGroups": [
+                "rbac.authorization.k8s.io"
+              ],
+              "apiVersions": [
+                "v1"
+              ],
+              "operations": [
+                "CREATE",
+                "UPDATE"
+              ],
+              "resources": [
+                "rolebindings"
+              ]
+            }
+          ]
+        },
+        "validations": [
+          {
+            "expression": "(object.metadata.namespace == \"tenant-identity-writer\" && object.metadata.name == \"identity-group-reconciler\" && !has(object.metadata.ownerReferences) && !has(object.metadata.finalizers) && object.roleRef.apiGroup == \"rbac.authorization.k8s.io\" && object.roleRef.kind == \"Role\" && object.roleRef.name == \"identity-group-reconciler\" && object.subjects.size() == 1 && object.subjects[0].kind == \"ServiceAccount\" && object.subjects[0].name == \"identity-group-reconciler\" && object.subjects[0].namespace == \"flux-system\" && (!has(object.subjects[0].apiGroup) || object.subjects[0].apiGroup == \"\")) || (object.metadata.namespace == \"tenant-identity-attestor\" && object.metadata.name == \"identity-attestor-reconciler\" && !has(object.metadata.ownerReferences) && !has(object.metadata.finalizers) && object.roleRef.apiGroup == \"rbac.authorization.k8s.io\" && object.roleRef.kind == \"Role\" && object.roleRef.name == \"identity-attestor-reconciler\" && object.subjects.size() == 1 && object.subjects[0].kind == \"ServiceAccount\" && object.subjects[0].name == \"identity-attestor-reconciler\" && object.subjects[0].namespace == \"flux-system\" && (!has(object.subjects[0].apiGroup) || object.subjects[0].apiGroup == \"\")) || (object.metadata.namespace == \"flux-system\" && object.metadata.name == \"identity-declaration-reconciler\" && !has(object.metadata.ownerReferences) && !has(object.metadata.finalizers) && object.roleRef.apiGroup == \"rbac.authorization.k8s.io\" && object.roleRef.kind == \"Role\" && object.roleRef.name == \"identity-declaration-reconciler\" && object.subjects.size() == 1 && object.subjects[0].kind == \"ServiceAccount\" && object.subjects[0].name == \"identity-declaration-reconciler\" && object.subjects[0].namespace == \"flux-system\" && (!has(object.subjects[0].apiGroup) || object.subjects[0].apiGroup == \"\")) || (object.metadata.namespace == \"tenant-identity-writer\" && object.metadata.name == \"identity-receipt-intent\" && !has(object.metadata.ownerReferences) && !has(object.metadata.finalizers) && object.roleRef.apiGroup == \"rbac.authorization.k8s.io\" && object.roleRef.kind == \"Role\" && object.roleRef.name == \"identity-receipt-intent\" && object.subjects.size() == 1 && object.subjects[0].kind == \"ServiceAccount\" && object.subjects[0].name == \"identity-declaration-reconciler\" && object.subjects[0].namespace == \"flux-system\" && (!has(object.subjects[0].apiGroup) || object.subjects[0].apiGroup == \"\")) || (object.metadata.namespace == \"tenant-identity-writer\" && object.metadata.name == \"identity-evidence-issuer\" && !has(object.metadata.ownerReferences) && !has(object.metadata.finalizers) && object.roleRef.apiGroup == \"rbac.authorization.k8s.io\" && object.roleRef.kind == \"Role\" && object.roleRef.name == \"identity-evidence-issuer\" && object.subjects.size() == 1 && object.subjects[0].kind == \"ServiceAccount\" && object.subjects[0].name == \"identity-attestor\" && object.subjects[0].namespace == \"tenant-identity-attestor\" && (!has(object.subjects[0].apiGroup) || object.subjects[0].apiGroup == \"\")) || (object.metadata.namespace == \"tenant-identity-writer\" && object.metadata.name == \"eso-identity-writer\" && !has(object.metadata.ownerReferences) && !has(object.metadata.finalizers) && object.roleRef.apiGroup == \"rbac.authorization.k8s.io\" && object.roleRef.kind == \"Role\" && object.roleRef.name == \"eso-identity-writer\" && object.subjects.size() == 1 && object.subjects[0].kind == \"ServiceAccount\" && object.subjects[0].name == \"external-secrets\" && object.subjects[0].namespace == \"external-secrets\" && (!has(object.subjects[0].apiGroup) || object.subjects[0].apiGroup == \"\")) || (object.metadata.namespace == \"tenant-identity-attestor\" && object.metadata.name == \"eso-identity-reader\" && !has(object.metadata.ownerReferences) && !has(object.metadata.finalizers) && object.roleRef.apiGroup == \"rbac.authorization.k8s.io\" && object.roleRef.kind == \"Role\" && object.roleRef.name == \"eso-identity-reader\" && object.subjects.size() == 1 && object.subjects[0].kind == \"ServiceAccount\" && object.subjects[0].name == \"external-secrets\" && object.subjects[0].namespace == \"external-secrets\" && (!has(object.subjects[0].apiGroup) || object.subjects[0].apiGroup == \"\")) || (object.metadata.namespace == \"tenant-identity-attestor\" && object.metadata.name == \"eso-identity-keycloak\" && !has(object.metadata.ownerReferences) && !has(object.metadata.finalizers) && object.roleRef.apiGroup == \"rbac.authorization.k8s.io\" && object.roleRef.kind == \"Role\" && object.roleRef.name == \"eso-identity-keycloak\" && object.subjects.size() == 1 && object.subjects[0].kind == \"ServiceAccount\" && object.subjects[0].name == \"external-secrets\" && object.subjects[0].namespace == \"external-secrets\" && (!has(object.subjects[0].apiGroup) || object.subjects[0].apiGroup == \"\"))",
+            "message": "Owned identity RBAC template drift requires root-reviewed guard update.",
+            "reason": "Forbidden"
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "admissionregistration.k8s.io/v1",
+      "kind": "ValidatingAdmissionPolicyBinding",
+      "metadata": {
+        "name": "identity-portal-foundation-owned-rolebinding"
+      },
+      "spec": {
+        "policyName": "identity-portal-foundation-owned-rolebinding",
+        "validationActions": [
+          "Deny"
+        ]
+      }
+    }
+  ],
+  "excludedBootstrapObjects": [
+    {
+      "kind": "Namespace",
+      "name": "tenant-identity-writer",
+      "namespace": null
+    },
+    {
+      "kind": "Namespace",
+      "name": "tenant-identity-attestor",
+      "namespace": null
+    },
+    {
+      "kind": "PersistentVolumeClaim",
+      "name": "identity-receipts",
+      "namespace": "tenant-identity-writer"
+    },
+    {
+      "kind": "Secret",
+      "name": "group-writer",
+      "namespace": "tenant-identity-writer"
+    },
+    {
+      "kind": "Secret",
+      "name": "isolated-attestor",
+      "namespace": "tenant-identity-attestor"
+    }
+  ],
+  "foundationSHA256": "574badef224b80e42cc686dab37de7dbf448974c33f853f7f7d56fedf9f4afdb",
+  "preconditions": [
+    "exact native cluster/UID inventory",
+    "root installs guards first; observedGeneration and zero warnings",
+    "precreate every named object; never recreate lost evidence/PVC",
+    "verify existing underlying Flux authority for exempt declaration role",
+    "SSA adoption under actual Flux identity, no Secret/issuer data fields",
+    "runtime approval and separate private receipt/issuer acceptance before Jobs"
+  ]
 }

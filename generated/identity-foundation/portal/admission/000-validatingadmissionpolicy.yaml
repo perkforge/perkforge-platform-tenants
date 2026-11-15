@@ -1,0 +1,345 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: identity-jobs-tenant-identity-writer
+  labels:
+    platform.perkforge.io/owner: tenant-identity-foundation-v1
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+    - apiGroups:
+      - batch
+      apiVersions:
+      - v1
+      operations:
+      - CREATE
+      - UPDATE
+      resources:
+      - jobs
+  matchConditions:
+  - name: exact-namespace
+    expression: request.namespace == "tenant-identity-writer"
+  validations:
+  - expression: (object.metadata.name == "identity-portal-foundation-45382250184caa3d"
+      && object.metadata.annotations == {"platform.perkforge.io/invocation":"5d92796ed2fcc186e8a770a13f69916eed814ed1d0bd6e9eb1fa67e61e84bca4","platform.perkforge.io/attempt":"45382250184caa3d280b5dfb25898fa10fbc919fd547dbbaa65213b95b94f6b3"}
+      && object.spec.completions == 1 && object.spec.parallelism == 1 && object.spec.backoffLimit
+      == 0 && object.spec.activeDeadlineSeconds == 300 && !has(object.spec.ttlSecondsAfterFinished)
+      && (!has(object.spec.suspend) || object.spec.suspend == false) && (!has(object.spec.completionMode)
+      || object.spec.completionMode == "NonIndexed") && !has(object.spec.podFailurePolicy)
+      && !has(object.spec.successPolicy) && object.spec.template.metadata.annotations
+      == {"platform.perkforge.io/invocation":"5d92796ed2fcc186e8a770a13f69916eed814ed1d0bd6e9eb1fa67e61e84bca4","platform.perkforge.io/attempt":"45382250184caa3d280b5dfb25898fa10fbc919fd547dbbaa65213b95b94f6b3"}
+      && object.spec.template.spec.containers.size() == 1 && object.spec.template.spec.serviceAccountName
+      == "identity-group-worker" && object.spec.template.spec.automountServiceAccountToken
+      == false && object.spec.template.spec.restartPolicy == "Never" && object.spec.template.spec.nodeSelector
+      == {"kubernetes.io/hostname":"worker-2"} && (!has(object.spec.template.spec.hostNetwork)
+      || object.spec.template.spec.hostNetwork == false) && (!has(object.spec.template.spec.hostPID)
+      || object.spec.template.spec.hostPID == false) && (!has(object.spec.template.spec.hostIPC)
+      || object.spec.template.spec.hostIPC == false) && (!has(object.spec.template.spec.shareProcessNamespace)
+      || object.spec.template.spec.shareProcessNamespace == false) && !has(object.spec.template.spec.nodeName)
+      && !has(object.spec.template.spec.initContainers) && !has(object.spec.template.spec.ephemeralContainers)
+      && !has(object.spec.template.spec.hostAliases) && !has(object.spec.template.spec.dnsConfig)
+      && !has(object.spec.template.spec.runtimeClassName) && !has(object.spec.template.spec.affinity)
+      && !has(object.spec.template.spec.tolerations) && !has(object.spec.template.spec.topologySpreadConstraints)
+      && !has(object.spec.template.spec.resourceClaims) && !has(object.spec.template.spec.os)
+      && !has(dyn(object.spec.template.spec).overhead) && object.spec.template.spec.containers[0].name
+      == "reconcile" && object.spec.template.spec.containers[0].image == "registry1.dso.mil/ironbank/opensource/ansible/ansible@sha256:3308322cc09f20a813c00e9087c166a3d97dbb7789c059f1020f3c0b092fdf02"
+      && object.spec.template.spec.containers[0].command == ["/bin/bash","/opt/perkforge/bin/launch"]
+      && object.spec.template.spec.containers[0].args == ["--phase","foundation","--invocation","5d92796ed2fcc186e8a770a13f69916eed814ed1d0bd6e9eb1fa67e61e84bca4","--inputs-sha256","f7c4dd708c691653a5432df0c69164fd01ce06cd771db5b702fc20154cf1e2da","--bundle-sha256","43bad232454e5fb0698b417270dfbd329efa64cef34862c98af97dba0a311aaa"]
+      && !has(object.spec.template.spec.containers[0].env) && !has(object.spec.template.spec.containers[0].envFrom)
+      && !has(object.spec.template.spec.containers[0].lifecycle) && !has(object.spec.template.spec.containers[0].livenessProbe)
+      && !has(object.spec.template.spec.containers[0].readinessProbe) && !has(object.spec.template.spec.containers[0].startupProbe)
+      && !has(object.spec.template.spec.containers[0].ports) && !has(object.spec.template.spec.containers[0].workingDir)
+      && !has(object.spec.template.spec.containers[0].volumeDevices) && !has(object.spec.template.spec.containers[0].restartPolicy)
+      && !has(object.spec.template.spec.containers[0].restartPolicyRules) && (!has(object.spec.template.spec.containers[0].terminationMessagePath)
+      || object.spec.template.spec.containers[0].terminationMessagePath == "/dev/termination-log")
+      && (!has(object.spec.template.spec.containers[0].terminationMessagePolicy) ||
+      object.spec.template.spec.containers[0].terminationMessagePolicy == "File")
+      && (!has(object.spec.template.spec.containers[0].stdin) || object.spec.template.spec.containers[0].stdin
+      == false) && (!has(object.spec.template.spec.containers[0].stdinOnce) || object.spec.template.spec.containers[0].stdinOnce
+      == false) && (!has(object.spec.template.spec.containers[0].tty) || object.spec.template.spec.containers[0].tty
+      == false) && (!has(object.spec.template.spec.schedulerName) || object.spec.template.spec.schedulerName
+      == "default-scheduler") && (!has(object.spec.template.spec.priorityClassName)
+      || object.spec.template.spec.priorityClassName == "") && (!has(object.spec.template.spec.priority)
+      || object.spec.template.spec.priority == 0) && !has(object.spec.template.spec.containers[0].securityContext.runAsUser)
+      && !has(object.spec.template.spec.containers[0].securityContext.runAsGroup)
+      && !has(object.spec.template.spec.containers[0].securityContext.runAsNonRoot)
+      && !has(object.spec.template.spec.containers[0].securityContext.seccompProfile)
+      && !has(object.spec.template.spec.containers[0].securityContext.seLinuxOptions)
+      && !has(object.spec.template.spec.containers[0].securityContext.appArmorProfile)
+      && !has(object.spec.template.spec.containers[0].securityContext.procMount) &&
+      !has(object.spec.template.spec.securityContext.seLinuxOptions) && !has(object.spec.template.spec.securityContext.supplementalGroups)
+      && !has(object.spec.template.spec.securityContext.sysctls) && !has(object.spec.template.spec.securityContext.appArmorProfile)
+      && object.spec.template.spec.containers[0].securityContext.allowPrivilegeEscalation
+      == false && object.spec.template.spec.containers[0].securityContext.readOnlyRootFilesystem
+      == true && object.spec.template.spec.containers[0].securityContext.capabilities.drop
+      == ["ALL"] && (!has(object.spec.template.spec.containers[0].securityContext.capabilities.add)
+      || object.spec.template.spec.containers[0].securityContext.capabilities.add.size()
+      == 0) && (!has(object.spec.template.spec.containers[0].securityContext.privileged)
+      || object.spec.template.spec.containers[0].securityContext.privileged == false)
+      && object.spec.template.spec.securityContext.runAsNonRoot == true && object.spec.template.spec.securityContext.runAsUser
+      == 1001 && object.spec.template.spec.securityContext.runAsGroup == 1001 && object.spec.template.spec.securityContext.fsGroup
+      == 1001 && object.spec.template.spec.securityContext.fsGroupChangePolicy ==
+      "OnRootMismatch" && object.spec.template.spec.securityContext.seccompProfile.type
+      == "RuntimeDefault" && dyn(object.spec.template.spec.containers[0].resources).requests
+      == {"cpu":"100m","memory":"256Mi"} && dyn(object.spec.template.spec.containers[0].resources).limits
+      == {"cpu":"500m","memory":"512Mi"} && object.spec.template.spec.imagePullSecrets.size()
+      == 1 && object.spec.template.spec.imagePullSecrets[0].name == "private-registry"
+      && object.spec.template.spec.volumes.size() == 5 && object.spec.template.spec.containers[0].volumeMounts.size()
+      == 5 && object.spec.template.spec.volumes[0].name == "source" && object.spec.template.spec.volumes[0].configMap.name
+      == "identity-source-43bad232454e5fb0698b" && object.spec.template.spec.volumes[0].configMap.defaultMode
+      == 365 && object.spec.template.spec.volumes[0].configMap.items.size() == 27
+      && object.spec.template.spec.volumes[0].configMap.items[0].key == "file-0" &&
+      object.spec.template.spec.volumes[0].configMap.items[0].path == "perkforge/bin/launch"
+      && object.spec.template.spec.volumes[0].configMap.items[1].key == "file-1" &&
+      object.spec.template.spec.volumes[0].configMap.items[1].path == "perkforge/bin/refresh-identity-evidence"
+      && object.spec.template.spec.volumes[0].configMap.items[2].key == "file-2" &&
+      object.spec.template.spec.volumes[0].configMap.items[2].path == "perkforge/bin/run-phase.py"
+      && object.spec.template.spec.volumes[0].configMap.items[3].key == "file-3" &&
+      object.spec.template.spec.volumes[0].configMap.items[3].path == "platform/big-bang-bootstrap/configuration/authorization/contexts/portal.yaml"
+      && object.spec.template.spec.volumes[0].configMap.items[4].key == "file-4" &&
+      object.spec.template.spec.volumes[0].configMap.items[4].path == "platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/ensure-groups.yaml"
+      && object.spec.template.spec.volumes[0].configMap.items[5].key == "file-5" &&
+      object.spec.template.spec.volumes[0].configMap.items[5].path == "platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/ensure-one-group.yaml"
+      && object.spec.template.spec.volumes[0].configMap.items[6].key == "file-6" &&
+      object.spec.template.spec.volumes[0].configMap.items[6].path == "platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/identity_context.py"
+      && object.spec.template.spec.volumes[0].configMap.items[7].key == "file-7" &&
+      object.spec.template.spec.volumes[0].configMap.items[7].path == "platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/phases/attest-one.yaml"
+      && object.spec.template.spec.volumes[0].configMap.items[8].key == "file-8" &&
+      object.spec.template.spec.volumes[0].configMap.items[8].path == "platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/phases/attest.yaml"
+      && object.spec.template.spec.volumes[0].configMap.items[9].key == "file-9" &&
+      object.spec.template.spec.volumes[0].configMap.items[9].path == "platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/phases/contract.py"
+      && object.spec.template.spec.volumes[0].configMap.items[10].key == "file-10"
+      && object.spec.template.spec.volumes[0].configMap.items[10].path == "platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/phases/member-one.yaml"
+      && object.spec.template.spec.volumes[0].configMap.items[11].key == "file-11"
+      && object.spec.template.spec.volumes[0].configMap.items[11].path == "platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/phases/membership-state.py"
+      && object.spec.template.spec.volumes[0].configMap.items[12].key == "file-12"
+      && object.spec.template.spec.volumes[0].configMap.items[12].path == "platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/phases/memberships.yaml"
+      && object.spec.template.spec.volumes[0].configMap.items[13].key == "file-13"
+      && object.spec.template.spec.volumes[0].configMap.items[13].path == "platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/phases/paths.py"
+      && object.spec.template.spec.volumes[0].configMap.items[14].key == "file-14"
+      && object.spec.template.spec.volumes[0].configMap.items[14].path == "platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/phases/phase-lock.py"
+      && object.spec.template.spec.volumes[0].configMap.items[15].key == "file-15"
+      && object.spec.template.spec.volumes[0].configMap.items[15].path == "platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/phases/publish.yaml"
+      && object.spec.template.spec.volumes[0].configMap.items[16].key == "file-16"
+      && object.spec.template.spec.volumes[0].configMap.items[16].path == "platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/phases/run-attestor.sh"
+      && object.spec.template.spec.volumes[0].configMap.items[17].key == "file-17"
+      && object.spec.template.spec.volumes[0].configMap.items[17].path == "platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/phases/run-memberships.sh"
+      && object.spec.template.spec.volumes[0].configMap.items[18].key == "file-18"
+      && object.spec.template.spec.volumes[0].configMap.items[18].path == "platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/read-keycloak-context.py"
+      && object.spec.template.spec.volumes[0].configMap.items[19].key == "file-19"
+      && object.spec.template.spec.volumes[0].configMap.items[19].path == "platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/resolve-subject.py"
+      && object.spec.template.spec.volumes[0].configMap.items[20].key == "file-20"
+      && object.spec.template.spec.volumes[0].configMap.items[20].path == "platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/run-groups.sh"
+      && object.spec.template.spec.volumes[0].configMap.items[21].key == "file-21"
+      && object.spec.template.spec.volumes[0].configMap.items[21].path == "platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/verify_group_paths.py"
+      && object.spec.template.spec.volumes[0].configMap.items[22].key == "file-22"
+      && object.spec.template.spec.volumes[0].configMap.items[22].path == "platform/big-bang-bootstrap/configuration/packages/gitlab/reconcile-membership.yaml"
+      && object.spec.template.spec.volumes[0].configMap.items[23].key == "file-23"
+      && object.spec.template.spec.volumes[0].configMap.items[23].path == "platform/big-bang-bootstrap/configuration/packages/gitlab/run-membership.sh"
+      && object.spec.template.spec.volumes[0].configMap.items[24].key == "file-24"
+      && object.spec.template.spec.volumes[0].configMap.items[24].path == "platform/big-bang-bootstrap/configuration/packages/gitlab/verification/membership_inputs.py"
+      && object.spec.template.spec.volumes[0].configMap.items[25].key == "file-25"
+      && object.spec.template.spec.volumes[0].configMap.items[25].path == "provenance.sha256"
+      && object.spec.template.spec.volumes[0].configMap.items[26].key == "file-26"
+      && object.spec.template.spec.volumes[0].configMap.items[26].path == "revisions.json"
+      && object.spec.template.spec.volumes[1].name == "inputs" && object.spec.template.spec.volumes[1].configMap.name
+      == "identity-portal-foundation-45382250184caa3d-inputs" && object.spec.template.spec.volumes[2].name
+      == "credentials" && object.spec.template.spec.volumes[2].secret.secretName ==
+      "group-writer" && object.spec.template.spec.volumes[2].secret.defaultMode ==
+      288 && object.spec.template.spec.volumes[3].name == "tmp" && dyn(object.spec.template.spec.volumes[3].emptyDir).sizeLimit
+      == "128Mi" && object.spec.template.spec.volumes[4].name == "receipts" && object.spec.template.spec.volumes[4].persistentVolumeClaim.claimName
+      == "identity-receipts" && object.spec.template.spec.containers[0].volumeMounts[0].name
+      == "source" && object.spec.template.spec.containers[0].volumeMounts[0].mountPath
+      == "/opt" && object.spec.template.spec.containers[0].volumeMounts[0].readOnly
+      == true && !has(object.spec.template.spec.containers[0].volumeMounts[0].subPath)
+      && !has(object.spec.template.spec.containers[0].volumeMounts[0].subPathExpr)
+      && !has(object.spec.template.spec.containers[0].volumeMounts[0].mountPropagation)
+      && object.spec.template.spec.containers[0].volumeMounts[1].name == "inputs"
+      && object.spec.template.spec.containers[0].volumeMounts[1].mountPath == "/inputs"
+      && object.spec.template.spec.containers[0].volumeMounts[1].readOnly == true
+      && !has(object.spec.template.spec.containers[0].volumeMounts[1].subPath) &&
+      !has(object.spec.template.spec.containers[0].volumeMounts[1].subPathExpr) &&
+      !has(object.spec.template.spec.containers[0].volumeMounts[1].mountPropagation)
+      && object.spec.template.spec.containers[0].volumeMounts[2].name == "credentials"
+      && object.spec.template.spec.containers[0].volumeMounts[2].mountPath == "/credentials"
+      && object.spec.template.spec.containers[0].volumeMounts[2].readOnly == true
+      && !has(object.spec.template.spec.containers[0].volumeMounts[2].subPath) &&
+      !has(object.spec.template.spec.containers[0].volumeMounts[2].subPathExpr) &&
+      !has(object.spec.template.spec.containers[0].volumeMounts[2].mountPropagation)
+      && object.spec.template.spec.containers[0].volumeMounts[3].name == "tmp" &&
+      object.spec.template.spec.containers[0].volumeMounts[3].mountPath == "/tmp"
+      && !has(object.spec.template.spec.containers[0].volumeMounts[3].subPath) &&
+      !has(object.spec.template.spec.containers[0].volumeMounts[3].subPathExpr) &&
+      !has(object.spec.template.spec.containers[0].volumeMounts[3].mountPropagation)
+      && object.spec.template.spec.containers[0].volumeMounts[4].name == "receipts"
+      && object.spec.template.spec.containers[0].volumeMounts[4].mountPath == "/receipts"
+      && object.spec.template.spec.containers[0].volumeMounts[4].subPath == "private"
+      && !has(object.spec.template.spec.containers[0].volumeMounts[4].subPathExpr)
+      && !has(object.spec.template.spec.containers[0].volumeMounts[4].mountPropagation))
+      || (object.metadata.name == "identity-portal-memberships-45382250184caa3d" &&
+      object.metadata.annotations == {"platform.perkforge.io/invocation":"5d92796ed2fcc186e8a770a13f69916eed814ed1d0bd6e9eb1fa67e61e84bca4","platform.perkforge.io/attempt":"45382250184caa3d280b5dfb25898fa10fbc919fd547dbbaa65213b95b94f6b3"}
+      && object.spec.completions == 1 && object.spec.parallelism == 1 && object.spec.backoffLimit
+      == 0 && object.spec.activeDeadlineSeconds == 300 && !has(object.spec.ttlSecondsAfterFinished)
+      && (!has(object.spec.suspend) || object.spec.suspend == false) && (!has(object.spec.completionMode)
+      || object.spec.completionMode == "NonIndexed") && !has(object.spec.podFailurePolicy)
+      && !has(object.spec.successPolicy) && object.spec.template.metadata.annotations
+      == {"platform.perkforge.io/invocation":"5d92796ed2fcc186e8a770a13f69916eed814ed1d0bd6e9eb1fa67e61e84bca4","platform.perkforge.io/attempt":"45382250184caa3d280b5dfb25898fa10fbc919fd547dbbaa65213b95b94f6b3"}
+      && object.spec.template.spec.containers.size() == 1 && object.spec.template.spec.serviceAccountName
+      == "identity-group-worker" && object.spec.template.spec.automountServiceAccountToken
+      == false && object.spec.template.spec.restartPolicy == "Never" && object.spec.template.spec.nodeSelector
+      == {"kubernetes.io/hostname":"worker-2"} && (!has(object.spec.template.spec.hostNetwork)
+      || object.spec.template.spec.hostNetwork == false) && (!has(object.spec.template.spec.hostPID)
+      || object.spec.template.spec.hostPID == false) && (!has(object.spec.template.spec.hostIPC)
+      || object.spec.template.spec.hostIPC == false) && (!has(object.spec.template.spec.shareProcessNamespace)
+      || object.spec.template.spec.shareProcessNamespace == false) && !has(object.spec.template.spec.nodeName)
+      && !has(object.spec.template.spec.initContainers) && !has(object.spec.template.spec.ephemeralContainers)
+      && !has(object.spec.template.spec.hostAliases) && !has(object.spec.template.spec.dnsConfig)
+      && !has(object.spec.template.spec.runtimeClassName) && !has(object.spec.template.spec.affinity)
+      && !has(object.spec.template.spec.tolerations) && !has(object.spec.template.spec.topologySpreadConstraints)
+      && !has(object.spec.template.spec.resourceClaims) && !has(object.spec.template.spec.os)
+      && !has(dyn(object.spec.template.spec).overhead) && object.spec.template.spec.containers[0].name
+      == "reconcile" && object.spec.template.spec.containers[0].image == "registry1.dso.mil/ironbank/opensource/ansible/ansible@sha256:3308322cc09f20a813c00e9087c166a3d97dbb7789c059f1020f3c0b092fdf02"
+      && object.spec.template.spec.containers[0].command == ["/bin/bash","/opt/perkforge/bin/launch"]
+      && object.spec.template.spec.containers[0].args == ["--phase","memberships","--invocation","5d92796ed2fcc186e8a770a13f69916eed814ed1d0bd6e9eb1fa67e61e84bca4","--inputs-sha256","76273eb86e3833404b3d1c2cdd5239b38e0393ad9d8ebc6005b47ae8772b3b61","--bundle-sha256","43bad232454e5fb0698b417270dfbd329efa64cef34862c98af97dba0a311aaa"]
+      && !has(object.spec.template.spec.containers[0].env) && !has(object.spec.template.spec.containers[0].envFrom)
+      && !has(object.spec.template.spec.containers[0].lifecycle) && !has(object.spec.template.spec.containers[0].livenessProbe)
+      && !has(object.spec.template.spec.containers[0].readinessProbe) && !has(object.spec.template.spec.containers[0].startupProbe)
+      && !has(object.spec.template.spec.containers[0].ports) && !has(object.spec.template.spec.containers[0].workingDir)
+      && !has(object.spec.template.spec.containers[0].volumeDevices) && !has(object.spec.template.spec.containers[0].restartPolicy)
+      && !has(object.spec.template.spec.containers[0].restartPolicyRules) && (!has(object.spec.template.spec.containers[0].terminationMessagePath)
+      || object.spec.template.spec.containers[0].terminationMessagePath == "/dev/termination-log")
+      && (!has(object.spec.template.spec.containers[0].terminationMessagePolicy) ||
+      object.spec.template.spec.containers[0].terminationMessagePolicy == "File")
+      && (!has(object.spec.template.spec.containers[0].stdin) || object.spec.template.spec.containers[0].stdin
+      == false) && (!has(object.spec.template.spec.containers[0].stdinOnce) || object.spec.template.spec.containers[0].stdinOnce
+      == false) && (!has(object.spec.template.spec.containers[0].tty) || object.spec.template.spec.containers[0].tty
+      == false) && (!has(object.spec.template.spec.schedulerName) || object.spec.template.spec.schedulerName
+      == "default-scheduler") && (!has(object.spec.template.spec.priorityClassName)
+      || object.spec.template.spec.priorityClassName == "") && (!has(object.spec.template.spec.priority)
+      || object.spec.template.spec.priority == 0) && !has(object.spec.template.spec.containers[0].securityContext.runAsUser)
+      && !has(object.spec.template.spec.containers[0].securityContext.runAsGroup)
+      && !has(object.spec.template.spec.containers[0].securityContext.runAsNonRoot)
+      && !has(object.spec.template.spec.containers[0].securityContext.seccompProfile)
+      && !has(object.spec.template.spec.containers[0].securityContext.seLinuxOptions)
+      && !has(object.spec.template.spec.containers[0].securityContext.appArmorProfile)
+      && !has(object.spec.template.spec.containers[0].securityContext.procMount) &&
+      !has(object.spec.template.spec.securityContext.seLinuxOptions) && !has(object.spec.template.spec.securityContext.supplementalGroups)
+      && !has(object.spec.template.spec.securityContext.sysctls) && !has(object.spec.template.spec.securityContext.appArmorProfile)
+      && object.spec.template.spec.containers[0].securityContext.allowPrivilegeEscalation
+      == false && object.spec.template.spec.containers[0].securityContext.readOnlyRootFilesystem
+      == true && object.spec.template.spec.containers[0].securityContext.capabilities.drop
+      == ["ALL"] && (!has(object.spec.template.spec.containers[0].securityContext.capabilities.add)
+      || object.spec.template.spec.containers[0].securityContext.capabilities.add.size()
+      == 0) && (!has(object.spec.template.spec.containers[0].securityContext.privileged)
+      || object.spec.template.spec.containers[0].securityContext.privileged == false)
+      && object.spec.template.spec.securityContext.runAsNonRoot == true && object.spec.template.spec.securityContext.runAsUser
+      == 1001 && object.spec.template.spec.securityContext.runAsGroup == 1001 && object.spec.template.spec.securityContext.fsGroup
+      == 1001 && object.spec.template.spec.securityContext.fsGroupChangePolicy ==
+      "OnRootMismatch" && object.spec.template.spec.securityContext.seccompProfile.type
+      == "RuntimeDefault" && dyn(object.spec.template.spec.containers[0].resources).requests
+      == {"cpu":"100m","memory":"256Mi"} && dyn(object.spec.template.spec.containers[0].resources).limits
+      == {"cpu":"500m","memory":"512Mi"} && object.spec.template.spec.imagePullSecrets.size()
+      == 1 && object.spec.template.spec.imagePullSecrets[0].name == "private-registry"
+      && object.spec.template.spec.volumes.size() == 6 && object.spec.template.spec.containers[0].volumeMounts.size()
+      == 6 && object.spec.template.spec.volumes[0].name == "source" && object.spec.template.spec.volumes[0].configMap.name
+      == "identity-source-43bad232454e5fb0698b" && object.spec.template.spec.volumes[0].configMap.defaultMode
+      == 365 && object.spec.template.spec.volumes[0].configMap.items.size() == 27
+      && object.spec.template.spec.volumes[0].configMap.items[0].key == "file-0" &&
+      object.spec.template.spec.volumes[0].configMap.items[0].path == "perkforge/bin/launch"
+      && object.spec.template.spec.volumes[0].configMap.items[1].key == "file-1" &&
+      object.spec.template.spec.volumes[0].configMap.items[1].path == "perkforge/bin/refresh-identity-evidence"
+      && object.spec.template.spec.volumes[0].configMap.items[2].key == "file-2" &&
+      object.spec.template.spec.volumes[0].configMap.items[2].path == "perkforge/bin/run-phase.py"
+      && object.spec.template.spec.volumes[0].configMap.items[3].key == "file-3" &&
+      object.spec.template.spec.volumes[0].configMap.items[3].path == "platform/big-bang-bootstrap/configuration/authorization/contexts/portal.yaml"
+      && object.spec.template.spec.volumes[0].configMap.items[4].key == "file-4" &&
+      object.spec.template.spec.volumes[0].configMap.items[4].path == "platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/ensure-groups.yaml"
+      && object.spec.template.spec.volumes[0].configMap.items[5].key == "file-5" &&
+      object.spec.template.spec.volumes[0].configMap.items[5].path == "platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/ensure-one-group.yaml"
+      && object.spec.template.spec.volumes[0].configMap.items[6].key == "file-6" &&
+      object.spec.template.spec.volumes[0].configMap.items[6].path == "platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/identity_context.py"
+      && object.spec.template.spec.volumes[0].configMap.items[7].key == "file-7" &&
+      object.spec.template.spec.volumes[0].configMap.items[7].path == "platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/phases/attest-one.yaml"
+      && object.spec.template.spec.volumes[0].configMap.items[8].key == "file-8" &&
+      object.spec.template.spec.volumes[0].configMap.items[8].path == "platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/phases/attest.yaml"
+      && object.spec.template.spec.volumes[0].configMap.items[9].key == "file-9" &&
+      object.spec.template.spec.volumes[0].configMap.items[9].path == "platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/phases/contract.py"
+      && object.spec.template.spec.volumes[0].configMap.items[10].key == "file-10"
+      && object.spec.template.spec.volumes[0].configMap.items[10].path == "platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/phases/member-one.yaml"
+      && object.spec.template.spec.volumes[0].configMap.items[11].key == "file-11"
+      && object.spec.template.spec.volumes[0].configMap.items[11].path == "platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/phases/membership-state.py"
+      && object.spec.template.spec.volumes[0].configMap.items[12].key == "file-12"
+      && object.spec.template.spec.volumes[0].configMap.items[12].path == "platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/phases/memberships.yaml"
+      && object.spec.template.spec.volumes[0].configMap.items[13].key == "file-13"
+      && object.spec.template.spec.volumes[0].configMap.items[13].path == "platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/phases/paths.py"
+      && object.spec.template.spec.volumes[0].configMap.items[14].key == "file-14"
+      && object.spec.template.spec.volumes[0].configMap.items[14].path == "platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/phases/phase-lock.py"
+      && object.spec.template.spec.volumes[0].configMap.items[15].key == "file-15"
+      && object.spec.template.spec.volumes[0].configMap.items[15].path == "platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/phases/publish.yaml"
+      && object.spec.template.spec.volumes[0].configMap.items[16].key == "file-16"
+      && object.spec.template.spec.volumes[0].configMap.items[16].path == "platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/phases/run-attestor.sh"
+      && object.spec.template.spec.volumes[0].configMap.items[17].key == "file-17"
+      && object.spec.template.spec.volumes[0].configMap.items[17].path == "platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/phases/run-memberships.sh"
+      && object.spec.template.spec.volumes[0].configMap.items[18].key == "file-18"
+      && object.spec.template.spec.volumes[0].configMap.items[18].path == "platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/read-keycloak-context.py"
+      && object.spec.template.spec.volumes[0].configMap.items[19].key == "file-19"
+      && object.spec.template.spec.volumes[0].configMap.items[19].path == "platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/resolve-subject.py"
+      && object.spec.template.spec.volumes[0].configMap.items[20].key == "file-20"
+      && object.spec.template.spec.volumes[0].configMap.items[20].path == "platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/run-groups.sh"
+      && object.spec.template.spec.volumes[0].configMap.items[21].key == "file-21"
+      && object.spec.template.spec.volumes[0].configMap.items[21].path == "platform/big-bang-bootstrap/configuration/packages/gitlab/enrollment/verify_group_paths.py"
+      && object.spec.template.spec.volumes[0].configMap.items[22].key == "file-22"
+      && object.spec.template.spec.volumes[0].configMap.items[22].path == "platform/big-bang-bootstrap/configuration/packages/gitlab/reconcile-membership.yaml"
+      && object.spec.template.spec.volumes[0].configMap.items[23].key == "file-23"
+      && object.spec.template.spec.volumes[0].configMap.items[23].path == "platform/big-bang-bootstrap/configuration/packages/gitlab/run-membership.sh"
+      && object.spec.template.spec.volumes[0].configMap.items[24].key == "file-24"
+      && object.spec.template.spec.volumes[0].configMap.items[24].path == "platform/big-bang-bootstrap/configuration/packages/gitlab/verification/membership_inputs.py"
+      && object.spec.template.spec.volumes[0].configMap.items[25].key == "file-25"
+      && object.spec.template.spec.volumes[0].configMap.items[25].path == "provenance.sha256"
+      && object.spec.template.spec.volumes[0].configMap.items[26].key == "file-26"
+      && object.spec.template.spec.volumes[0].configMap.items[26].path == "revisions.json"
+      && object.spec.template.spec.volumes[1].name == "inputs" && object.spec.template.spec.volumes[1].configMap.name
+      == "identity-portal-memberships-45382250184caa3d-inputs" && object.spec.template.spec.volumes[2].name
+      == "credentials" && object.spec.template.spec.volumes[2].secret.secretName ==
+      "group-writer" && object.spec.template.spec.volumes[2].secret.defaultMode ==
+      288 && object.spec.template.spec.volumes[3].name == "tmp" && dyn(object.spec.template.spec.volumes[3].emptyDir).sizeLimit
+      == "128Mi" && object.spec.template.spec.volumes[4].name == "receipts" && object.spec.template.spec.volumes[4].persistentVolumeClaim.claimName
+      == "identity-receipts" && object.spec.template.spec.volumes[5].name == "evidence"
+      && object.spec.template.spec.volumes[5].configMap.name == "portal-identity-evidence"
+      && object.spec.template.spec.containers[0].volumeMounts[0].name == "source"
+      && object.spec.template.spec.containers[0].volumeMounts[0].mountPath == "/opt"
+      && object.spec.template.spec.containers[0].volumeMounts[0].readOnly == true
+      && !has(object.spec.template.spec.containers[0].volumeMounts[0].subPath) &&
+      !has(object.spec.template.spec.containers[0].volumeMounts[0].subPathExpr) &&
+      !has(object.spec.template.spec.containers[0].volumeMounts[0].mountPropagation)
+      && object.spec.template.spec.containers[0].volumeMounts[1].name == "inputs"
+      && object.spec.template.spec.containers[0].volumeMounts[1].mountPath == "/inputs"
+      && object.spec.template.spec.containers[0].volumeMounts[1].readOnly == true
+      && !has(object.spec.template.spec.containers[0].volumeMounts[1].subPath) &&
+      !has(object.spec.template.spec.containers[0].volumeMounts[1].subPathExpr) &&
+      !has(object.spec.template.spec.containers[0].volumeMounts[1].mountPropagation)
+      && object.spec.template.spec.containers[0].volumeMounts[2].name == "credentials"
+      && object.spec.template.spec.containers[0].volumeMounts[2].mountPath == "/credentials"
+      && object.spec.template.spec.containers[0].volumeMounts[2].readOnly == true
+      && !has(object.spec.template.spec.containers[0].volumeMounts[2].subPath) &&
+      !has(object.spec.template.spec.containers[0].volumeMounts[2].subPathExpr) &&
+      !has(object.spec.template.spec.containers[0].volumeMounts[2].mountPropagation)
+      && object.spec.template.spec.containers[0].volumeMounts[3].name == "tmp" &&
+      object.spec.template.spec.containers[0].volumeMounts[3].mountPath == "/tmp"
+      && !has(object.spec.template.spec.containers[0].volumeMounts[3].subPath) &&
+      !has(object.spec.template.spec.containers[0].volumeMounts[3].subPathExpr) &&
+      !has(object.spec.template.spec.containers[0].volumeMounts[3].mountPropagation)
+      && object.spec.template.spec.containers[0].volumeMounts[4].name == "receipts"
+      && object.spec.template.spec.containers[0].volumeMounts[4].mountPath == "/receipts"
+      && object.spec.template.spec.containers[0].volumeMounts[4].subPath == "private"
+      && !has(object.spec.template.spec.containers[0].volumeMounts[4].subPathExpr)
+      && !has(object.spec.template.spec.containers[0].volumeMounts[4].mountPropagation)
+      && object.spec.template.spec.containers[0].volumeMounts[5].name == "evidence"
+      && object.spec.template.spec.containers[0].volumeMounts[5].mountPath == "/identity-evidence"
+      && object.spec.template.spec.containers[0].volumeMounts[5].readOnly == true
+      && !has(object.spec.template.spec.containers[0].volumeMounts[5].subPath) &&
+      !has(object.spec.template.spec.containers[0].volumeMounts[5].subPathExpr) &&
+      !has(object.spec.template.spec.containers[0].volumeMounts[5].mountPropagation))
+    message: Identity foundation boundary refused an unreviewed mutation.
+    reason: Forbidden

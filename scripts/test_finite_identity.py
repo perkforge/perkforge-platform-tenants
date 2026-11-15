@@ -1,6 +1,6 @@
 from identity_target_profile import PILOT
 #!/usr/bin/env python3
-import base64,copy,hashlib,pathlib,subprocess,unittest
+import base64,copy,hashlib,json,pathlib,subprocess,unittest,yaml
 from finite_identity import render,IMAGE,digest
 class Tests(unittest.TestCase):
  def sample(self):
@@ -13,9 +13,13 @@ class Tests(unittest.TestCase):
   data={x['key']:raw[x['path']].decode('utf-8') for x in items};d['sourceBundleSHA256']=sha;d['sourceBundleName']='identity-source-'+sha[:20]
   d['sourceBundle']={'sha256':sha,'items':items,'configMaps':[{'apiVersion':'v1','kind':'ConfigMap','metadata':{'name':d['sourceBundleName'],'namespace':ns},'immutable':True,'data':data} for ns in ('tenant-identity-writer','tenant-identity-attestor')]}
   return d
- def test_current_opt_in_root_is_empty(self):
+ def test_current_opt_in_root_matches_explicit_selection(self):
   root=pathlib.Path(__file__).resolve().parents[1]
-  self.assertEqual(subprocess.check_output(['kubectl','kustomize',str(root/'clusters/local-identity-portal')],text=True).strip(),'')
+  d=json.loads((root/'declarations/identity/portal.json').read_text());f=render(d)
+  expected=[f[k] for k in f['kustomization.yaml']['resources']]
+  actual=list(yaml.safe_load_all(subprocess.check_output(['kubectl','kustomize',str(root/'clusters/local-identity-portal')],text=True)))
+  key=lambda o:(o['kind'],o['metadata']['name'])
+  self.assertEqual(sorted(actual,key=key),sorted(expected,key=key))
  def test_disabled(self):self.assertEqual(render({'schemaVersion':1,'context':'portal','enabled':False})['kustomization.yaml']['resources'],[])
  def test_identity_and_sequencing(self):
   d=self.sample();a=render(d);self.assertEqual(a,render(copy.deepcopy(d)))

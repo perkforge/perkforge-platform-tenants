@@ -1,0 +1,23 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+- 000-validatingadmissionpolicy.yaml
+- 001-validatingadmissionpolicybinding.yaml
+- 002-validatingadmissionpolicy.yaml
+- 003-validatingadmissionpolicybinding.yaml
+- 004-validatingadmissionpolicy.yaml
+- 005-validatingadmissionpolicybinding.yaml
+- 006-networkpolicy.yaml
+- 007-networkpolicy.yaml
+- 008-validatingadmissionpolicy.yaml
+- 009-validatingadmissionpolicybinding.yaml
+- 010-validatingadmissionpolicy.yaml
+- 011-validatingadmissionpolicybinding.yaml
+- 012-validatingadmissionpolicy.yaml
+- 013-validatingadmissionpolicybinding.yaml
+- 014-networkpolicy.yaml
+- 015-networkpolicy.yaml
+- 016-validatingadmissionpolicy.yaml
+- 017-validatingadmissionpolicybinding.yaml
+- 018-validatingadmissionpolicy.yaml
+- 019-validatingadmissionpolicybinding.yaml

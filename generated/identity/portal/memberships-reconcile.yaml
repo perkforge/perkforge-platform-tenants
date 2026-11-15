@@ -1,0 +1,33 @@
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: identity-portal-memberships
+  namespace: flux-system
+spec:
+  interval: 5m
+  timeout: 6m
+  path: ./generated/identity/portal/memberships
+  sourceRef:
+    kind: GitRepository
+    name: tenant-enrollments
+  serviceAccountName: identity-group-reconciler
+  prune: false
+  force: false
+  wait: true
+  commonMetadata:
+    annotations:
+      platform.perkforge.io/invocation: 5d92796ed2fcc186e8a770a13f69916eed814ed1d0bd6e9eb1fa67e61e84bca4
+      platform.perkforge.io/attempt: 45382250184caa3d280b5dfb25898fa10fbc919fd547dbbaa65213b95b94f6b3
+  healthChecks:
+  - apiVersion: batch/v1
+    kind: Job
+    name: identity-portal-memberships-45382250184caa3d
+    namespace: tenant-identity-writer
+  suspend: false
+  dependsOn:
+  - name: identity-portal-attest
+    readyExpr: dep.spec.commonMetadata.annotations['platform.perkforge.io/invocation']
+      == self.spec.commonMetadata.annotations['platform.perkforge.io/invocation']
+      && dep.spec.commonMetadata.annotations['platform.perkforge.io/attempt'] == self.spec.commonMetadata.annotations['platform.perkforge.io/attempt']
+      && dep.metadata.generation == dep.status.observedGeneration && dep.status.conditions.exists(e,
+      e.type == 'Ready' && e.status == 'True')
