@@ -14,8 +14,9 @@ import (
  "k8s.io/apiserver/pkg/admission/plugin/policy/validating"
  "k8s.io/apiserver/pkg/cel/environment"
 )
-func TestIdentityFoundation(t *testing.T){
- raw,err:=exec.Command("python3","../../scripts/identity_foundation_cases.py").CombinedOutput();if err!=nil{t.Fatalf("%s %v",raw,err)}
+func TestIdentityFoundation(t *testing.T){testIdentityFoundationCases(t,"identity_foundation_cases.py")}
+func testIdentityFoundationCases(t *testing.T, script string){
+ raw,err:=exec.Command("python3","../../scripts/"+script).CombinedOutput();if err!=nil{t.Fatalf("%s %v",raw,err)}
  var f struct{Policies []admissionv1.ValidatingAdmissionPolicy;Schemas fixtureSchemas;Cases []struct{Name,Policy,Username,Operation string;Object,OldObject map[string]any;Allowed bool}}
  if err=json.Unmarshal(raw,&f);err!=nil{t.Fatal(err)}
  path:=os.Getenv("NEXTCLOUD_OPENAPI");if path==""{t.Fatal("exact native OpenAPI required")};b,err:=os.ReadFile(path);if err!=nil{t.Fatal(err)}
@@ -49,3 +50,5 @@ func TestIdentityFoundationSupervisedMaximumContext(t *testing.T) {
  t.Setenv("IDENTITY_CONTEXT_FIXTURE", "abcdefghijklmnopqrstuvwxyzabcde")
  TestIdentityFoundationSupervised(t)
 }
+
+func TestIdentityChildPause(t *testing.T) {testIdentityFoundationCases(t,"identity_child_pause_cases.py")}

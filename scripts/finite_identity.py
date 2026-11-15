@@ -42,6 +42,7 @@ def render(d):
  if isinstance(d,dict) and set(d) in ({'schemaVersion','context','enabled'},{'schemaVersion','context','enabled','contextDigest'}) and type(d['schemaVersion']) is int and d['schemaVersion']==1 and d['enabled'] is False:
   selection(d);return {'kustomization.yaml':{'apiVersion':'kustomize.config.k8s.io/v1beta1','kind':'Kustomization','resources':[]}}
  required={'targetProfile','schemaVersion','context','enabled','foundationApproved','membershipReleased','sourceName','sourcePath','enrollmentRevision','platformRevision','invocation','retryGeneration','image','sourceBundleName','sourceBundleSHA256','sourceBundle','sourceItems','workerNode','receiptClaim','writerSecret','attestorSecret','pullSecret','resources','phaseInputs'}
+ if 'phasesSuspended' in d:required.add('phasesSuspended')
  if 'contextDigest' in d:required.add('contextDigest')
  if 'runtimeProfile' in d:
   required.add('runtimeProfile')
@@ -49,6 +50,8 @@ def render(d):
  binding=selection(d)
  if set(d)!=required or d['schemaVersion']!=1 or d['enabled'] is not True or d['foundationApproved'] is not True:raise ValueError('explicit approved context declaration required')
  if type(d['membershipReleased']) is not bool:raise ValueError('explicit membership release gate')
+ if 'phasesSuspended' in d and type(d['phasesSuspended']) is not bool:raise ValueError('explicit boolean phase suspension gate')
+ if d.get('phasesSuspended',False) and d['membershipReleased']:raise ValueError('held phases cannot release memberships')
  profile=target_profile(d['targetProfile'])
  if d['image']!=IMAGE:raise ValueError('unverified image')
  for k in ('enrollmentRevision','platformRevision'):match(d[k],r'[0-9a-f]{40}')
@@ -124,6 +127,7 @@ def render(d):
   out[phase+'/kustomization.yaml']={'apiVersion':'kustomize.config.k8s.io/v1beta1','kind':'Kustomization','resources':phase_resources}
   spec={'interval':'5m','timeout':'6m','path':d['sourcePath']+'/'+phase,'sourceRef':{'kind':'GitRepository','name':d['sourceName']},'serviceAccountName':binding['attestor_reconciler'] if phase=='attest' else binding['group_reconciler'],'prune':False,'force':False,'wait':True,'commonMetadata':{'annotations':annotations},'healthChecks':[{'apiVersion':'batch/v1','kind':'Job','name':name,'namespace':ns}]}
   if phase=='memberships':spec['suspend']=not d['membershipReleased']
+  if 'phasesSuspended' in d:spec['suspend']=d['phasesSuspended'] or (phase=='memberships' and not d['membershipReleased'])
   if i:
    spec['dependsOn']=[{'name':binding['phase_prefix']+'-'+PHASES[i-1],'readyExpr':"dep.spec.commonMetadata.annotations['platform.perkforge.io/invocation'] == self.spec.commonMetadata.annotations['platform.perkforge.io/invocation'] && dep.spec.commonMetadata.annotations['platform.perkforge.io/attempt'] == self.spec.commonMetadata.annotations['platform.perkforge.io/attempt'] && dep.metadata.generation == dep.status.observedGeneration && dep.status.conditions.exists(e, e.type == 'Ready' && e.status == 'True')"}]
   if phase=='attest':
