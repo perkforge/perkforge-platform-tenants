@@ -49,14 +49,28 @@ for phase in ('foundation','attest','memberships'):
   bad=copy.deepcopy(k);mutation(bad['spec']);cases.append({'Name':phase+'-declaration-'+label,'Policy':B['declaration_policy'],'Object':bad,'Username':user,'Allowed':False})
 bad=copy.deepcopy(g['memberships-reconcile.yaml']);bad['spec']['suspend']=not bad['spec']['suspend']
 cases.append({'Name':'membership-gate-before-policy-update','Policy':B['declaration_policy'],'Object':bad,'Username':'system:serviceaccount:flux-system:'+B['declaration_reconciler'],'Allowed':False})
-old={'apiVersion':'v1','kind':'ConfigMap','metadata':{'uid':D['phaseInputs']['attest']['identity']['identity_receipt_uid'],'name':B['evidence_name'],'namespace':B['writer_namespace'],'labels':{'app.kubernetes.io/managed-by':'perkforge-identity','perkforge.dev/context':D['context']},'annotations':{'perkforge.dev/desired-invocation':'old'}},'data':{'receipt.json':'old'}}
+old={'apiVersion':'v1','kind':'ConfigMap','metadata':{'uid':D['phaseInputs']['attest']['identity']['identity_receipt_uid'],'name':B['evidence_name'],'namespace':B['writer_namespace'],'labels':{'app.kubernetes.io/managed-by':'perkforge-identity','perkforge.dev/context':D['context'],'platform.perkforge.io/owner':'tenant-identity-foundation-v1'},'annotations':{'perkforge.dev/desired-invocation':'old'}},'data':{'receipt.json':'old'}}
 issuer='system:serviceaccount:'+B['attestor_namespace']+':identity-attestor';intent='system:serviceaccount:flux-system:'+B['declaration_reconciler']
 new=copy.deepcopy(old);new['data']['receipt.json']='new'
 cases.append({'Name':'issuer-data-only','Policy':B['evidence_policy'],'Object':new,'OldObject':old,'Operation':'UPDATE','Username':issuer,'Allowed':True})
 for label,mutation in [('uid',lambda o:o['metadata'].update(uid='33333333-3333-4333-8333-333333333333')),('intent',lambda o:o['metadata']['annotations'].update({'perkforge.dev/desired-invocation':'foreign'})),('owner',lambda o:o['metadata'].update(finalizers=['foreign'])),('extra',lambda o:o['data'].update(extra='foreign'))]:
  bad=copy.deepcopy(new);mutation(bad);cases.append({'Name':'issuer-'+label,'Policy':B['evidence_policy'],'Object':bad,'OldObject':old,'Operation':'UPDATE','Username':issuer,'Allowed':False})
 new=copy.deepcopy(old);new['metadata']['annotations']={'perkforge.dev/desired-invocation':D['invocation']}
+new['metadata']['labels'].update({'kustomize.toolkit.fluxcd.io/name':B['phase_prefix'],'kustomize.toolkit.fluxcd.io/namespace':'flux-system'})
 cases.append({'Name':'intent-preserves-issuer','Policy':B['evidence_policy'],'Object':new,'OldObject':old,'Operation':'UPDATE','Username':intent,'Allowed':True})
+tracked=copy.deepcopy(old);tracked['metadata']['labels']=copy.deepcopy(new['metadata']['labels'])
+cases.append({'Name':'intent-same-flux-owner','Policy':B['evidence_policy'],'Object':new,'OldObject':tracked,'Operation':'UPDATE','Username':intent,'Allowed':True})
+for label,target,key,value in [('foreign-old','old','kustomize.toolkit.fluxcd.io/name','foreign'),('foreign-new','new','kustomize.toolkit.fluxcd.io/name','foreign'),('foreign-ns','new','kustomize.toolkit.fluxcd.io/namespace','foreign'),('bootstrap-owner','new','platform.perkforge.io/owner','foreign'),('bootstrap-context','new','perkforge.dev/context','foreign'),('extra','new','extra','foreign'),('old-extra','old','extra','foreign')]:
+ prior=copy.deepcopy(old);bad=copy.deepcopy(new);(prior if target=='old' else bad)['metadata']['labels'][key]=value
+ cases.append({'Name':'intent-label-'+label,'Policy':B['evidence_policy'],'Object':bad,'OldObject':prior,'Operation':'UPDATE','Username':intent,'Allowed':False})
+for label in ('kustomize.toolkit.fluxcd.io/name','kustomize.toolkit.fluxcd.io/namespace','platform.perkforge.io/owner'):
+ bad=copy.deepcopy(new);bad['metadata']['labels'].pop(label)
+ cases.append({'Name':'intent-label-missing-'+label,'Policy':B['evidence_policy'],'Object':bad,'OldObject':tracked,'Operation':'UPDATE','Username':intent,'Allowed':False})
+for who in (issuer,'foreign'):
+ cases.append({'Name':'adoption-wrong-caller-'+who,'Policy':B['evidence_policy'],'Object':new,'OldObject':old,'Operation':'UPDATE','Username':who,'Allowed':False})
+for field in ('ownerReferences','finalizers'):
+ bad=copy.deepcopy(new);bad['metadata'][field]=[{'apiVersion':'v1','kind':'ConfigMap','name':'foreign','uid':'11111111-1111-4111-8111-111111111111'}] if field=='ownerReferences' else ['foreign']
+ cases.append({'Name':'intent-forbidden-'+field,'Policy':B['evidence_policy'],'Object':bad,'OldObject':old,'Operation':'UPDATE','Username':intent,'Allowed':False})
 bad=copy.deepcopy(new);bad['data']={};cases.append({'Name':'intent-cannot-erase','Policy':B['evidence_policy'],'Object':bad,'OldObject':old,'Operation':'UPDATE','Username':intent,'Allowed':False})
 cases.append({'Name':'missing-evidence-no-adoption','Policy':B['evidence_policy'],'Object':new,'Operation':'CREATE','Username':intent,'Allowed':False})
 from private_receipts import plan

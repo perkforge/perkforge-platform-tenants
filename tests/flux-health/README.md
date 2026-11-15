@@ -16,3 +16,12 @@ it must never become Current. This source-only test performs no Kubernetes calls
 Normal candidate CI runs it alongside the existing admission/dependency suite.
 Selected source A/B must be regenerated after this generic generator correction;
 no executable bundle, Job input, provider permission or readiness bypass changes.
+
+The evidence ownership fixture additionally uses the controller's pinned SSA
+v0.76.2 `SetOwnerLabels` implementation. It checks that the native admission
+fixture is precisely the existing bootstrap labels plus the context-bound
+Kustomization name and `flux-system` namespace, including a maximum-length
+context and idempotent repetition. Admission separately refuses foreign owners,
+extra/missing labels, issuer adoption, receipt mutation and ownership metadata
+changes. This is an offline transform/admission proof, not a live SSA field-owner
+or nonempty-receipt preservation result.
