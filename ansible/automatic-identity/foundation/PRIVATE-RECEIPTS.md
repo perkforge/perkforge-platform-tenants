@@ -103,6 +103,9 @@ attachment. PVC binding, Longhorn readiness and this wait share a 180-second
 pre-release ceiling starting before Pod creation, rather than extending the
 existing helper gate or 300-second Pod deadline. Terminal, deleting or replaced
 helpers stop immediately when observed. Metadata reads are bounded and the
-ceiling is rechecked before releasing the gate; a slow read cannot authorize a
-late release. Image pulls are not guaranteed to finish in this window. Timeout
+ceiling is rechecked before initiating the gate PATCH; a slow metadata read
+cannot initiate a late release. The bounded API call may complete after that
+ceiling, so this is not a server-side completion deadline. The helper retains
+its own 180-second gate timeout. Image pulls are not guaranteed to finish in
+this window. Timeout
 still enters the existing UID-specific cleanup/detach path; there is no retry.
