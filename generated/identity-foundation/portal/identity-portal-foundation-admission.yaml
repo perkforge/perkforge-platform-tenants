@@ -17,7 +17,7 @@ spec:
   wait: true
   commonMetadata:
     annotations:
-      platform.perkforge.io/foundation-sha256: 340c989400984b5587c19363e3d64e3adfdc0b0b155112c380183e5c749a70c3
+      platform.perkforge.io/foundation-sha256: 85cf7ecff82a67d9c8ac09b4a9b602c7f6df154871bae57116e71af3414559ca
   healthCheckExprs:
   - apiVersion: admissionregistration.k8s.io/v1
     kind: ValidatingAdmissionPolicy
