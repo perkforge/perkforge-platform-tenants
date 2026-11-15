@@ -1,5 +1,21 @@
 # Changelog
 
+## [2.10.0](https://github.com/perkforge/perkforge-platform-tenants/compare/v2.9.0...v2.10.0) (2026-11-15)
+
+
+### Features
+
+* **identity:** prepare corrected attempt phase A with memberships held ([b222f88](https://github.com/perkforge/perkforge-platform-tenants/commit/b222f888581225f6dc0741bd0a64c3ca4183383b))
+* **identity:** prepare gated membership release for corrected attempt ([d341e06](https://github.com/perkforge/perkforge-platform-tenants/commit/d341e062d78ce983510cee933912516e065f8d66))
+* **identity:** stage existing child reconcilers paused ([69ea9ba](https://github.com/perkforge/perkforge-platform-tenants/commit/69ea9badca964423164c1a8f549d051e3a730a54))
+
+
+### Bug Fixes
+
+* **identity:** bind separate issuer predecessor for partial retries ([#108](https://github.com/perkforge/perkforge-platform-tenants/issues/108)) ([ab0cc9c](https://github.com/perkforge/perkforge-platform-tenants/commit/ab0cc9c7d65b24e0988de02d0aff00fbcf68d312))
+* **identity:** stage corrected released executable behind child holds ([3ea3050](https://github.com/perkforge/perkforge-platform-tenants/commit/3ea305013267dffdcfab2ccb6cdbd7a198da743f))
+* **identity:** stage released projection correction with children held ([8bc0dd1](https://github.com/perkforge/perkforge-platform-tenants/commit/8bc0dd10acef2f40971502a26f42f74f16e5b9f4))
+
 ## [2.9.0](https://github.com/perkforge/perkforge-platform-tenants/compare/v2.8.0...v2.9.0) (2026-11-15)
 
 
