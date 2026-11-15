@@ -70,6 +70,7 @@ jobs:
         python3 scripts/test_identity_target_profile.py
         python3 scripts/test_identity_context_runtime.py
         python3 scripts/test_private_receipts.py
+        python3 scripts/test_phase_atomic_projection.py
         python3 scripts/test_identity_kubelet_preflight.py
         python3 scripts/finite_identity.py --check
         kubectl kustomize clusters/local-identity-portal

@@ -23,3 +23,12 @@ network, real credentials, provider or cluster API. Test resources are disposabl
 All containers use500m CPU and512Mi memory caps. The private bind simulation does
 not prove kubelet fsGroup/subPath lifecycle. Actual no-credential kubelet preflight,
 native defaulted admission and fresh scheduler capacity remain separate gates.
+
+Add `--atomic-writer` to the full driver to test actual filesystem projection
+layout: timestamped directories, `..data`, and visible file/directory symlinks
+for source, input, API, credential and evidence mounts. The synthetic publisher
+retains earlier timestamped fixture versions, unlike kubelet's cleanup. Thus this
+proves projection compatibility, bounded reads and phase behavior, not credential
+mount isolation or removal of prior credentials. Exact per-phase mounts and
+admission remain separate isolation evidence. All bytes and API endpoints here
+are synthetic; no real provider credentials are used.
