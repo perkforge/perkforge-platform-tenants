@@ -24,7 +24,8 @@ def pod_checks(p,prefix='object.spec.template.spec'):
  x=prefix;c=x+'.containers[0]';v=p['containers'][0]
  checks=[x+'.containers.size() == 1',x+'.serviceAccountName == '+cel(p['serviceAccountName']),x+'.automountServiceAccountToken == false',x+'.restartPolicy == "Never"',x+'.nodeSelector == '+cel(p['nodeSelector'])]
  for k in ('hostNetwork','hostPID','hostIPC','shareProcessNamespace'):checks.append('(!has('+x+'.'+k+') || '+x+'.'+k+' == false)')
- for k in ('nodeName','initContainers','ephemeralContainers','hostAliases','dnsConfig','runtimeClassName','affinity','tolerations','topologySpreadConstraints','resourceClaims','overhead','os'):checks.append('!has('+x+'.'+k+')')
+ for k in ('nodeName','initContainers','ephemeralContainers','hostAliases','dnsConfig','runtimeClassName','affinity','tolerations','topologySpreadConstraints','resourceClaims','os'):checks.append('!has('+x+'.'+k+')')
+ checks.append('!has(dyn('+x+').overhead)')
  for k in ('name','image','command','args'):checks.append(c+'.'+k+' == '+cel(v[k]))
  for k in ('env','envFrom','lifecycle','livenessProbe','readinessProbe','startupProbe','ports','workingDir','volumeDevices','restartPolicy','restartPolicyRules'):checks.append('!has('+c+'.'+k+')')
  for field,value in (('terminationMessagePath','/dev/termination-log'),('terminationMessagePolicy','File')):checks.append('(!has('+c+'.'+field+') || '+c+'.'+field+' == '+cel(value)+')')
@@ -32,7 +33,7 @@ def pod_checks(p,prefix='object.spec.template.spec'):
  checks += ['(!has('+x+'.schedulerName) || '+x+'.schedulerName == \"default-scheduler\")','(!has('+x+'.priorityClassName) || '+x+'.priorityClassName == \"\")','(!has('+x+'.priority) || '+x+'.priority == 0)']
  for k in ('runAsUser','runAsGroup','runAsNonRoot','seccompProfile','seLinuxOptions','appArmorProfile','procMount'):checks.append('!has('+c+'.securityContext.'+k+')')
  for k in ('seLinuxOptions','supplementalGroups','sysctls','appArmorProfile'):checks.append('!has('+x+'.securityContext.'+k+')')
- checks += [c+'.securityContext.allowPrivilegeEscalation == false',c+'.securityContext.readOnlyRootFilesystem == true',c+'.securityContext.capabilities.drop == ["ALL"]','(!has('+c+'.securityContext.capabilities.add) || '+c+'.securityContext.capabilities.add.size() == 0)','(!has('+c+'.securityContext.privileged) || '+c+'.securityContext.privileged == false)',x+'.securityContext.runAsNonRoot == true',x+'.securityContext.runAsUser == 1001',x+'.securityContext.runAsGroup == 1001',x+'.securityContext.fsGroup == 1001',x+'.securityContext.fsGroupChangePolicy == "OnRootMismatch"',x+'.securityContext.seccompProfile.type == "RuntimeDefault"',c+'.resources.requests == '+cel(v['resources']['requests']),c+'.resources.limits == '+cel(v['resources']['limits'])]
+ checks += [c+'.securityContext.allowPrivilegeEscalation == false',c+'.securityContext.readOnlyRootFilesystem == true',c+'.securityContext.capabilities.drop == ["ALL"]','(!has('+c+'.securityContext.capabilities.add) || '+c+'.securityContext.capabilities.add.size() == 0)','(!has('+c+'.securityContext.privileged) || '+c+'.securityContext.privileged == false)',x+'.securityContext.runAsNonRoot == true',x+'.securityContext.runAsUser == 1001',x+'.securityContext.runAsGroup == 1001',x+'.securityContext.fsGroup == 1001',x+'.securityContext.fsGroupChangePolicy == "OnRootMismatch"',x+'.securityContext.seccompProfile.type == "RuntimeDefault"','dyn('+c+'.resources).requests == '+cel(v['resources']['requests']),'dyn('+c+'.resources).limits == '+cel(v['resources']['limits'])]
  checks += [x+'.imagePullSecrets.size() == 1',x+'.imagePullSecrets[0].name == '+cel(p['imagePullSecrets'][0]['name']),x+'.volumes.size() == '+str(len(p['volumes'])),c+'.volumeMounts.size() == '+str(len(v['volumeMounts']))]
  # Compare explicit source/mount leaves, not permissive name-only allowlists.
  def leaves(value,path):
@@ -42,6 +43,7 @@ def pod_checks(p,prefix='object.spec.template.spec'):
    return out
   if isinstance(value,list):
    return [path+'.size() == '+str(len(value))]+[z for i,val in enumerate(value) for z in leaves(val,path+'['+str(i)+']')]
+  if path.endswith('.emptyDir.sizeLimit'):path='dyn('+path.rsplit('.',1)[0]+').sizeLimit'
   return [path+' == '+cel(value)]
  for i,volume in enumerate(p['volumes']):checks+=leaves(volume,x+'.volumes['+str(i)+']')
  for i,mount in enumerate(v['volumeMounts']):

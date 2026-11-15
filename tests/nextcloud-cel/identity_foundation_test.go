@@ -24,6 +24,13 @@ func TestIdentityFoundation(t *testing.T){
  compiler:=admissioncel.NewCompiler(environment.MustBaseEnvSet(version.MajorMinor(1,36)))
  policies:=map[string]admissionv1.ValidatingAdmissionPolicy{}
  for _,p:=range f.Policies {policies[p.Name]=p;if w:=checker.Check(&p);len(w)>0{t.Errorf("%s: %+v",p.Name,w)}}
+ // RKE2 1.36 live OpenAPI v3 Quantity is oneOf string/number, not v2 string.
+ // It makes typed CEL omit Quantity-bearing fields: preserve guards via narrow dyn parents.
+ quantity:=schemas.Definitions["io.k8s.apimachinery.pkg.api.resource.Quantity"]
+ if err=json.Unmarshal([]byte(`{"oneOf":[{"type":"string"},{"type":"number"}]}`),&quantity);err!=nil{t.Fatal(err)}
+ quantity.Type=nil
+ schemas.Definitions["io.k8s.apimachinery.pkg.api.resource.Quantity"]=quantity
+ for _,p:=range f.Policies{if w:=checker.Check(&p);len(w)>0{t.Errorf("live-v3 %s: %+v",p.Name,w)}}
  for _,tc:=range f.Cases{t.Run(tc.Name,func(t *testing.T){allowed:=true;p:=policies[tc.Policy];if tc.Username==""{tc.Username="system:serviceaccount:flux-system:identity-group-reconciler"};if tc.Operation==""{tc.Operation="CREATE"}
   for _,v:=range p.Spec.Validations{r:=compiler.CompileCELExpression(expression{v.Expression,false},admissioncel.OptionalVariableDeclarations{},environment.NewExpressions);if r.Error!=nil{t.Fatal(r.Error)}
    value,_,err:=r.Program.ContextEval(context.Background(),map[string]any{"object":tc.Object,"oldObject":tc.OldObject,"request":map[string]any{"operation":tc.Operation,"userInfo":map[string]any{"username":tc.Username}},"namespaceObject":nil});if err!=nil || value.Value()!=true{allowed=false}}
