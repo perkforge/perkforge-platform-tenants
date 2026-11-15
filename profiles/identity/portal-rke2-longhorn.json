@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "apiAudience": "https://kubernetes.default.svc.cluster.local",
+  "dns": {
+    "namespaceLabels": {
+      "kubernetes.io/metadata.name": "kube-system"
+    },
+    "podLabels": {
+      "k8s-app": "kube-dns"
+    },
+    "port": 53
+  },
+  "ingress": {
+    "namespaceLabels": {
+      "kubernetes.io/metadata.name": "kube-system"
+    },
+    "podLabels": {
+      "app.kubernetes.io/name": "rke2-traefik",
+      "app.kubernetes.io/instance": "rke2-traefik-kube-system"
+    },
+    "frontendPort": 443,
+    "backendPort": 8443
+  },
+  "api": {
+    "servicePort": 443,
+    "backendPort": 6443
+  },
+  "storage": {
+    "provider": "longhorn-v1",
+    "className": "longhorn",
+    "size": "1Gi"
+  }
+}

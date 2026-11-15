@@ -3,6 +3,7 @@
 import argparse,copy,ipaddress,json,pathlib,re
 import yaml
 from finite_identity import render,PHASES
+from identity_target_profile import validate as target_profile
 OWNER={'platform.perkforge.io/owner':'tenant-identity-foundation-v1'}
 WRITER='tenant-identity-writer';ATTESTOR='tenant-identity-attestor'
 def obj(api,kind,name,namespace=None,**fields):
@@ -56,6 +57,7 @@ def pod_checks(p,prefix='object.spec.template.spec'):
 def build(d,network,custody,initializer=None):
  generated=render(d)
  if not d.get('enabled'):return []
+ profile=target_profile(d['targetProfile'])
  if set(network)!={'ingressHosts','apiHosts','apiBackendHosts','apiCA','traefikBackend'} or network['traefikBackend'] is not True:raise ValueError('explicit target endpoints required')
  if not isinstance(network['apiCA'],str) or not network['apiCA'].startswith('-----BEGIN CERTIFICATE-----'):raise ValueError('explicit public API CA')
  for k in ('ingressHosts','apiHosts','apiBackendHosts'):
@@ -73,6 +75,7 @@ def build(d,network,custody,initializer=None):
  if initializer is not None:
   from private_receipts import plan
   if (initializer['claim'],initializer['node'],initializer['pullSecret'])!=(d['receiptClaim'],d['workerNode'],d['pullSecret']):raise ValueError('initializer declaration mismatch')
+  if initializer['storageProfile']!=profile['storage']:raise ValueError('initializer storage profile mismatch')
   init=plan(initializer)
  out=[]
  for ns,worker,reconciler in ((WRITER,'identity-group-worker','identity-group-reconciler'),(ATTESTOR,'identity-attestor','identity-attestor-reconciler')):
@@ -110,9 +113,9 @@ def build(d,network,custody,initializer=None):
   if any(len(x)>90000 for x in checks):raise ValueError('admission expression exceeds conservative source budget')
   out+=policy('identity-config-'+ns,'','v1','configmaps',ns,checks)
   out.append(obj('networking.k8s.io/v1','NetworkPolicy','identity-default-deny',ns,spec={'podSelector':{},'policyTypes':['Ingress','Egress']}))
-  dns={'to':[{'namespaceSelector':{'matchLabels':{'kubernetes.io/metadata.name':'kube-system'}},'podSelector':{'matchLabels':{'k8s-app':'kube-dns'}}}],'ports':[{'protocol':'UDP','port':53},{'protocol':'TCP','port':53}]}
-  egress=[dns,{'to':[{'ipBlock':{'cidr':ip}} for ip in network['ingressHosts']],'ports':[{'protocol':'TCP','port':443}]},{'to':[{'namespaceSelector':{'matchLabels':{'kubernetes.io/metadata.name':'kube-system'}},'podSelector':{'matchLabels':{'app.kubernetes.io/name':'rke2-traefik','app.kubernetes.io/instance':'rke2-traefik-kube-system'}}}],'ports':[{'protocol':'TCP','port':8443}]}]
-  if ns==ATTESTOR:egress += [{'to':[{'ipBlock':{'cidr':ip}} for ip in network[key]],'ports':[{'protocol':'TCP','port':port}]} for key,port in [('apiHosts',443),('apiBackendHosts',6443)]]
+  dns={'to':[{'namespaceSelector':{'matchLabels':profile['dns']['namespaceLabels']},'podSelector':{'matchLabels':profile['dns']['podLabels']}}],'ports':[{'protocol':'UDP','port':profile['dns']['port']},{'protocol':'TCP','port':profile['dns']['port']}]}
+  egress=[dns,{'to':[{'ipBlock':{'cidr':ip}} for ip in network['ingressHosts']],'ports':[{'protocol':'TCP','port':profile['ingress']['frontendPort']}]},{'to':[{'namespaceSelector':{'matchLabels':profile['ingress']['namespaceLabels']},'podSelector':{'matchLabels':profile['ingress']['podLabels']}}],'ports':[{'protocol':'TCP','port':profile['ingress']['backendPort']}]}]
+  if ns==ATTESTOR:egress += [{'to':[{'ipBlock':{'cidr':ip}} for ip in network[key]],'ports':[{'protocol':'TCP','port':port}]} for key,port in [('apiHosts',profile['api']['servicePort']),('apiBackendHosts',profile['api']['backendPort'])]]
   out.append(obj('networking.k8s.io/v1','NetworkPolicy','identity-worker-egress',ns,spec={'podSelector':{'matchLabels':{'platform.perkforge.io/identity-phase':'true'}},'policyTypes':['Egress'],'egress':egress}))
  out.append(sa('identity-declaration-reconciler','flux-system'))
  children=[generated[p+'-reconcile.yaml'] for p in PHASES]
@@ -136,7 +139,7 @@ def build(d,network,custody,initializer=None):
  out+=policy('identity-evidence-fields','','v1','configmaps',WRITER,["object.metadata.name != 'portal-identity-evidence' || (request.operation == 'UPDATE' && oldObject != null && object.metadata.uid == "+cel(uid)+" && oldObject.metadata.uid == "+cel(uid)+" && !has(object.binaryData) && (!has(object.immutable) || object.immutable == false) && ((request.userInfo.username == "+cel(issuer)+" && object.metadata.annotations == oldObject.metadata.annotations && object.metadata.labels == oldObject.metadata.labels && object.data.size() == 1 && 'receipt.json' in object.data && object.data['receipt.json'].size() <= 262144) || (request.userInfo.username == "+cel(declaration_user)+" && object.metadata.labels == oldObject.metadata.labels && has(object.data) == has(oldObject.data) && (!has(object.data) || object.data == oldObject.data) && object.metadata.annotations == {'perkforge.dev/desired-invocation': "+cel(d['invocation'])+"})))"])
  for field in ('ownerReferences','finalizers'):
   out[-2]['spec']['validations'].append({'expression':"object.metadata.name != 'portal-identity-evidence' || (oldObject != null && has(object.metadata."+field+") == has(oldObject.metadata."+field+") && (!has(object.metadata."+field+") || object.metadata."+field+" == oldObject.metadata."+field+"))",'message':'Evidence ownership metadata is immutable.','reason':'Forbidden'})
- out.append(obj('v1','PersistentVolumeClaim',d['receiptClaim'],WRITER,spec={'accessModes':['ReadWriteOnce'],'storageClassName':'longhorn','resources':{'requests':{'storage':'1Gi'}}}))
+ out.append(obj('v1','PersistentVolumeClaim',d['receiptClaim'],WRITER,spec={'accessModes':['ReadWriteOnce'],'storageClassName':profile['storage']['className'],'resources':{'requests':{'storage':profile['storage']['size']}}}))
  # Empty destination Secrets are CREATE-ONLY separate artifacts, never reapplied.
  for ns,name in ((WRITER,d['writerSecret']),(ATTESTOR,d['attestorSecret'])):out.append(obj('v1','Secret',name,ns,type='Opaque',data={}))
  for purpose,ns,target in (('writer',WRITER,d['writerSecret']),('reader',ATTESTOR,d['attestorSecret']),('keycloak',ATTESTOR,d['attestorSecret'])):
