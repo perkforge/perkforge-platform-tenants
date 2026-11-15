@@ -25,14 +25,14 @@ spec:
   - name: exact-namespace
     expression: request.namespace == "tenant-identity-writer"
   validations:
-  - expression: (object.metadata.name == "identity-portal-foundation-74a1fd77a43038f5"
-      && object.metadata.annotations == {"platform.perkforge.io/invocation":"89fa3d6348444b25ede774bebe27287c083b5932d4ea192b4dc5826a7e6191c5","platform.perkforge.io/attempt":"74a1fd77a43038f577050abc6df5e601b2f6f5e87147de9e855925194120a78c"}
+  - expression: (object.metadata.name == "identity-portal-foundation-54819c8b56bfc3e8"
+      && object.metadata.annotations == {"platform.perkforge.io/invocation":"3d08188c5f24e69af33ee7e38f05bfbdb3bd3ff3d66a1d794488bb140c030c9c","platform.perkforge.io/attempt":"54819c8b56bfc3e8e1e19b306cb445f9ca56f526a59f1f4aa684679359245e6d"}
       && object.spec.completions == 1 && object.spec.parallelism == 1 && object.spec.backoffLimit
       == 0 && object.spec.activeDeadlineSeconds == 300 && !has(object.spec.ttlSecondsAfterFinished)
       && (!has(object.spec.suspend) || object.spec.suspend == false) && (!has(object.spec.completionMode)
       || object.spec.completionMode == "NonIndexed") && !has(object.spec.podFailurePolicy)
       && !has(object.spec.successPolicy) && object.spec.template.metadata.annotations
-      == {"platform.perkforge.io/invocation":"89fa3d6348444b25ede774bebe27287c083b5932d4ea192b4dc5826a7e6191c5","platform.perkforge.io/attempt":"74a1fd77a43038f577050abc6df5e601b2f6f5e87147de9e855925194120a78c"}
+      == {"platform.perkforge.io/invocation":"3d08188c5f24e69af33ee7e38f05bfbdb3bd3ff3d66a1d794488bb140c030c9c","platform.perkforge.io/attempt":"54819c8b56bfc3e8e1e19b306cb445f9ca56f526a59f1f4aa684679359245e6d"}
       && object.spec.template.spec.containers.size() == 1 && object.spec.template.spec.serviceAccountName
       == "identity-group-worker" && object.spec.template.spec.automountServiceAccountToken
       == false && object.spec.template.spec.restartPolicy == "Never" && object.spec.template.spec.nodeSelector
@@ -96,7 +96,7 @@ spec:
       && object.spec.template.spec.containers[0].name == "reconcile" && object.spec.template.spec.containers[0].image
       == "registry1.dso.mil/ironbank/opensource/ansible/ansible@sha256:3308322cc09f20a813c00e9087c166a3d97dbb7789c059f1020f3c0b092fdf02"
       && object.spec.template.spec.containers[0].command == ["/usr/bin/timeout","--signal=TERM","--kill-after=10s","270s","/bin/bash","/opt/perkforge/bin/launch"]
-      && object.spec.template.spec.containers[0].args == ["--phase","foundation","--invocation","89fa3d6348444b25ede774bebe27287c083b5932d4ea192b4dc5826a7e6191c5","--inputs-sha256","79b596fcd48db6e65ba8a584b7e6e9b17c3e7065b5f66b25e4b81124cd24c751","--bundle-sha256","a3cd3cb767ad59076ac03482f93871e050e078c66ccb7cedc0fa735b2e8dfb51"]
+      && object.spec.template.spec.containers[0].args == ["--phase","foundation","--invocation","3d08188c5f24e69af33ee7e38f05bfbdb3bd3ff3d66a1d794488bb140c030c9c","--inputs-sha256","6828ddf4c3ddf9358e2604b2c247d08e40d0afed413ea35cbd3382a4bb42f62f","--bundle-sha256","763db8699537d09e25650d7e31338b68056b65c72c2d89033f6452bdab96dbb1"]
       && !has(object.spec.template.spec.containers[0].env) && !has(object.spec.template.spec.containers[0].envFrom)
       && !has(object.spec.template.spec.containers[0].lifecycle) && !has(object.spec.template.spec.containers[0].livenessProbe)
       && !has(object.spec.template.spec.containers[0].readinessProbe) && !has(object.spec.template.spec.containers[0].startupProbe)
@@ -138,7 +138,7 @@ spec:
       == 1 && object.spec.template.spec.imagePullSecrets[0].name == "private-registry"
       && object.spec.template.spec.volumes.size() == 5 && object.spec.template.spec.containers[0].volumeMounts.size()
       == 5 && object.spec.template.spec.volumes[0].name == "source" && object.spec.template.spec.volumes[0].configMap.name
-      == "identity-source-a3cd3cb767ad59076ac0" && object.spec.template.spec.volumes[0].configMap.defaultMode
+      == "identity-source-763db8699537d09e2565" && object.spec.template.spec.volumes[0].configMap.defaultMode
       == 365 && object.spec.template.spec.volumes[0].configMap.items.size() == 27
       && object.spec.template.spec.volumes[0].configMap.items[0].key == "file-0" &&
       object.spec.template.spec.volumes[0].configMap.items[0].path == "perkforge/bin/launch"
@@ -195,7 +195,7 @@ spec:
       && object.spec.template.spec.volumes[0].configMap.items[26].key == "file-26"
       && object.spec.template.spec.volumes[0].configMap.items[26].path == "revisions.json"
       && object.spec.template.spec.volumes[1].name == "inputs" && object.spec.template.spec.volumes[1].configMap.name
-      == "identity-portal-foundation-74a1fd77a43038f5-inputs" && object.spec.template.spec.volumes[2].name
+      == "identity-portal-foundation-54819c8b56bfc3e8-inputs" && object.spec.template.spec.volumes[2].name
       == "credentials" && object.spec.template.spec.volumes[2].secret.secretName ==
       "group-writer" && object.spec.template.spec.volumes[2].secret.defaultMode ==
       288 && object.spec.template.spec.volumes[3].name == "tmp" && dyn(object.spec.template.spec.volumes[3].emptyDir).sizeLimit
@@ -228,14 +228,14 @@ spec:
       && object.spec.template.spec.containers[0].volumeMounts[4].subPath == "private"
       && !has(object.spec.template.spec.containers[0].volumeMounts[4].subPathExpr)
       && !has(object.spec.template.spec.containers[0].volumeMounts[4].mountPropagation))
-      || (object.metadata.name == "identity-portal-memberships-74a1fd77a43038f5" &&
-      object.metadata.annotations == {"platform.perkforge.io/invocation":"89fa3d6348444b25ede774bebe27287c083b5932d4ea192b4dc5826a7e6191c5","platform.perkforge.io/attempt":"74a1fd77a43038f577050abc6df5e601b2f6f5e87147de9e855925194120a78c"}
+      || (object.metadata.name == "identity-portal-memberships-54819c8b56bfc3e8" &&
+      object.metadata.annotations == {"platform.perkforge.io/invocation":"3d08188c5f24e69af33ee7e38f05bfbdb3bd3ff3d66a1d794488bb140c030c9c","platform.perkforge.io/attempt":"54819c8b56bfc3e8e1e19b306cb445f9ca56f526a59f1f4aa684679359245e6d"}
       && object.spec.completions == 1 && object.spec.parallelism == 1 && object.spec.backoffLimit
       == 0 && object.spec.activeDeadlineSeconds == 300 && !has(object.spec.ttlSecondsAfterFinished)
       && (!has(object.spec.suspend) || object.spec.suspend == false) && (!has(object.spec.completionMode)
       || object.spec.completionMode == "NonIndexed") && !has(object.spec.podFailurePolicy)
       && !has(object.spec.successPolicy) && object.spec.template.metadata.annotations
-      == {"platform.perkforge.io/invocation":"89fa3d6348444b25ede774bebe27287c083b5932d4ea192b4dc5826a7e6191c5","platform.perkforge.io/attempt":"74a1fd77a43038f577050abc6df5e601b2f6f5e87147de9e855925194120a78c"}
+      == {"platform.perkforge.io/invocation":"3d08188c5f24e69af33ee7e38f05bfbdb3bd3ff3d66a1d794488bb140c030c9c","platform.perkforge.io/attempt":"54819c8b56bfc3e8e1e19b306cb445f9ca56f526a59f1f4aa684679359245e6d"}
       && object.spec.template.spec.containers.size() == 1 && object.spec.template.spec.serviceAccountName
       == "identity-group-worker" && object.spec.template.spec.automountServiceAccountToken
       == false && object.spec.template.spec.restartPolicy == "Never" && object.spec.template.spec.nodeSelector
@@ -299,7 +299,7 @@ spec:
       && object.spec.template.spec.containers[0].name == "reconcile" && object.spec.template.spec.containers[0].image
       == "registry1.dso.mil/ironbank/opensource/ansible/ansible@sha256:3308322cc09f20a813c00e9087c166a3d97dbb7789c059f1020f3c0b092fdf02"
       && object.spec.template.spec.containers[0].command == ["/usr/bin/timeout","--signal=TERM","--kill-after=10s","270s","/bin/bash","/opt/perkforge/bin/launch"]
-      && object.spec.template.spec.containers[0].args == ["--phase","memberships","--invocation","89fa3d6348444b25ede774bebe27287c083b5932d4ea192b4dc5826a7e6191c5","--inputs-sha256","cb5a1ec86fda2679dccc70fd02c4994405fa0f1c86272763d247f59c16a6af40","--bundle-sha256","a3cd3cb767ad59076ac03482f93871e050e078c66ccb7cedc0fa735b2e8dfb51"]
+      && object.spec.template.spec.containers[0].args == ["--phase","memberships","--invocation","3d08188c5f24e69af33ee7e38f05bfbdb3bd3ff3d66a1d794488bb140c030c9c","--inputs-sha256","e28c6d77d9fd9e36b217aa960306b28886e048cb70c4ca7e28450af93666a707","--bundle-sha256","763db8699537d09e25650d7e31338b68056b65c72c2d89033f6452bdab96dbb1"]
       && !has(object.spec.template.spec.containers[0].env) && !has(object.spec.template.spec.containers[0].envFrom)
       && !has(object.spec.template.spec.containers[0].lifecycle) && !has(object.spec.template.spec.containers[0].livenessProbe)
       && !has(object.spec.template.spec.containers[0].readinessProbe) && !has(object.spec.template.spec.containers[0].startupProbe)
@@ -341,7 +341,7 @@ spec:
       == 1 && object.spec.template.spec.imagePullSecrets[0].name == "private-registry"
       && object.spec.template.spec.volumes.size() == 6 && object.spec.template.spec.containers[0].volumeMounts.size()
       == 6 && object.spec.template.spec.volumes[0].name == "source" && object.spec.template.spec.volumes[0].configMap.name
-      == "identity-source-a3cd3cb767ad59076ac0" && object.spec.template.spec.volumes[0].configMap.defaultMode
+      == "identity-source-763db8699537d09e2565" && object.spec.template.spec.volumes[0].configMap.defaultMode
       == 365 && object.spec.template.spec.volumes[0].configMap.items.size() == 27
       && object.spec.template.spec.volumes[0].configMap.items[0].key == "file-0" &&
       object.spec.template.spec.volumes[0].configMap.items[0].path == "perkforge/bin/launch"
@@ -398,7 +398,7 @@ spec:
       && object.spec.template.spec.volumes[0].configMap.items[26].key == "file-26"
       && object.spec.template.spec.volumes[0].configMap.items[26].path == "revisions.json"
       && object.spec.template.spec.volumes[1].name == "inputs" && object.spec.template.spec.volumes[1].configMap.name
-      == "identity-portal-memberships-74a1fd77a43038f5-inputs" && object.spec.template.spec.volumes[2].name
+      == "identity-portal-memberships-54819c8b56bfc3e8-inputs" && object.spec.template.spec.volumes[2].name
       == "credentials" && object.spec.template.spec.volumes[2].secret.secretName ==
       "group-writer" && object.spec.template.spec.volumes[2].secret.defaultMode ==
       288 && object.spec.template.spec.volumes[3].name == "tmp" && dyn(object.spec.template.spec.volumes[3].emptyDir).sizeLimit

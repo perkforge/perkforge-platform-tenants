@@ -9,4 +9,4 @@ metadata:
     perkforge.dev/context: portal
     platform.perkforge.io/owner: tenant-identity-foundation-v1
   annotations:
-    perkforge.dev/desired-invocation: 89fa3d6348444b25ede774bebe27287c083b5932d4ea192b4dc5826a7e6191c5
+    perkforge.dev/desired-invocation: 3d08188c5f24e69af33ee7e38f05bfbdb3bd3ff3d66a1d794488bb140c030c9c

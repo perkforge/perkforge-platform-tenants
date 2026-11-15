@@ -9,11 +9,16 @@ class Activation(unittest.TestCase):
  def setUp(self):
   self.d=json.loads((ROOT/'declarations/identity/portal.json').read_text());self.c=json.loads((ROOT/'declarations/identity/foundation.json').read_text())
  def test_release_pins_and_explicit_scope(self):
-  self.assertEqual(self.d['enrollmentRevision'],'4b027b7a50ebf477a36746b88d0f034cc6a7d454');self.assertEqual(self.d['platformRevision'],'b904017158100944a81129899e8fc64a3ed976b8')
+  self.assertEqual(self.d['enrollmentRevision'],'3f3d630e70a5f6db7282779cae059202229cb517');self.assertEqual(self.d['platformRevision'],'95ef0f103a89fe71b7e5aff93d0f3dd2ce31947c')
   self.assertEqual(self.d['context'],'portal');self.assertEqual(self.d['image'],IMAGE);self.assertEqual(self.d['sourceName'],'tenant-enrollments')
   self.assertEqual(self.d['resources'],{'requests':{'cpu':'100m','memory':'256Mi'},'limits':{'cpu':'500m','memory':'512Mi'}})
   self.assertEqual(self.d['phaseInputs']['foundation']['group']['gitlab_group_expected_parent_id'],7)
   self.assertFalse(self.d['phaseInputs']['foundation']['group']['gitlab_group_allow_parent_create'])
+ def test_partial_success_predecessors(self):
+  self.assertEqual(self.d['retryGeneration'],1)
+  for phase in ('foundation','attest','memberships'):
+   i=self.d['phaseInputs'][phase]['identity'];self.assertEqual(i['identity_previous_invocation'],'89fa3d6348444b25ede774bebe27287c083b5932d4ea192b4dc5826a7e6191c5');self.assertEqual(i['identity_previous_attestation_invocation'],'')
+  self.assertEqual(self.d['phaseInputs']['foundation']['group']['gitlab_group_previous_revision'],'4b027b7a50ebf477a36746b88d0f034cc6a7d454')
  def test_explicit_reviewed_foundation_hash(self):
   c=self.c;self.assertEqual(c['ownership']['foundationSHA256'],sha(build(self.d,c['network'],c['custody'],c['initializer'])))
  def test_A_B_differ_only_membership_scheduling_and_its_admission(self):

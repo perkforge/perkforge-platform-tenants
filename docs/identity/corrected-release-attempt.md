@@ -1,3 +1,5 @@
+> Historical retry0 checkpoint. The subsequent partial-success retry is documented in `partial-success-retry-selection.md`.
+
 # Corrected released executable: held replacement attempt
 
 The executable is enrollment v2.9.0, exact commit
