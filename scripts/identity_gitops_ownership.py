@@ -97,6 +97,10 @@ def build(objects,c):
   r='validatingadmissionpolicies' if k=='ValidatingAdmissionPolicy' else 'validatingadmissionpolicybindings';cluster[r]=[o['metadata']['name'] for o in admission if o['kind']==k]
  name=c['namePrefix']+'-admission-owner';grants += [resource('ClusterRole',name,rules=[rule('admissionregistration.k8s.io',r,v) for r,v in cluster.items()]),resource('ClusterRoleBinding',name,roleRef={'apiGroup':'rbac.authorization.k8s.io','kind':'ClusterRole','name':name},subjects=[{'kind':'ServiceAccount','name':c['platformServiceAccount'],'namespace':c['controlNamespace']}])]
  policies=guard('Role',roles,c['namePrefix'])+guard('RoleBinding',bindings,c['namePrefix'])
+ def object_key(o):return (o['apiVersion'],o['kind'],o['metadata'].get('namespace'),o['metadata']['name'])
+ managed_keys={object_key(o) for o in admission+controls}
+ bootstrap_keys=[object_key(o) for o in grants+policies]
+ if len(set(bootstrap_keys))!=len(bootstrap_keys) or managed_keys.intersection(bootstrap_keys):raise ValueError('bootstrap authority must be disjoint from managed objects')
  stages={}
  for stage,objs in [('admission',admission),('controls',controls)]:
   files={str(i).zfill(3)+'-'+o['kind'].lower()+'.yaml':o for i,o in enumerate(objs)}

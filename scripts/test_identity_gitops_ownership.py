@@ -38,6 +38,11 @@ class Ownership(unittest.TestCase):
    with self.assertRaises(ValueError):build(bad,c)
   bad=copy.deepcopy(objects);next(o for o in bad if o['kind']=='Role')['rules'][0]['verbs'].append('escalate');c['foundationSHA256']=sha(bad)
   with self.assertRaises(ValueError):build(bad,c)
+ def test_bootstrap_authority_collision_denied(self):
+  objects,c=sample();r=next(o for o in objects if o['kind']=='Role');old=r['metadata']['name'];ns=r['metadata']['namespace'];r['metadata']['name']=c['namePrefix']+'-owner'
+  b=next(o for o in objects if o['kind']=='RoleBinding' and o['metadata']['namespace']==ns and o['roleRef']['name']==old);b['metadata']['name']=r['metadata']['name'];b['roleRef']['name']=r['metadata']['name']
+  c['foundationSHA256']=sha(objects)
+  with self.assertRaisesRegex(ValueError,'disjoint'):build(objects,c)
  def test_independent_context_namespace_selection(self):
   objects,c=sample();replacement={'tenant-identity-writer':'sample-identity-writer','tenant-identity-attestor':'sample-identity-attestor'}
   # Rendered object handoff, not a second tenant-name implementation.
