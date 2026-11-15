@@ -1,5 +1,45 @@
 # Changelog
 
+## [2.9.0](https://github.com/perkforge/perkforge-platform-tenants/compare/v2.8.0...v2.9.0) (2026-11-15)
+
+
+### Features
+
+* **identity:** add exact declarative child pause gate ([#104](https://github.com/perkforge/perkforge-platform-tenants/issues/104)) ([4f86e9c](https://github.com/perkforge/perkforge-platform-tenants/commit/4f86e9c04b5eb524232cd10934ece411f96784d5))
+* **identity:** prepublish guarded membership release stage ([73648e4](https://github.com/perkforge/perkforge-platform-tenants/commit/73648e47d1fd4bb6ba901820df23db4df45a9dd6))
+* **identity:** preserve paired release after native health correction ([ca5f5ad](https://github.com/perkforge/perkforge-platform-tenants/commit/ca5f5ada8f83b8e42279b71e8a40e2e3755c3472))
+* **identity:** retain explicit release stage after SSA normalization ([d7c2804](https://github.com/perkforge/perkforge-platform-tenants/commit/d7c2804fb7576ec1c4df35ac236a4dd9502755db))
+* **identity:** select released Portal attempt with memberships held ([cf30914](https://github.com/perkforge/perkforge-platform-tenants/commit/cf30914f793358507c71348a3ca1bd25bd654198))
+* **identity:** source-owned foundation render and freshness ([#94](https://github.com/perkforge/perkforge-platform-tenants/issues/94)) ([dfcfeb5](https://github.com/perkforge/perkforge-platform-tenants/commit/dfcfeb513eca12c9b097e9b305fe47eaa49bff32))
+* **identity:** stage released Portal GitOps onboarding selection ([6340e44](https://github.com/perkforge/perkforge-platform-tenants/commit/6340e440dfdc2489d7334416b709b7063cfced55))
+
+
+### Bug Fixes
+
+* **identity:** accept bounded native initializer representations ([1cf2fee](https://github.com/perkforge/perkforge-platform-tenants/commit/1cf2fee1929ae1052f6f09f649a714a6d2b6af3d))
+* **identity:** admit exact Flux evidence tracking labels ([a9631ad](https://github.com/perkforge/perkforge-platform-tenants/commit/a9631ad2f53155f660b3b8227292c3a51be763f6))
+* **identity:** bind private temporary workspace and supervisor profile ([cd859a2](https://github.com/perkforge/perkforge-platform-tenants/commit/cd859a242d89b4dd80c9f70a97f5413571d62310))
+* **identity:** bound retry names and foundation readiness ([#95](https://github.com/perkforge/perkforge-platform-tenants/issues/95)) ([3a49b7f](https://github.com/perkforge/perkforge-platform-tenants/commit/3a49b7f3c34ad30b8a05c2553c98d2bb01f22ca5))
+* **identity:** freeze budget-guarded stage A ([da17274](https://github.com/perkforge/perkforge-platform-tenants/commit/da172740021a61752901828e29a9b35e53fddddc))
+* **identity:** freeze budget-guarded stage B ([9c619d8](https://github.com/perkforge/perkforge-platform-tenants/commit/9c619d834a849842ce20171988304db3bf04afb5))
+* **identity:** handle native initializer representations before first start ([1741ac1](https://github.com/perkforge/perkforge-platform-tenants/commit/1741ac1fb97290a2a23e8d6978ace50c352cbe0d))
+* **identity:** make native admission defaults explicit for SSA ([4838b8a](https://github.com/perkforge/perkforge-platform-tenants/commit/4838b8a4de5ed67bced99011f33e55cca9d880d3))
+* **identity:** pair evidence-preserving membership release stage ([a1812ec](https://github.com/perkforge/perkforge-platform-tenants/commit/a1812ec14b8955e760e26166e33c99f38c4be66e))
+* **identity:** prepublish held initializer-compatible foundation ([dd67536](https://github.com/perkforge/perkforge-platform-tenants/commit/dd675360a87bbd1df545e75f522666e9c6b22e6b))
+* **identity:** prepublish held stage with native Flux health check ([fd51eea](https://github.com/perkforge/perkforge-platform-tenants/commit/fd51eeaf0ad6123c089826aee3687e449c4c2979))
+* **identity:** preserve evidence across native Flux SSA cleanup ([895e2b0](https://github.com/perkforge/perkforge-platform-tenants/commit/895e2b02041949b8c865b32966b07dfd47cbb2a5))
+* **identity:** preserve evidence through native SSA cleanup ([c42eac8](https://github.com/perkforge/perkforge-platform-tenants/commit/c42eac8b8a745c3a5dcc6f241472c744cc27f292))
+* **identity:** preserve exact evidence metadata in held stage A ([0732cff](https://github.com/perkforge/perkforge-platform-tenants/commit/0732cff9aff9815d1bedec4b94ff2883ce75b577))
+* **identity:** preserve native defaults during foundation SSA adoption ([6c70d10](https://github.com/perkforge/perkforge-platform-tenants/commit/6c70d1017f453d67ed96da439fe113aa07e97952))
+* **identity:** preserve paired membership release after initializer correction ([aba4d7c](https://github.com/perkforge/perkforge-platform-tenants/commit/aba4d7caaeca1b81eeab0d74ed9d9a1bbcc7b711))
+* **identity:** preserve separately gated membership release stage ([4bd027f](https://github.com/perkforge/perkforge-platform-tenants/commit/4bd027f1b0bc8f352f56cf470786a5021536e813))
+* **identity:** private runtime, native supervisor and exact Flux adoption ([289b94d](https://github.com/perkforge/perkforge-platform-tenants/commit/289b94de0eb11c4d1c09ea2f633ce91d41c0548f))
+* **identity:** reject overriding Pod-level resource budgets ([86f494a](https://github.com/perkforge/perkforge-platform-tenants/commit/86f494afb86fccc44269e772d13be0a2e58b3181))
+* **identity:** resolve bounded source metadata projections ([#103](https://github.com/perkforge/perkforge-platform-tenants/issues/103)) ([08f6315](https://github.com/perkforge/perkforge-platform-tenants/commit/08f6315d7024196fe80dc475d987e7f053b0e815))
+* **identity:** select reviewed private runtime with memberships held ([8b04be3](https://github.com/perkforge/perkforge-platform-tenants/commit/8b04be30c091eb92a2bc029945182ff0179f3e4e))
+* **identity:** validate admission health with pinned Flux evaluator ([28ad592](https://github.com/perkforge/perkforge-platform-tenants/commit/28ad592c7db31cf28bc657f717840c211c10627a))
+* **identity:** validate health with pinned native Flux evaluator ([da1b464](https://github.com/perkforge/perkforge-platform-tenants/commit/da1b46452a54a57bbaa6e2283bc651b8a314af77))
+
 ## [2.8.0](https://github.com/perkforge/perkforge-platform-tenants/compare/v2.7.1...v2.8.0) (2026-11-15)
 
 
