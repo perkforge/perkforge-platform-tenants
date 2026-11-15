@@ -1200,7 +1200,7 @@ spec:
     reason: Forbidden
   - expression: object.metadata.name != "identity-private-init-b11c4ced0c56fdb9-gate"
       || (request.userInfo.username == "system:admin" && !has(object.binaryData) &&
-      object.data.size() <= 1 && object.data.all(k, k == "approval.json" && object.data[k].size()
-      <= 4096))
+      (!has(object.data) || (object.data.size() <= 1 && object.data.all(k, k == "approval.json"
+      && object.data[k].size() <= 4096))))
     message: Identity foundation boundary refused an unreviewed mutation.
     reason: Forbidden

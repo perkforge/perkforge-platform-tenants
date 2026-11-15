@@ -108,7 +108,7 @@ def build(d,network,custody,initializer=None):
   if init and ns==WRITER:
    for cm in (init['configMap'],init['inputs']):exact_cm(cm['metadata']['name'],cm['data'],True)
    name=init['gate']['metadata']['name'];names.append(name)
-   checks.append('object.metadata.name != '+cel(name)+' || (request.userInfo.username == '+cel(initializer['operatorUser'])+' && !has(object.binaryData) && object.data.size() <= 1 && object.data.all(k, k == "approval.json" && object.data[k].size() <= 4096))')
+   checks.append('object.metadata.name != '+cel(name)+' || (request.userInfo.username == '+cel(initializer['operatorUser'])+' && !has(object.binaryData) && (!has(object.data) || (object.data.size() <= 1 && object.data.all(k, k == "approval.json" && object.data[k].size() <= 4096))))')
   if ns==WRITER:names.append(evidence)
   checks.insert(0,'object.metadata.name in '+cel(names))
   if any(len(x)>90000 for x in checks):raise ValueError('admission expression exceeds conservative source budget')
