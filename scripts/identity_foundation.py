@@ -60,7 +60,7 @@ def pod_checks(p,prefix='object.spec.template.spec'):
    if k not in mount:checks+=['!has('+q+'.'+k+')']
  return checks
 
-def build(d,network,custody,initializer=None):
+def build(d,network,custody,initializer=None,receipt_export=False):
  generated=render(d)
  if not d.get('enabled'):return []
  profile=target_profile(d['targetProfile']);binding=selection(d);WRITER=binding['writer_namespace'];ATTESTOR=binding['attestor_namespace'];declaration=binding['declaration_reconciler'];evidence=binding['evidence_name']
@@ -105,6 +105,10 @@ def build(d,network,custody,initializer=None):
    h=preflight(d,initializer);checks=pod_checks(h['spec'],'object.spec');checks=[x for x in checks if x!='!has(object.spec.tolerations)']
    checks += ['request.userInfo.username == '+cel(initializer['operatorUser']),'object.metadata.name == '+cel(h['metadata']['name']),'object.metadata.annotations == '+cel(h['metadata']['annotations']),'object.metadata.labels == '+cel(h['metadata']['labels']),'!has(object.metadata.ownerReferences)','!has(object.metadata.finalizers)','!has(object.metadata.generateName)','object.spec.activeDeadlineSeconds == 300','(!has(object.spec.tolerations) || (object.spec.tolerations.size() <= 2 && object.spec.tolerations.all(t, t.key in ["node.kubernetes.io/not-ready","node.kubernetes.io/unreachable"] && t.operator == "Exists" && t.effect == "NoExecute" && t.tolerationSeconds == 300)))']
    pod_clauses.append('('+' && '.join(checks)+')')
+  if receipt_export and ns==WRITER:
+   if initializer is None:raise ValueError('receipt export requires exact initializer binding')
+   from identity_receipt_export import clause
+   pod_clauses.append(clause(d,initializer))
   out+=policy('identity-pods-'+ns,'','v1','pods',ns,[' || '.join(pod_clauses)],operations=('CREATE',))
   # One bounded implication per exact name/key, never one giant OR literal.
   # Exact key sets preserve full-map equality; unknown object names remain denied.

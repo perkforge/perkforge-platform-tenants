@@ -14,12 +14,19 @@ def render(d,c):
     if c=={'schemaVersion':1,'enabled':False} and type(c['schemaVersion']) is int:
         return {'kustomization.yaml':EMPTY}, {'enabled':False}
     keys={'schemaVersion','enabled','network','custody','initializer','ownership'}
+    receipt_export=False
+    if 'receiptExport' in c:
+        r=c['receiptExport']
+        if not isinstance(r,dict) or set(r)!={'schemaVersion','enabled'} or type(r['schemaVersion']) is not int or r['schemaVersion']!=1 or type(r['enabled']) is not bool:
+            raise ValueError('exact receipt export opt-in required')
+        receipt_export=r['enabled']
+        keys.add('receiptExport')
     if set(c)!=keys or type(c['schemaVersion']) is not int or c['schemaVersion']!=1 or c['enabled'] is not True or d.get('enabled') is not True:
         raise ValueError('explicit enabled foundation and declaration required')
     b=selection(d);s=c['ownership']
     if s.get('runtimeNamespaces')!=[b['writer_namespace'],b['attestor_namespace']] or s.get('controlNamespace')!='flux-system' or s.get('sourceNamespace')!='flux-system' or s.get('sourceName')!=d['sourceName'] or s.get('sourcePath')!='./generated/identity-foundation/portal':
         raise ValueError('foundation must bind the selected context and source')
-    objects=foundation(d,c['network'],c['custody'],c['initializer'])
+    objects=foundation(d,c['network'],c['custody'],c['initializer'],receipt_export=receipt_export)
     plan=ownership(objects,s) # Explicit reviewed foundation hash remains mandatory.
     files={stage+'/'+name:o for stage,items in plan['stages'].items() for name,o in items.items()}
     refs=[]
