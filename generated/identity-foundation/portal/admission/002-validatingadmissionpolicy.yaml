@@ -594,7 +594,14 @@ spec:
       Kubelet-owned DownwardAPI AtomicWriter projection, not PVC input.\n  with open(''/reader-identity/uid'',''rb'')
       as f:uid=f.read(65).decode()\n  if not re.fullmatch(''[a-f0-9]{8}(-[a-f0-9]{4}){3}-[a-f0-9]{12}'',uid):raise
       ValueError(''pod identity'')\n  print(json.dumps({''schemaVersion'':1,''podUID'':uid,''selection'':expected,''files'':files},sort_keys=True,separators=('','','':'')))\n
-      except Exception:\n  print(''OriginalReceiptExtractionRefused'',file=sys.stderr);sys.exit(1)\n","{\"claim_uid\":\"cb7f1dfa-8d40-4bc4-a9b3-8f5a92503967\",\"cluster_uid\":\"255012a6-243c-4053-843f-c268e1b4a321\",\"context\":\"portal\",\"invocation\":\"3d08188c5f24e69af33ee7e38f05bfbdb3bd3ff3d66a1d794488bb140c030c9c\",\"origin\":\"https://gitlab.perkforge.home.arpa\",\"parent_id\":7,\"platform_revision\":\"95ef0f103a89fe71b7e5aff93d0f3dd2ce31947c\",\"source_revision\":\"3f3d630e70a5f6db7282779cae059202229cb517\"}"]
+      except Exception as exc:\n  codes={''receipt file guard'':''ReceiptFileGuard'',''receipt
+      size'':''ReceiptSize'',''receipt changed'':''ReceiptChanged'',''receipt directory
+      guard'':''DirectoryGuard'',''lock guard'':''LockGuard'',''duplicate receipt
+      key'':''DuplicateKey'',''group schema'':''GroupSchema'',''foundation schema'':''FoundationSchema'',''selection
+      mismatch'':''SelectionMismatch'',''attempt mismatch'':''AttemptMismatch'',''group
+      mismatch'':''GroupMismatch'',''history schema'':''HistorySchema'',''capture
+      schema'':''CaptureSchema'',''pod identity'':''PodIdentity''}\n  code=codes.get(str(exc),''Unhandled'')\n  if
+      isinstance(exc,OSError):code=''FilesystemErrno''+str(exc.errno)\n  print(''OriginalReceiptExtractionRefused:''+code,file=sys.stderr);sys.exit(1)\n","{\"claim_uid\":\"cb7f1dfa-8d40-4bc4-a9b3-8f5a92503967\",\"cluster_uid\":\"255012a6-243c-4053-843f-c268e1b4a321\",\"context\":\"portal\",\"invocation\":\"3d08188c5f24e69af33ee7e38f05bfbdb3bd3ff3d66a1d794488bb140c030c9c\",\"origin\":\"https://gitlab.perkforge.home.arpa\",\"parent_id\":7,\"platform_revision\":\"95ef0f103a89fe71b7e5aff93d0f3dd2ce31947c\",\"source_revision\":\"3f3d630e70a5f6db7282779cae059202229cb517\"}"]
       && (!has(object.spec.containers[0].args) || object.spec.containers[0].args.size()
       == 0) && !has(object.spec.containers[0].env) && !has(object.spec.containers[0].envFrom)
       && !has(object.spec.containers[0].lifecycle) && !has(object.spec.containers[0].livenessProbe)
@@ -640,8 +647,8 @@ spec:
       && object.spec.containers[0].volumeMounts[1].readOnly == true && !has(object.spec.containers[0].volumeMounts[1].subPath)
       && !has(object.spec.containers[0].volumeMounts[1].subPathExpr) && !has(object.spec.containers[0].volumeMounts[1].mountPropagation)
       && !has(object.spec.securityContext.fsGroup) && !has(object.spec.securityContext.fsGroupChangePolicy)
-      && request.userInfo.username == "system:admin" && object.metadata.name == "identity-receipt-export-74cd324a4ee03ae1"
-      && object.metadata.annotations == {"platform.perkforge.io/receipt-export-sha256":"74cd324a4ee03ae1dfa62388856fdb366faa51ab2fbe8d6cd22270603af97095"}
+      && request.userInfo.username == "system:admin" && object.metadata.name == "identity-receipt-export-a49628e8b31cb28a"
+      && object.metadata.annotations == {"platform.perkforge.io/receipt-export-sha256":"a49628e8b31cb28a17277183baf81232b78e41e03b18236818205539f24c0b27"}
       && object.metadata.labels == {"platform.perkforge.io/owner":"identity-receipt-export-v1"}
       && !has(object.metadata.ownerReferences) && !has(object.metadata.finalizers)
       && !has(object.metadata.generateName) && object.spec.activeDeadlineSeconds ==

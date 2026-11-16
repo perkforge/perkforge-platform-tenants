@@ -52,5 +52,8 @@ if __name__=='__main__':
   with open('/reader-identity/uid','rb') as f:uid=f.read(65).decode()
   if not re.fullmatch('[a-f0-9]{8}(-[a-f0-9]{4}){3}-[a-f0-9]{12}',uid):raise ValueError('pod identity')
   print(json.dumps({'schemaVersion':1,'podUID':uid,'selection':expected,'files':files},sort_keys=True,separators=(',',':')))
- except Exception:
-  print('OriginalReceiptExtractionRefused',file=sys.stderr);sys.exit(1)
+ except Exception as exc:
+  codes={'receipt file guard':'ReceiptFileGuard','receipt size':'ReceiptSize','receipt changed':'ReceiptChanged','receipt directory guard':'DirectoryGuard','lock guard':'LockGuard','duplicate receipt key':'DuplicateKey','group schema':'GroupSchema','foundation schema':'FoundationSchema','selection mismatch':'SelectionMismatch','attempt mismatch':'AttemptMismatch','group mismatch':'GroupMismatch','history schema':'HistorySchema','capture schema':'CaptureSchema','pod identity':'PodIdentity'}
+  code=codes.get(str(exc),'Unhandled')
+  if isinstance(exc,OSError):code='FilesystemErrno'+str(exc.errno)
+  print('OriginalReceiptExtractionRefused:'+code,file=sys.stderr);sys.exit(1)
