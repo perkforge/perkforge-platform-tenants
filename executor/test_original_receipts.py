@@ -10,7 +10,8 @@ class Original(unittest.TestCase):
    native=os.fstat
    def owned(fd):
     s=native(fd);return SimpleNamespace(**{k:(1001 if k=="st_uid" and getattr(s,k)==os.getuid() else getattr(s,k)) for k in ("st_uid","st_mode","st_nlink","st_size","st_ino","st_mtime_ns")})
-   patch=mock.patch.object(r.os,"fstat",side_effect=owned);patch.start();self.addCleanup(patch.stop)
+   proxy=SimpleNamespace(**{k:getattr(os,k) for k in dir(os) if not k.startswith("__")});proxy.fstat=owned
+   patch=mock.patch.object(r,"os",proxy);patch.start();self.addCleanup(patch.stop)
   self.t=tempfile.TemporaryDirectory();self.p=pathlib.Path(self.t.name);os.chmod(self.p,0o700)
   self.e=dict(context='portal',invocation='a'*64,source_revision='b'*40,platform_revision='c'*40,parent_id=7,origin='https://example.test')
   self.g=dict(schema=1,stage='group-ready',context='portal',source_revision='b'*40,parent_id=7,origin='https://example.test',group_id=9,previous_revisions=[])
