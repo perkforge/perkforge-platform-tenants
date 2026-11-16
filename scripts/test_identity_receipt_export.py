@@ -10,6 +10,9 @@ class Export(unittest.TestCase):
   changes=[(x,y) for x,y in zip(a,b) if x!=y];self.assertEqual(len(changes),1);self.assertEqual(changes[0][0]['metadata']['name'],'identity-pods-'+build(F['D'],F['I'])['metadata']['namespace'])
  def test_fixed_readonly(self):
   p=build(F['D'],F['I']);s=p['spec'];self.assertFalse(s['automountServiceAccountToken']);self.assertNotIn('fsGroup',s['securityContext']);self.assertNotIn('initContainers',s);self.assertTrue(s['volumes'][0]['persistentVolumeClaim']['readOnly']);self.assertTrue(all(m['readOnly'] for m in s['containers'][0]['volumeMounts']));self.assertNotIn('platform.perkforge.io/identity-phase',p['metadata']['labels'])
+ def test_service_account_from_reviewed_phase(self):
+  from finite_identity import render
+  self.assertEqual(build(F['D'],F['I'])['spec']['serviceAccountName'],render(F['D'])['foundation/job.yaml']['spec']['template']['spec']['serviceAccountName'])
  def test_transport(self):
   from identity_receipt_export import verify_transport
   import base64,hashlib

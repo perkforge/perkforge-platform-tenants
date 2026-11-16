@@ -26,6 +26,18 @@ class Original(unittest.TestCase):
   for k,v in [('invocation','d'*64),('group_id',10),('context','foreign')]:
    f=dict(self.f);f[k]=v;self.write('foundation-result.json',json.dumps(f).encode())
    with self.assertRaises(ValueError):r.extract(self.e,str(self.p))
+ def test_hardlinks_and_nonempty_lock(self):
+  for name in ('gitlab-group.json','foundation-result.json','trigger.lock'):
+   alias=self.p/'alias';os.link(self.p/name,alias)
+   with self.assertRaises(ValueError):r.extract(self.e,str(self.p))
+   alias.unlink()
+  self.write('trigger.lock',b'x')
+  with self.assertRaises(ValueError):r.extract(self.e,str(self.p))
+ def test_duplicate_keys(self):
+  for name in ('gitlab-group.json','foundation-result.json'):
+   p=self.p/name;old=p.read_bytes();self.write(name,b'{"schema":1,'+old.lstrip()[1:])
+   with self.assertRaises(ValueError):r.extract(self.e,str(self.p))
+   self.write(name,old)
  def test_exclusive_lock(self):
   with open(self.p/'trigger.lock','rb') as f:
    fcntl.flock(f,fcntl.LOCK_EX|fcntl.LOCK_NB)
