@@ -151,6 +151,16 @@ for mode in ('absent','empty','approval','foreign-absent','binary','extra','over
  if mode=='extra':gate['data']={'other':'{}'}
  if mode=='oversize':gate['data']={'approval.json':'x'*4097}
  cases.append({'Name':'private-gate-'+mode,'Policy':'identity-config-'+B['writer_namespace'],'Object':gate,'Username':user,'Allowed':allowed})
+if os.environ.get('IDENTITY_RECEIPT_EXPORT_FIXTURE'):
+ from identity_receipt_export import build as export_plan
+ policies=[o for o in build(D,network,custody,I,receipt_export=True) if o['kind']=='ValidatingAdmissionPolicy']
+ reader=export_plan(D,I);pn='identity-pods-'+reader['metadata']['namespace']
+ cases.append({'Name':'receipt-reader','Policy':pn,'Object':reader,'Username':I['operatorUser'],'Allowed':True})
+ cases.append({'Name':'receipt-reader-foreign','Policy':pn,'Object':reader,'Username':'foreign','Allowed':False})
+ for label,mutate in [('token',lambda x:x['spec'].update(automountServiceAccountToken=True)),('writable',lambda x:x['spec']['containers'][0]['volumeMounts'][0].update(readOnly=False)),('claim-writable',lambda x:x['spec']['volumes'][0]['persistentVolumeClaim'].update(readOnly=False)),('command',lambda x:x['spec']['containers'][0].update(command=['cat','/original-receipts/gitlab-group.json'])),('egress',lambda x:x['metadata']['labels'].update({'platform.perkforge.io/identity-phase':'true'})),('fsgroup',lambda x:x['spec']['securityContext'].update(fsGroup=1001))]:
+  bad=copy.deepcopy(reader);mutate(bad);cases.append({'Name':'receipt-reader-'+label,'Policy':pn,'Object':bad,'Username':I['operatorUser'],'Allowed':False})
+ defaulted=copy.deepcopy(reader);defaulted['spec']['containers'][0].pop('args');defaulted['spec']['tolerations']=[{'key':k,'operator':'Exists','effect':'NoExecute','tolerationSeconds':300} for k in ('node.kubernetes.io/not-ready','node.kubernetes.io/unreachable')]
+ cases.append({'Name':'receipt-reader-defaulted','Policy':pn,'Object':defaulted,'Username':I['operatorUser'],'Allowed':True})
 schemas={}
 crd_path=os.environ.get('IDENTITY_FLUX_CRD') or (os.path.join(os.environ['NEXTCLOUD_CRD_DIR'],'kustomization.yaml') if os.environ.get('NEXTCLOUD_CRD_DIR') else None)
 if crd_path:
