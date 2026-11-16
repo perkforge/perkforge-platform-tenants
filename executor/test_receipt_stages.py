@@ -22,7 +22,8 @@ class Stages(f.Original):
    with self.subTest(stage=stage):
     status,out,err,seen=self.run_cli(stage)
     self.assertEqual(status,1);self.assertEqual(out,'')
-    self.assertEqual(err,'OriginalReceiptExtractionRefused:'+stage+'FilesystemErrno13\n')
+    self.assertEqual(err.splitlines()[0],'OriginalReceiptExtractionRefused:'+stage+'FilesystemErrno13')
+    self.assertEqual(len(err.splitlines()),2 if stage=='DirectoryOpen' else 1)
     self.assertEqual(seen[-1],stage)
     self.assertEqual({p.name:p.read_bytes() for p in self.p.iterdir()},before)
  def test_success_visits_all_stages(self):

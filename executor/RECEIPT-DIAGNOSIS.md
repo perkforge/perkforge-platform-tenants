@@ -50,3 +50,18 @@ CLI also passed in the cached maintained image against the retained actual-write
 synthetic atlas bytes identified above, preserving their hashes. This does not
 prove live PVC permissions or SELinux behavior. No selected admission output,
 new live attempt, source selection, or publication is included in this change.
+
+## Directory metadata after EACCES (local source only)
+
+The stage diagnostic identified DirectoryOpenFilesystemErrno13 before any lock or
+receipt reads. This revision preserves that refusal and exit status and adds one
+bounded best-effort lstat observation of the fixed mountpoint only for that exact
+failure. Fixed-schema stderr includes numeric effective UID/GID, directory UID/GID,
+mode and enumerated type, or numeric lstat errno/unavailable. No symlink traversal,
+listing, content, label/ACL dump, fallback open or mutation is performed. Output is
+limited to 1024 encoded bytes and fits existing protected failure capture.
+
+The observation can race with the failed open and does not prove a DAC or SELinux
+cause. It authorizes no access or permission repair. No new live attempt or source
+publication is included. Exact command admission and foundation hashes are
+regenerated; the paired platform pin/readiness selection remains future work.

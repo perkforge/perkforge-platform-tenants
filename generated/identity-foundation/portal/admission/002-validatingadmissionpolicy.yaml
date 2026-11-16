@@ -561,7 +561,7 @@ spec:
       == "registry1.dso.mil/ironbank/opensource/ansible/ansible@sha256:3308322cc09f20a813c00e9087c166a3d97dbb7789c059f1020f3c0b092fdf02"
       && object.spec.containers[0].command == ["/home/python/python-env/bin/python3","-B","-c","\"\"\"Fixed
       read-only original-byte transport. No credentials, API or network.\"\"\"\nimport
-      base64,fcntl,hashlib,json,os,re,stat,sys\n\nSTAGES=frozenset((''DirectoryOpen'',''DirectoryStat'',''LockOpen'',''LockStat'',''LockAcquire'',''GroupOpen'',''GroupStat'',''GroupRead'',''GroupRestat'',''FoundationOpen'',''FoundationStat'',''FoundationRead'',''FoundationRestat'',''PodIdentityOpen'',''PodIdentityRead''))\n\ndef
+      errno,base64,fcntl,hashlib,json,os,re,stat,sys\n\nSTAGES=frozenset((''DirectoryOpen'',''DirectoryStat'',''LockOpen'',''LockStat'',''LockAcquire'',''GroupOpen'',''GroupStat'',''GroupRead'',''GroupRestat'',''FoundationOpen'',''FoundationStat'',''FoundationRead'',''FoundationRestat'',''PodIdentityOpen'',''PodIdentityRead''))\n\ndef
       syscall(stage,operation,*args,**kwargs):\n if stage not in STAGES:raise ValueError(''diagnostic
       stage'')\n try:return operation(*args,**kwargs)\n except OSError as exc:\n  exc.receipt_stage=stage\n  raise\n\ndef
       unique(pairs):\n out={}\n for k,v in pairs:\n  if k in out:raise ValueError(''duplicate
@@ -594,6 +594,15 @@ spec:
       or len(f[''captured_at''])>64:raise ValueError(''capture schema'')\n  return
       {n:{''bytes'':len(v),''sha256'':hashlib.sha256(v).hexdigest(),''base64'':base64.b64encode(v).decode()}
       for n,v in raw.items()}\n finally:\n  if lock is not None:os.close(lock)\n  os.close(fd)\n\ndef
+      directory_metadata():\n \"\"\"A separate best-effort observation, never an access
+      decision or fallback.\"\"\"\n record={''schemaVersion'':1,''outcome'':''diagnostic_unavailable''}\n
+      try:\n  def number(value,maximum=4294967295):\n   if type(value) is not int
+      or not 0<=value<=maximum:raise ValueError(''numeric metadata'')\n   return value\n  try:s=os.lstat(''/original-receipts'')\n  except
+      OSError as exc:\n   record={''schemaVersion'':1,''outcome'':''lstat_errno'',''errno'':number(exc.errno,4095)}\n  else:\n   kind=''directory''
+      if stat.S_ISDIR(s.st_mode) else ''symlink'' if stat.S_ISLNK(s.st_mode) else
+      ''other''\n   record={''schemaVersion'':1,''outcome'':''metadata'',''euid'':number(os.geteuid()),''egid'':number(os.getegid()),''uid'':number(s.st_uid),''gid'':number(s.st_gid),''mode'':number(stat.S_IMODE(s.st_mode),4095),''type'':kind}\n
+      except Exception:pass\n try:\n  line=''OriginalReceiptDirectoryMetadata:''+json.dumps(record,sort_keys=True,separators=('','','':''))+''\\n''\n  if
+      len(line.encode(''utf-8''))>1024:return\n  sys.stderr.write(line)\n except Exception:pass\n\ndef
       main(argv):\n try:\n  expected=json.loads(argv[1]);files=extract(expected)\n  #
       Kubelet-owned DownwardAPI AtomicWriter projection, not PVC input.\n  with syscall(''PodIdentityOpen'',open,''/reader-identity/uid'',''rb'')
       as f:uid=syscall(''PodIdentityRead'',f.read,65).decode()\n  if not re.fullmatch(''[a-f0-9]{8}(-[a-f0-9]{4}){3}-[a-f0-9]{12}'',uid):raise
@@ -606,8 +615,10 @@ spec:
       mismatch'':''GroupMismatch'',''history schema'':''HistorySchema'',''capture
       schema'':''CaptureSchema'',''pod identity'':''PodIdentity''}\n  code=codes.get(str(exc),''Unhandled'')\n  if
       isinstance(exc,OSError):\n   stage=getattr(exc,''receipt_stage'',None)\n   code=(stage
-      if stage in STAGES else ''Unclassified'')+''FilesystemErrno''+str(exc.errno)\n  print(''OriginalReceiptExtractionRefused:''+code,file=sys.stderr);return
-      1\n return 0\n\nif __name__==''__main__'':sys.exit(main(sys.argv))\n","{\"claim_uid\":\"cb7f1dfa-8d40-4bc4-a9b3-8f5a92503967\",\"cluster_uid\":\"255012a6-243c-4053-843f-c268e1b4a321\",\"context\":\"portal\",\"invocation\":\"3d08188c5f24e69af33ee7e38f05bfbdb3bd3ff3d66a1d794488bb140c030c9c\",\"origin\":\"https://gitlab.perkforge.home.arpa\",\"parent_id\":7,\"platform_revision\":\"95ef0f103a89fe71b7e5aff93d0f3dd2ce31947c\",\"source_revision\":\"3f3d630e70a5f6db7282779cae059202229cb517\"}"]
+      if stage in STAGES else ''Unclassified'')+''FilesystemErrno''+str(exc.errno)\n  try:print(''OriginalReceiptExtractionRefused:''+code,file=sys.stderr)\n  except
+      Exception:pass\n  if isinstance(exc,OSError) and getattr(exc,''receipt_stage'',None)==''DirectoryOpen''
+      and exc.errno==errno.EACCES:directory_metadata()\n  return 1\n return 0\n\nif
+      __name__==''__main__'':sys.exit(main(sys.argv))\n","{\"claim_uid\":\"cb7f1dfa-8d40-4bc4-a9b3-8f5a92503967\",\"cluster_uid\":\"255012a6-243c-4053-843f-c268e1b4a321\",\"context\":\"portal\",\"invocation\":\"3d08188c5f24e69af33ee7e38f05bfbdb3bd3ff3d66a1d794488bb140c030c9c\",\"origin\":\"https://gitlab.perkforge.home.arpa\",\"parent_id\":7,\"platform_revision\":\"95ef0f103a89fe71b7e5aff93d0f3dd2ce31947c\",\"source_revision\":\"3f3d630e70a5f6db7282779cae059202229cb517\"}"]
       && (!has(object.spec.containers[0].args) || object.spec.containers[0].args.size()
       == 0) && !has(object.spec.containers[0].env) && !has(object.spec.containers[0].envFrom)
       && !has(object.spec.containers[0].lifecycle) && !has(object.spec.containers[0].livenessProbe)
@@ -653,8 +664,8 @@ spec:
       && object.spec.containers[0].volumeMounts[1].readOnly == true && !has(object.spec.containers[0].volumeMounts[1].subPath)
       && !has(object.spec.containers[0].volumeMounts[1].subPathExpr) && !has(object.spec.containers[0].volumeMounts[1].mountPropagation)
       && !has(object.spec.securityContext.fsGroup) && !has(object.spec.securityContext.fsGroupChangePolicy)
-      && request.userInfo.username == "system:admin" && object.metadata.name == "identity-receipt-export-8ca807515922c0d4"
-      && object.metadata.annotations == {"platform.perkforge.io/receipt-export-sha256":"8ca807515922c0d49a0962bd576c4149437ed172359ac5d3305bbf14fefcccad"}
+      && request.userInfo.username == "system:admin" && object.metadata.name == "identity-receipt-export-70e76a79c56bfc30"
+      && object.metadata.annotations == {"platform.perkforge.io/receipt-export-sha256":"70e76a79c56bfc30b9ce2034d2023d4503d65b03fae2ae2f02c796757bf656d5"}
       && object.metadata.labels == {"platform.perkforge.io/owner":"identity-receipt-export-v1"}
       && !has(object.metadata.ownerReferences) && !has(object.metadata.finalizers)
       && !has(object.metadata.generateName) && object.spec.activeDeadlineSeconds ==
