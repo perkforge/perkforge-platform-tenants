@@ -1,7 +1,16 @@
 import base64,fcntl,hashlib,importlib.util,json,os,pathlib,tempfile,unittest
+from unittest import mock
+from types import SimpleNamespace
 s=importlib.util.spec_from_file_location('reader',pathlib.Path(__file__).with_name('read-original-receipts.py'));r=importlib.util.module_from_spec(s);s.loader.exec_module(r)
 class Original(unittest.TestCase):
  def setUp(self):
+  # CI portability only: map this test process owner to the contract UID.
+  # Cached-image execution at UID1001 exercises actual native ownership unchanged.
+  if os.getuid()!=1001:
+   native=os.fstat
+   def owned(fd):
+    s=native(fd);return SimpleNamespace(**{k:(1001 if k=="st_uid" and getattr(s,k)==os.getuid() else getattr(s,k)) for k in ("st_uid","st_mode","st_nlink","st_size","st_ino","st_mtime_ns")})
+   patch=mock.patch.object(r.os,"fstat",side_effect=owned);patch.start();self.addCleanup(patch.stop)
   self.t=tempfile.TemporaryDirectory();self.p=pathlib.Path(self.t.name);os.chmod(self.p,0o700)
   self.e=dict(context='portal',invocation='a'*64,source_revision='b'*40,platform_revision='c'*40,parent_id=7,origin='https://example.test')
   self.g=dict(schema=1,stage='group-ready',context='portal',source_revision='b'*40,parent_id=7,origin='https://example.test',group_id=9,previous_revisions=[])
