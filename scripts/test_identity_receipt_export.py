@@ -13,6 +13,20 @@ class Export(unittest.TestCase):
  def test_service_account_from_reviewed_phase(self):
   from finite_identity import render
   self.assertEqual(build(F['D'],F['I'])['spec']['serviceAccountName'],render(F['D'])['foundation/job.yaml']['spec']['template']['spec']['serviceAccountName'])
+ def test_materialized_optin(self):
+  from render_identity_foundation import render as material
+  from identity_gitops_ownership import sha
+  original=material(d,f)
+  off=copy.deepcopy(f);off['receiptExport']={'schemaVersion':1,'enabled':False};self.assertEqual(material(d,off),original)
+  on=copy.deepcopy(off);on['receiptExport']['enabled']=True
+  with self.assertRaises(ValueError):material(d,on) # old complete foundation digest is refused
+  on['ownership']['foundationSHA256']=sha(foundation(d,on['network'],on['custody'],on['initializer'],True))
+  files,bootstrap=material(d,on)
+  self.assertFalse(any(o['kind'] in ('Pod','Job') for o in files.values()))
+  for k in ('bootstrapGuards','bootstrapGrants'):self.assertEqual(bootstrap[k],original[1][k])
+  for invalid in (True,{'enabled':True},{'schemaVersion':True,'enabled':True},{'schemaVersion':1,'enabled':1},{'schemaVersion':1,'enabled':True,'extra':1}):
+   bad=copy.deepcopy(f);bad['receiptExport']=invalid
+   with self.assertRaises(ValueError):material(d,bad)
  def test_transport(self):
   from identity_receipt_export import verify_transport
   import base64,hashlib

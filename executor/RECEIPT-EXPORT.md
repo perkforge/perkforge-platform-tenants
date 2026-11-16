@@ -35,3 +35,15 @@ Native CEL uses saved schemas plus `IDENTITY_RECEIPT_EXPORT_FIXTURE=1` and
 minimal phase fixtures deliberately lack required provider fields. Cached-image
 filesystem tests use explicit Python entrypoint, readonly root/source, no network,
 UID1001 and synthetic tmpfs. No live credential or receipt is a fixture.
+
+## Persistent selection
+
+Foundation declaration may explicitly contain `receiptExport: {schemaVersion: 1,
+enabled: true}`. Unknown keys/types are refused; absent or false preserves legacy
+output. The normal materializer recomputes nothing silently: the complete reviewed
+`ownership.foundationSHA256` must be updated to the exact new object list first.
+Generated admission and stage hashes change; bootstrap RBAC guards/grants do not.
+No helper Pod enters the GitOps selected tree. Keep the phase declaration, bundle,
+attempt, Jobs and input bytes unchanged, review generated output and enclosing
+foundation readiness hash, then use normal immutable source selection. Disable
+the option through source after the one-off extraction if no longer authorized.
