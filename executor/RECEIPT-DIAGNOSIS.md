@@ -21,3 +21,15 @@ fsGroup ownership pass runs, it ORs0660 into writable files and setgid/0770 into
 directories. OnRootMismatch skips only when the volume root GID, mode superset and
 setgid agree. Therefore recursive permission drift is possible if the root changes,
 but is not established as the live failure. The reader itself has no fsGroup.
+
+## Actual writer-generated synthetic byte check
+
+Both the original19d1159 reader and diagnostic reader passed the complete `-c`
+CLI in the exact cached maintained image with UID1001 and readonly mounts of
+retained atlas writer output. Provenance: runtimeba7f181c441c0690cd576892a847cefa3f3df41a,
+ABI7bf7a089be0346ff816fa70a40838f91bc4a7d74, synthetic platform
+551ba9544e03c4af07299e6a075b4c2f8f04a1c5; the producing partial-success fixture
+reported PASS171.830s. Both decoded transport bodies and hashes matched the exact
+original synthetic writer bytes. This rules out a universal CLI/schema mismatch,
+not live PVC permissions, identity, content, mount behavior or filesystem effects.
+No live volume or provider endpoint was accessed by this check.
