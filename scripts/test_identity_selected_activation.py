@@ -4,6 +4,7 @@ import copy,json,pathlib,unittest
 from finite_identity import render,IMAGE
 from identity_foundation import build
 from identity_gitops_ownership import sha
+from render_identity_foundation import render as render_foundation
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 class Activation(unittest.TestCase):
  def setUp(self):
@@ -20,7 +21,10 @@ class Activation(unittest.TestCase):
    i=self.d['phaseInputs'][phase]['identity'];self.assertEqual(i['identity_previous_invocation'],'89fa3d6348444b25ede774bebe27287c083b5932d4ea192b4dc5826a7e6191c5');self.assertEqual(i['identity_previous_attestation_invocation'],'')
   self.assertEqual(self.d['phaseInputs']['foundation']['group']['gitlab_group_previous_revision'],'4b027b7a50ebf477a36746b88d0f034cc6a7d454')
  def test_explicit_reviewed_foundation_hash(self):
-  c=self.c;self.assertEqual(c['ownership']['foundationSHA256'],sha(build(self.d,c['network'],c['custody'],c['initializer'])))
+  c=self.c;_,bootstrap=render_foundation(self.d,c) # validates strict persisted opt-in and exact full object hash
+  self.assertEqual(c['ownership']['foundationSHA256'],bootstrap['foundationSHA256'])
+  stale=copy.deepcopy(c);stale['ownership']['foundationSHA256']='0'*64
+  with self.assertRaises(ValueError):render_foundation(self.d,stale)
  def test_A_B_differ_only_membership_scheduling_and_its_admission(self):
   a=copy.deepcopy(self.d);a['membershipReleased']=False
   if 'phasesSuspended' in a:a['phasesSuspended']=False
@@ -28,7 +32,9 @@ class Activation(unittest.TestCase):
   fa,fb=render(a),render(b)
   self.assertEqual(set(fa),set(fb));self.assertEqual([k for k in fa if fa[k]!=fb[k]],['memberships-reconcile.yaml'])
   self.assertTrue(fa['memberships-reconcile.yaml']['spec']['suspend']);self.assertFalse(fb['memberships-reconcile.yaml']['spec']['suspend'])
-  c=self.c;oa=build(a,c['network'],c['custody'],c['initializer']);ob=build(b,c['network'],c['custody'],c['initializer'])
+  c=self.c;render_foundation(self.d,c) # validate selected opt-in before forwarding it
+  export=c.get('receiptExport',{}).get('enabled',False)
+  oa=build(a,c['network'],c['custody'],c['initializer'],receipt_export=export);ob=build(b,c['network'],c['custody'],c['initializer'],receipt_export=export)
   changed=[(x['kind'],x['metadata']['name']) for x,y in zip(oa,ob) if x!=y]
   self.assertEqual(changed,[('ValidatingAdmissionPolicy','identity-declaration-scope')])
  def test_selected_child_hold_is_exact(self):
