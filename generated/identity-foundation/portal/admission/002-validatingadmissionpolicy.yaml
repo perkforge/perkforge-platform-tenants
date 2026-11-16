@@ -561,20 +561,24 @@ spec:
       == "registry1.dso.mil/ironbank/opensource/ansible/ansible@sha256:3308322cc09f20a813c00e9087c166a3d97dbb7789c059f1020f3c0b092fdf02"
       && object.spec.containers[0].command == ["/home/python/python-env/bin/python3","-B","-c","\"\"\"Fixed
       read-only original-byte transport. No credentials, API or network.\"\"\"\nimport
-      base64,fcntl,hashlib,json,os,re,stat,sys\n\ndef unique(pairs):\n out={}\n for
-      k,v in pairs:\n  if k in out:raise ValueError(''duplicate receipt key'')\n  out[k]=v\n
-      return out\n\ndef read_at(directory,name):\n fd=os.open(name,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK,dir_fd=directory)\n
-      try:\n  s=os.fstat(fd)\n  if not stat.S_ISREG(s.st_mode) or s.st_uid!=1001 or
-      stat.S_IMODE(s.st_mode)!=0o600 or s.st_nlink!=1 or s.st_size>4096:raise ValueError(''receipt
-      file guard'')\n  raw=os.read(fd,4097)\n  if len(raw)>4096 or len(raw)!=s.st_size:raise
-      ValueError(''receipt size'')\n  after=os.fstat(fd)\n  if (s.st_ino,s.st_size,s.st_mtime_ns)!=(after.st_ino,after.st_size,after.st_mtime_ns):raise
+      base64,fcntl,hashlib,json,os,re,stat,sys\n\nSTAGES=frozenset((''DirectoryOpen'',''DirectoryStat'',''LockOpen'',''LockStat'',''LockAcquire'',''GroupOpen'',''GroupStat'',''GroupRead'',''GroupRestat'',''FoundationOpen'',''FoundationStat'',''FoundationRead'',''FoundationRestat'',''PodIdentityOpen'',''PodIdentityRead''))\n\ndef
+      syscall(stage,operation,*args,**kwargs):\n if stage not in STAGES:raise ValueError(''diagnostic
+      stage'')\n try:return operation(*args,**kwargs)\n except OSError as exc:\n  exc.receipt_stage=stage\n  raise\n\ndef
+      unique(pairs):\n out={}\n for k,v in pairs:\n  if k in out:raise ValueError(''duplicate
+      receipt key'')\n  out[k]=v\n return out\n\ndef read_at(directory,name,stage):\n
+      fd=syscall(stage+''Open'',os.open,name,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK,dir_fd=directory)\n
+      try:\n  s=syscall(stage+''Stat'',os.fstat,fd)\n  if not stat.S_ISREG(s.st_mode)
+      or s.st_uid!=1001 or stat.S_IMODE(s.st_mode)!=0o600 or s.st_nlink!=1 or s.st_size>4096:raise
+      ValueError(''receipt file guard'')\n  raw=syscall(stage+''Read'',os.read,fd,4097)\n  if
+      len(raw)>4096 or len(raw)!=s.st_size:raise ValueError(''receipt size'')\n  after=syscall(stage+''Restat'',os.fstat,fd)\n  if
+      (s.st_ino,s.st_size,s.st_mtime_ns)!=(after.st_ino,after.st_size,after.st_mtime_ns):raise
       ValueError(''receipt changed'')\n  return raw\n finally:os.close(fd)\n\ndef
-      extract(expected,root=''/original-receipts''):\n fd=os.open(root,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW)\n
-      lock=None\n try:\n  s=os.fstat(fd)\n  if s.st_uid!=1001 or stat.S_IMODE(s.st_mode)!=0o700:raise
-      ValueError(''receipt directory guard'')\n  lock=os.open(''trigger.lock'',os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK,dir_fd=fd)\n  s=os.fstat(lock)\n  if
+      extract(expected,root=''/original-receipts''):\n fd=syscall(''DirectoryOpen'',os.open,root,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW)\n
+      lock=None\n try:\n  s=syscall(''DirectoryStat'',os.fstat,fd)\n  if s.st_uid!=1001
+      or stat.S_IMODE(s.st_mode)!=0o700:raise ValueError(''receipt directory guard'')\n  lock=syscall(''LockOpen'',os.open,''trigger.lock'',os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK,dir_fd=fd)\n  s=syscall(''LockStat'',os.fstat,lock)\n  if
       not stat.S_ISREG(s.st_mode) or s.st_uid!=1001 or stat.S_IMODE(s.st_mode)!=0o600
-      or s.st_nlink!=1 or s.st_size!=0:raise ValueError(''lock guard'')\n  fcntl.flock(lock,fcntl.LOCK_SH|fcntl.LOCK_NB)\n  raw={n:read_at(fd,n)
-      for n in (''gitlab-group.json'',''foundation-result.json'')}\n  g,f=[json.loads(raw[n],object_pairs_hook=unique)
+      or s.st_nlink!=1 or s.st_size!=0:raise ValueError(''lock guard'')\n  syscall(''LockAcquire'',fcntl.flock,lock,fcntl.LOCK_SH|fcntl.LOCK_NB)\n  raw={n:read_at(fd,n,stage)
+      for n,stage in ((''gitlab-group.json'',''Group''),(''foundation-result.json'',''Foundation''))}\n  g,f=[json.loads(raw[n],object_pairs_hook=unique)
       for n in (''gitlab-group.json'',''foundation-result.json'')]\n  if set(g)!={''context'',''group_id'',''origin'',''parent_id'',''previous_revisions'',''schema'',''source_revision'',''stage''}
       or g[''schema'']!=1 or g[''stage'']!=''group-ready'':raise ValueError(''group
       schema'')\n  if set(f)!={''schema'',''phase'',''context'',''invocation'',''source_revision'',''platform_revision'',''parent_id'',''group_id'',''captured_at''}
@@ -589,10 +593,10 @@ spec:
       g[''previous_revisions'']):raise ValueError(''history schema'')\n  if not isinstance(f[''captured_at''],str)
       or len(f[''captured_at''])>64:raise ValueError(''capture schema'')\n  return
       {n:{''bytes'':len(v),''sha256'':hashlib.sha256(v).hexdigest(),''base64'':base64.b64encode(v).decode()}
-      for n,v in raw.items()}\n finally:\n  if lock is not None:os.close(lock)\n  os.close(fd)\n\nif
-      __name__==''__main__'':\n try:\n  expected=json.loads(sys.argv[1]);files=extract(expected)\n  #
-      Kubelet-owned DownwardAPI AtomicWriter projection, not PVC input.\n  with open(''/reader-identity/uid'',''rb'')
-      as f:uid=f.read(65).decode()\n  if not re.fullmatch(''[a-f0-9]{8}(-[a-f0-9]{4}){3}-[a-f0-9]{12}'',uid):raise
+      for n,v in raw.items()}\n finally:\n  if lock is not None:os.close(lock)\n  os.close(fd)\n\ndef
+      main(argv):\n try:\n  expected=json.loads(argv[1]);files=extract(expected)\n  #
+      Kubelet-owned DownwardAPI AtomicWriter projection, not PVC input.\n  with syscall(''PodIdentityOpen'',open,''/reader-identity/uid'',''rb'')
+      as f:uid=syscall(''PodIdentityRead'',f.read,65).decode()\n  if not re.fullmatch(''[a-f0-9]{8}(-[a-f0-9]{4}){3}-[a-f0-9]{12}'',uid):raise
       ValueError(''pod identity'')\n  print(json.dumps({''schemaVersion'':1,''podUID'':uid,''selection'':expected,''files'':files},sort_keys=True,separators=('','','':'')))\n
       except Exception as exc:\n  codes={''receipt file guard'':''ReceiptFileGuard'',''receipt
       size'':''ReceiptSize'',''receipt changed'':''ReceiptChanged'',''receipt directory
@@ -601,7 +605,9 @@ spec:
       mismatch'':''SelectionMismatch'',''attempt mismatch'':''AttemptMismatch'',''group
       mismatch'':''GroupMismatch'',''history schema'':''HistorySchema'',''capture
       schema'':''CaptureSchema'',''pod identity'':''PodIdentity''}\n  code=codes.get(str(exc),''Unhandled'')\n  if
-      isinstance(exc,OSError):code=''FilesystemErrno''+str(exc.errno)\n  print(''OriginalReceiptExtractionRefused:''+code,file=sys.stderr);sys.exit(1)\n","{\"claim_uid\":\"cb7f1dfa-8d40-4bc4-a9b3-8f5a92503967\",\"cluster_uid\":\"255012a6-243c-4053-843f-c268e1b4a321\",\"context\":\"portal\",\"invocation\":\"3d08188c5f24e69af33ee7e38f05bfbdb3bd3ff3d66a1d794488bb140c030c9c\",\"origin\":\"https://gitlab.perkforge.home.arpa\",\"parent_id\":7,\"platform_revision\":\"95ef0f103a89fe71b7e5aff93d0f3dd2ce31947c\",\"source_revision\":\"3f3d630e70a5f6db7282779cae059202229cb517\"}"]
+      isinstance(exc,OSError):\n   stage=getattr(exc,''receipt_stage'',None)\n   code=(stage
+      if stage in STAGES else ''Unclassified'')+''FilesystemErrno''+str(exc.errno)\n  print(''OriginalReceiptExtractionRefused:''+code,file=sys.stderr);return
+      1\n return 0\n\nif __name__==''__main__'':sys.exit(main(sys.argv))\n","{\"claim_uid\":\"cb7f1dfa-8d40-4bc4-a9b3-8f5a92503967\",\"cluster_uid\":\"255012a6-243c-4053-843f-c268e1b4a321\",\"context\":\"portal\",\"invocation\":\"3d08188c5f24e69af33ee7e38f05bfbdb3bd3ff3d66a1d794488bb140c030c9c\",\"origin\":\"https://gitlab.perkforge.home.arpa\",\"parent_id\":7,\"platform_revision\":\"95ef0f103a89fe71b7e5aff93d0f3dd2ce31947c\",\"source_revision\":\"3f3d630e70a5f6db7282779cae059202229cb517\"}"]
       && (!has(object.spec.containers[0].args) || object.spec.containers[0].args.size()
       == 0) && !has(object.spec.containers[0].env) && !has(object.spec.containers[0].envFrom)
       && !has(object.spec.containers[0].lifecycle) && !has(object.spec.containers[0].livenessProbe)
@@ -647,8 +653,8 @@ spec:
       && object.spec.containers[0].volumeMounts[1].readOnly == true && !has(object.spec.containers[0].volumeMounts[1].subPath)
       && !has(object.spec.containers[0].volumeMounts[1].subPathExpr) && !has(object.spec.containers[0].volumeMounts[1].mountPropagation)
       && !has(object.spec.securityContext.fsGroup) && !has(object.spec.securityContext.fsGroupChangePolicy)
-      && request.userInfo.username == "system:admin" && object.metadata.name == "identity-receipt-export-a49628e8b31cb28a"
-      && object.metadata.annotations == {"platform.perkforge.io/receipt-export-sha256":"a49628e8b31cb28a17277183baf81232b78e41e03b18236818205539f24c0b27"}
+      && request.userInfo.username == "system:admin" && object.metadata.name == "identity-receipt-export-8ca807515922c0d4"
+      && object.metadata.annotations == {"platform.perkforge.io/receipt-export-sha256":"8ca807515922c0d49a0962bd576c4149437ed172359ac5d3305bbf14fefcccad"}
       && object.metadata.labels == {"platform.perkforge.io/owner":"identity-receipt-export-v1"}
       && !has(object.metadata.ownerReferences) && !has(object.metadata.finalizers)
       && !has(object.metadata.generateName) && object.spec.activeDeadlineSeconds ==

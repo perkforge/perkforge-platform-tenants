@@ -33,3 +33,20 @@ reported PASS171.830s. Both decoded transport bodies and hashes matched the exac
 original synthetic writer bytes. This rules out a universal CLI/schema mismatch,
 not live PVC permissions, identity, content, mount behavior or filesystem effects.
 No live volume or provider endpoint was accessed by this check.
+
+## Fixed syscall stages (source only)
+
+The second authorized attempt returned FilesystemErrno13 and was cleaned up;
+no original receipts were captured. That code does not identify a path or cause.
+The source now reports a fixed operation stage plus numeric errno for directory
+open/stat, lock open/stat/flock, each receipt open/stat/read/restat, and UID
+projection open/read. Unknown OSError sites are explicitly Unclassified.
+No paths, exception text, receipt content, fallback access, or security changes
+are introduced. Existing guard failures retain their existing codes.
+
+Offline injected EACCES cases cover all fifteen stages and verify no receipt
+stdout, no continuation after failure, and unchanged synthetic files. The exact
+CLI also passed in the cached maintained image against the retained actual-writer
+synthetic atlas bytes identified above, preserving their hashes. This does not
+prove live PVC permissions or SELinux behavior. No selected admission output,
+new live attempt, source selection, or publication is included in this change.

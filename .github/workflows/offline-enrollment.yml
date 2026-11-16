@@ -76,6 +76,7 @@ jobs:
         python3 scripts/test_identity_kubelet_preflight.py
         python3 scripts/test_identity_receipt_export.py
         python3 executor/test_original_receipts.py
+        python3 executor/test_receipt_stages.py
         python3 scripts/finite_identity.py --check
         kubectl kustomize clusters/local-identity-portal
     # Test fixture selection only; this is not tenant discovery or a config generator.
