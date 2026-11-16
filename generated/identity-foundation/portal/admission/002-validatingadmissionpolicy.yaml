@@ -24,7 +24,7 @@ spec:
   - name: exact-namespace
     expression: request.namespace == "tenant-identity-writer"
   validations:
-  - expression: (object.spec.containers.size() == 1 && object.spec.serviceAccountName
+  - expression: '(object.spec.containers.size() == 1 && object.spec.serviceAccountName
       == "identity-group-worker" && object.spec.automountServiceAccountToken == false
       && object.spec.restartPolicy == "Never" && object.spec.nodeSelector == {"kubernetes.io/hostname":"worker-2"}
       && (!has(object.spec.hostNetwork) || object.spec.hostNetwork == false) && (!has(object.spec.hostPID)
@@ -37,14 +37,14 @@ spec:
       == 1 && object.spec.initContainers[0].name == "private-tmp" && object.spec.initContainers[0].image
       == "registry1.dso.mil/ironbank/opensource/ansible/ansible@sha256:3308322cc09f20a813c00e9087c166a3d97dbb7789c059f1020f3c0b092fdf02"
       && object.spec.initContainers[0].command == ["/home/python/python-env/bin/python3","-c","import
-      os,stat\nos.umask(0o077)\nf=os.open('/work',os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW)\ns=os.fstat(f)\nif
+      os,stat\nos.umask(0o077)\nf=os.open(''/work'',os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW)\ns=os.fstat(f)\nif
       s.st_uid!=0 or s.st_gid!=1001 or stat.S_IMODE(s.st_mode)!=0o2777 or os.listdir(f):\n
-      raise SystemExit('UnsafeTemporaryRoot')\nos.mkdir('private',0o700,dir_fd=f)\ncreated=os.stat('private',dir_fd=f,follow_symlinks=False)\nc=os.open('private',os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW,dir_fd=f)\ns=os.fstat(c)\nif
+      raise SystemExit(''UnsafeTemporaryRoot'')\nos.mkdir(''private'',0o700,dir_fd=f)\ncreated=os.stat(''private'',dir_fd=f,follow_symlinks=False)\nc=os.open(''private'',os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW,dir_fd=f)\ns=os.fstat(c)\nif
       (s.st_dev,s.st_ino)!=(created.st_dev,created.st_ino) or s.st_uid!=1001 or s.st_gid!=1001
-      or stat.S_IMODE(s.st_mode) not in (0o700,0o2700) or os.listdir(c):\n raise SystemExit('UnsafeCreatedTemporaryDirectory')\n#
-      Only this invocation's exclusively created child; never repair an existing path.\nos.fchmod(c,0o700)\ns=os.fstat(c)\nif
-      s.st_uid!=1001 or s.st_gid!=1001 or stat.S_IMODE(s.st_mode)!=0o700 or os.listdir(c):\n
-      raise SystemExit('UnsafePrivateTemporaryDirectory')\nos.close(c);os.close(f)\n"]
+      or stat.S_IMODE(s.st_mode) not in (0o700,0o2700) or os.listdir(c):\n raise SystemExit(''UnsafeCreatedTemporaryDirectory'')\n#
+      Only this invocation''s exclusively created child; never repair an existing
+      path.\nos.fchmod(c,0o700)\ns=os.fstat(c)\nif s.st_uid!=1001 or s.st_gid!=1001
+      or stat.S_IMODE(s.st_mode)!=0o700 or os.listdir(c):\n raise SystemExit(''UnsafePrivateTemporaryDirectory'')\nos.close(c);os.close(f)\n"]
       && (!has(object.spec.initContainers[0].args) || object.spec.initContainers[0].args.size()
       == 0) && !has(object.spec.initContainers[0].env) && !has(object.spec.initContainers[0].envFrom)
       && !has(object.spec.initContainers[0].lifecycle) && !has(object.spec.initContainers[0].livenessProbe)
@@ -185,8 +185,8 @@ spec:
       == "/receipts" && object.spec.containers[0].volumeMounts[4].subPath == "private"
       && !has(object.spec.containers[0].volumeMounts[4].subPathExpr) && !has(object.spec.containers[0].volumeMounts[4].mountPropagation)
       && (!has(object.spec.tolerations) || (object.spec.tolerations.size() <= 2 &&
-      object.spec.tolerations.all(t, t.key in ['node.kubernetes.io/not-ready','node.kubernetes.io/unreachable']
-      && t.operator == 'Exists' && t.effect == 'NoExecute' && t.tolerationSeconds
+      object.spec.tolerations.all(t, t.key in [''node.kubernetes.io/not-ready'',''node.kubernetes.io/unreachable'']
+      && t.operator == ''Exists'' && t.effect == ''NoExecute'' && t.tolerationSeconds
       == 300))) && object.metadata.ownerReferences.size() == 1 && object.metadata.ownerReferences[0].apiVersion
       == "batch/v1" && object.metadata.ownerReferences[0].kind == "Job" && object.metadata.ownerReferences[0].controller
       == true && object.metadata.ownerReferences[0].name == "identity-portal-foundation-54819c8b56bfc3e8"
@@ -205,14 +205,14 @@ spec:
       == 1 && object.spec.initContainers[0].name == "private-tmp" && object.spec.initContainers[0].image
       == "registry1.dso.mil/ironbank/opensource/ansible/ansible@sha256:3308322cc09f20a813c00e9087c166a3d97dbb7789c059f1020f3c0b092fdf02"
       && object.spec.initContainers[0].command == ["/home/python/python-env/bin/python3","-c","import
-      os,stat\nos.umask(0o077)\nf=os.open('/work',os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW)\ns=os.fstat(f)\nif
+      os,stat\nos.umask(0o077)\nf=os.open(''/work'',os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW)\ns=os.fstat(f)\nif
       s.st_uid!=0 or s.st_gid!=1001 or stat.S_IMODE(s.st_mode)!=0o2777 or os.listdir(f):\n
-      raise SystemExit('UnsafeTemporaryRoot')\nos.mkdir('private',0o700,dir_fd=f)\ncreated=os.stat('private',dir_fd=f,follow_symlinks=False)\nc=os.open('private',os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW,dir_fd=f)\ns=os.fstat(c)\nif
+      raise SystemExit(''UnsafeTemporaryRoot'')\nos.mkdir(''private'',0o700,dir_fd=f)\ncreated=os.stat(''private'',dir_fd=f,follow_symlinks=False)\nc=os.open(''private'',os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW,dir_fd=f)\ns=os.fstat(c)\nif
       (s.st_dev,s.st_ino)!=(created.st_dev,created.st_ino) or s.st_uid!=1001 or s.st_gid!=1001
-      or stat.S_IMODE(s.st_mode) not in (0o700,0o2700) or os.listdir(c):\n raise SystemExit('UnsafeCreatedTemporaryDirectory')\n#
-      Only this invocation's exclusively created child; never repair an existing path.\nos.fchmod(c,0o700)\ns=os.fstat(c)\nif
-      s.st_uid!=1001 or s.st_gid!=1001 or stat.S_IMODE(s.st_mode)!=0o700 or os.listdir(c):\n
-      raise SystemExit('UnsafePrivateTemporaryDirectory')\nos.close(c);os.close(f)\n"]
+      or stat.S_IMODE(s.st_mode) not in (0o700,0o2700) or os.listdir(c):\n raise SystemExit(''UnsafeCreatedTemporaryDirectory'')\n#
+      Only this invocation''s exclusively created child; never repair an existing
+      path.\nos.fchmod(c,0o700)\ns=os.fstat(c)\nif s.st_uid!=1001 or s.st_gid!=1001
+      or stat.S_IMODE(s.st_mode)!=0o700 or os.listdir(c):\n raise SystemExit(''UnsafePrivateTemporaryDirectory'')\nos.close(c);os.close(f)\n"]
       && (!has(object.spec.initContainers[0].args) || object.spec.initContainers[0].args.size()
       == 0) && !has(object.spec.initContainers[0].env) && !has(object.spec.initContainers[0].envFrom)
       && !has(object.spec.initContainers[0].lifecycle) && !has(object.spec.initContainers[0].livenessProbe)
@@ -359,13 +359,13 @@ spec:
       == true && !has(object.spec.containers[0].volumeMounts[5].subPath) && !has(object.spec.containers[0].volumeMounts[5].subPathExpr)
       && !has(object.spec.containers[0].volumeMounts[5].mountPropagation) && (!has(object.spec.tolerations)
       || (object.spec.tolerations.size() <= 2 && object.spec.tolerations.all(t, t.key
-      in ['node.kubernetes.io/not-ready','node.kubernetes.io/unreachable'] && t.operator
-      == 'Exists' && t.effect == 'NoExecute' && t.tolerationSeconds == 300))) && object.metadata.ownerReferences.size()
-      == 1 && object.metadata.ownerReferences[0].apiVersion == "batch/v1" && object.metadata.ownerReferences[0].kind
-      == "Job" && object.metadata.ownerReferences[0].controller == true && object.metadata.ownerReferences[0].name
-      == "identity-portal-memberships-54819c8b56bfc3e8" && object.metadata.generateName
-      == "identity-portal-memberships-54819c8b56bfc3e8-" && object.metadata.annotations
-      == {"platform.perkforge.io/invocation":"3d08188c5f24e69af33ee7e38f05bfbdb3bd3ff3d66a1d794488bb140c030c9c","platform.perkforge.io/attempt":"54819c8b56bfc3e8e1e19b306cb445f9ca56f526a59f1f4aa684679359245e6d"})
+      in [''node.kubernetes.io/not-ready'',''node.kubernetes.io/unreachable''] &&
+      t.operator == ''Exists'' && t.effect == ''NoExecute'' && t.tolerationSeconds
+      == 300))) && object.metadata.ownerReferences.size() == 1 && object.metadata.ownerReferences[0].apiVersion
+      == "batch/v1" && object.metadata.ownerReferences[0].kind == "Job" && object.metadata.ownerReferences[0].controller
+      == true && object.metadata.ownerReferences[0].name == "identity-portal-memberships-54819c8b56bfc3e8"
+      && object.metadata.generateName == "identity-portal-memberships-54819c8b56bfc3e8-"
+      && object.metadata.annotations == {"platform.perkforge.io/invocation":"3d08188c5f24e69af33ee7e38f05bfbdb3bd3ff3d66a1d794488bb140c030c9c","platform.perkforge.io/attempt":"54819c8b56bfc3e8e1e19b306cb445f9ca56f526a59f1f4aa684679359245e6d"})
       || (object.spec.containers.size() == 1 && object.spec.serviceAccountName ==
       "identity-group-worker" && object.spec.automountServiceAccountToken == false
       && object.spec.restartPolicy == "Never" && object.spec.nodeSelector == {"kubernetes.io/hostname":"worker-2"}
@@ -458,14 +458,14 @@ spec:
       == 1 && object.spec.initContainers[0].name == "private-tmp" && object.spec.initContainers[0].image
       == "registry1.dso.mil/ironbank/opensource/ansible/ansible@sha256:3308322cc09f20a813c00e9087c166a3d97dbb7789c059f1020f3c0b092fdf02"
       && object.spec.initContainers[0].command == ["/home/python/python-env/bin/python3","-c","import
-      os,stat\nos.umask(0o077)\nf=os.open('/work',os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW)\ns=os.fstat(f)\nif
+      os,stat\nos.umask(0o077)\nf=os.open(''/work'',os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW)\ns=os.fstat(f)\nif
       s.st_uid!=0 or s.st_gid!=1001 or stat.S_IMODE(s.st_mode)!=0o2777 or os.listdir(f):\n
-      raise SystemExit('UnsafeTemporaryRoot')\nos.mkdir('private',0o700,dir_fd=f)\ncreated=os.stat('private',dir_fd=f,follow_symlinks=False)\nc=os.open('private',os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW,dir_fd=f)\ns=os.fstat(c)\nif
+      raise SystemExit(''UnsafeTemporaryRoot'')\nos.mkdir(''private'',0o700,dir_fd=f)\ncreated=os.stat(''private'',dir_fd=f,follow_symlinks=False)\nc=os.open(''private'',os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW,dir_fd=f)\ns=os.fstat(c)\nif
       (s.st_dev,s.st_ino)!=(created.st_dev,created.st_ino) or s.st_uid!=1001 or s.st_gid!=1001
-      or stat.S_IMODE(s.st_mode) not in (0o700,0o2700) or os.listdir(c):\n raise SystemExit('UnsafeCreatedTemporaryDirectory')\n#
-      Only this invocation's exclusively created child; never repair an existing path.\nos.fchmod(c,0o700)\ns=os.fstat(c)\nif
-      s.st_uid!=1001 or s.st_gid!=1001 or stat.S_IMODE(s.st_mode)!=0o700 or os.listdir(c):\n
-      raise SystemExit('UnsafePrivateTemporaryDirectory')\nos.close(c);os.close(f)\n"]
+      or stat.S_IMODE(s.st_mode) not in (0o700,0o2700) or os.listdir(c):\n raise SystemExit(''UnsafeCreatedTemporaryDirectory'')\n#
+      Only this invocation''s exclusively created child; never repair an existing
+      path.\nos.fchmod(c,0o700)\ns=os.fstat(c)\nif s.st_uid!=1001 or s.st_gid!=1001
+      or stat.S_IMODE(s.st_mode)!=0o700 or os.listdir(c):\n raise SystemExit(''UnsafePrivateTemporaryDirectory'')\nos.close(c);os.close(f)\n"]
       && (!has(object.spec.initContainers[0].args) || object.spec.initContainers[0].args.size()
       == 0) && !has(object.spec.initContainers[0].env) && !has(object.spec.initContainers[0].envFrom)
       && !has(object.spec.initContainers[0].lifecycle) && !has(object.spec.initContainers[0].livenessProbe)
@@ -497,10 +497,10 @@ spec:
       && !has(dyn(object.spec).resources) && object.spec.containers[0].name == "verify-private-tmp"
       && object.spec.containers[0].image == "registry1.dso.mil/ironbank/opensource/ansible/ansible@sha256:3308322cc09f20a813c00e9087c166a3d97dbb7789c059f1020f3c0b092fdf02"
       && object.spec.containers[0].command == ["/usr/bin/timeout","--signal=TERM","--kill-after=10s","270s","/home/python/python-env/bin/python3","-c","import
-      os,stat\ns=os.lstat('/tmp')\nif os.getuid()!=1001 or os.getgid()!=1001 or not
-      stat.S_ISDIR(s.st_mode) or s.st_uid!=1001 or s.st_gid!=1001 or stat.S_IMODE(s.st_mode)!=0o700
-      or os.listdir('/tmp'):\n raise SystemExit('PrivateTemporaryWorkspaceUnverified')\nif
-      os.getpid()<=1:\n raise SystemExit('MissingSupervisor')\nprint('PrivateTemporaryWorkspaceVerified',flush=True)\n"]
+      os,stat\ns=os.lstat(''/tmp'')\nif os.getuid()!=1001 or os.getgid()!=1001 or
+      not stat.S_ISDIR(s.st_mode) or s.st_uid!=1001 or s.st_gid!=1001 or stat.S_IMODE(s.st_mode)!=0o700
+      or os.listdir(''/tmp''):\n raise SystemExit(''PrivateTemporaryWorkspaceUnverified'')\nif
+      os.getpid()<=1:\n raise SystemExit(''MissingSupervisor'')\nprint(''PrivateTemporaryWorkspaceVerified'',flush=True)\n"]
       && (!has(object.spec.containers[0].args) || object.spec.containers[0].args.size()
       == 0) && !has(object.spec.containers[0].env) && !has(object.spec.containers[0].envFrom)
       && !has(object.spec.containers[0].lifecycle) && !has(object.spec.containers[0].livenessProbe)
@@ -546,6 +546,108 @@ spec:
       300 && (!has(object.spec.tolerations) || (object.spec.tolerations.size() <=
       2 && object.spec.tolerations.all(t, t.key in ["node.kubernetes.io/not-ready","node.kubernetes.io/unreachable"]
       && t.operator == "Exists" && t.effect == "NoExecute" && t.tolerationSeconds
-      == 300))))
+      == 300)))) || (object.spec.containers.size() == 1 && object.spec.serviceAccountName
+      == "identity-group-worker" && object.spec.automountServiceAccountToken == false
+      && object.spec.restartPolicy == "Never" && object.spec.nodeSelector == {"kubernetes.io/hostname":"worker-2"}
+      && (!has(object.spec.hostNetwork) || object.spec.hostNetwork == false) && (!has(object.spec.hostPID)
+      || object.spec.hostPID == false) && (!has(object.spec.hostIPC) || object.spec.hostIPC
+      == false) && (!has(object.spec.shareProcessNamespace) || object.spec.shareProcessNamespace
+      == false) && !has(object.spec.nodeName) && !has(object.spec.initContainers)
+      && !has(object.spec.ephemeralContainers) && !has(object.spec.hostAliases) &&
+      !has(object.spec.dnsConfig) && !has(object.spec.runtimeClassName) && !has(object.spec.affinity)
+      && !has(object.spec.topologySpreadConstraints) && !has(object.spec.resourceClaims)
+      && !has(object.spec.os) && !has(dyn(object.spec).overhead) && !has(dyn(object.spec).resources)
+      && object.spec.containers[0].name == "read-original-receipts" && object.spec.containers[0].image
+      == "registry1.dso.mil/ironbank/opensource/ansible/ansible@sha256:3308322cc09f20a813c00e9087c166a3d97dbb7789c059f1020f3c0b092fdf02"
+      && object.spec.containers[0].command == ["/home/python/python-env/bin/python3","-B","-c","\"\"\"Fixed
+      read-only original-byte transport. No credentials, API or network.\"\"\"\nimport
+      base64,fcntl,hashlib,json,os,re,stat,sys\n\ndef unique(pairs):\n out={}\n for
+      k,v in pairs:\n  if k in out:raise ValueError(''duplicate receipt key'')\n  out[k]=v\n
+      return out\n\ndef read_at(directory,name):\n fd=os.open(name,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK,dir_fd=directory)\n
+      try:\n  s=os.fstat(fd)\n  if not stat.S_ISREG(s.st_mode) or s.st_uid!=1001 or
+      stat.S_IMODE(s.st_mode)!=0o600 or s.st_nlink!=1 or s.st_size>4096:raise ValueError(''receipt
+      file guard'')\n  raw=os.read(fd,4097)\n  if len(raw)>4096 or len(raw)!=s.st_size:raise
+      ValueError(''receipt size'')\n  after=os.fstat(fd)\n  if (s.st_ino,s.st_size,s.st_mtime_ns)!=(after.st_ino,after.st_size,after.st_mtime_ns):raise
+      ValueError(''receipt changed'')\n  return raw\n finally:os.close(fd)\n\ndef
+      extract(expected,root=''/original-receipts''):\n fd=os.open(root,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW)\n
+      lock=None\n try:\n  s=os.fstat(fd)\n  if s.st_uid!=1001 or stat.S_IMODE(s.st_mode)!=0o700:raise
+      ValueError(''receipt directory guard'')\n  lock=os.open(''trigger.lock'',os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK,dir_fd=fd)\n  s=os.fstat(lock)\n  if
+      not stat.S_ISREG(s.st_mode) or s.st_uid!=1001 or stat.S_IMODE(s.st_mode)!=0o600
+      or s.st_nlink!=1 or s.st_size!=0:raise ValueError(''lock guard'')\n  fcntl.flock(lock,fcntl.LOCK_SH|fcntl.LOCK_NB)\n  raw={n:read_at(fd,n)
+      for n in (''gitlab-group.json'',''foundation-result.json'')}\n  g,f=[json.loads(raw[n],object_pairs_hook=unique)
+      for n in (''gitlab-group.json'',''foundation-result.json'')]\n  if set(g)!={''context'',''group_id'',''origin'',''parent_id'',''previous_revisions'',''schema'',''source_revision'',''stage''}
+      or g[''schema'']!=1 or g[''stage'']!=''group-ready'':raise ValueError(''group
+      schema'')\n  if set(f)!={''schema'',''phase'',''context'',''invocation'',''source_revision'',''platform_revision'',''parent_id'',''group_id'',''captured_at''}
+      or f[''schema'']!=1 or f[''phase'']!=''GroupReady'':raise ValueError(''foundation
+      schema'')\n  for k in (''context'',''source_revision'',''parent_id''):\n   if
+      g[k]!=expected[k] or f[k]!=expected[k]:raise ValueError(''selection mismatch'')\n  if
+      g[''origin'']!=expected[''origin''] or any(f[k]!=expected[k] for k in (''invocation'',''platform_revision'')):raise
+      ValueError(''attempt mismatch'')\n  if type(g[''group_id'']) is not int or g[''group_id'']<1
+      or type(f[''group_id'']) is not int or f[''group_id'']!=g[''group_id'']:raise
+      ValueError(''group mismatch'')\n  if not isinstance(g[''previous_revisions''],list)
+      or any(not isinstance(x,str) or not re.fullmatch(''[a-f0-9]{40}'',x) for x in
+      g[''previous_revisions'']):raise ValueError(''history schema'')\n  if not isinstance(f[''captured_at''],str)
+      or len(f[''captured_at''])>64:raise ValueError(''capture schema'')\n  return
+      {n:{''bytes'':len(v),''sha256'':hashlib.sha256(v).hexdigest(),''base64'':base64.b64encode(v).decode()}
+      for n,v in raw.items()}\n finally:\n  if lock is not None:os.close(lock)\n  os.close(fd)\n\nif
+      __name__==''__main__'':\n try:\n  expected=json.loads(sys.argv[1]);files=extract(expected)\n  #
+      Kubelet-owned DownwardAPI AtomicWriter projection, not PVC input.\n  with open(''/reader-identity/uid'',''rb'')
+      as f:uid=f.read(65).decode()\n  if not re.fullmatch(''[a-f0-9]{8}(-[a-f0-9]{4}){3}-[a-f0-9]{12}'',uid):raise
+      ValueError(''pod identity'')\n  print(json.dumps({''schemaVersion'':1,''podUID'':uid,''selection'':expected,''files'':files},sort_keys=True,separators=('','','':'')))\n
+      except Exception:\n  print(''OriginalReceiptExtractionRefused'',file=sys.stderr);sys.exit(1)\n","{\"claim_uid\":\"cb7f1dfa-8d40-4bc4-a9b3-8f5a92503967\",\"cluster_uid\":\"255012a6-243c-4053-843f-c268e1b4a321\",\"context\":\"portal\",\"invocation\":\"3d08188c5f24e69af33ee7e38f05bfbdb3bd3ff3d66a1d794488bb140c030c9c\",\"origin\":\"https://gitlab.perkforge.home.arpa\",\"parent_id\":7,\"platform_revision\":\"95ef0f103a89fe71b7e5aff93d0f3dd2ce31947c\",\"source_revision\":\"3f3d630e70a5f6db7282779cae059202229cb517\"}"]
+      && (!has(object.spec.containers[0].args) || object.spec.containers[0].args.size()
+      == 0) && !has(object.spec.containers[0].env) && !has(object.spec.containers[0].envFrom)
+      && !has(object.spec.containers[0].lifecycle) && !has(object.spec.containers[0].livenessProbe)
+      && !has(object.spec.containers[0].readinessProbe) && !has(object.spec.containers[0].startupProbe)
+      && !has(object.spec.containers[0].ports) && !has(object.spec.containers[0].workingDir)
+      && !has(object.spec.containers[0].volumeDevices) && !has(object.spec.containers[0].restartPolicy)
+      && !has(object.spec.containers[0].restartPolicyRules) && (!has(object.spec.containers[0].terminationMessagePath)
+      || object.spec.containers[0].terminationMessagePath == "/dev/termination-log")
+      && (!has(object.spec.containers[0].terminationMessagePolicy) || object.spec.containers[0].terminationMessagePolicy
+      == "File") && (!has(object.spec.containers[0].stdin) || object.spec.containers[0].stdin
+      == false) && (!has(object.spec.containers[0].stdinOnce) || object.spec.containers[0].stdinOnce
+      == false) && (!has(object.spec.containers[0].tty) || object.spec.containers[0].tty
+      == false) && (!has(object.spec.schedulerName) || object.spec.schedulerName ==
+      "default-scheduler") && (!has(object.spec.priorityClassName) || object.spec.priorityClassName
+      == "") && (!has(object.spec.priority) || object.spec.priority == 0) && !has(object.spec.containers[0].securityContext.runAsUser)
+      && !has(object.spec.containers[0].securityContext.runAsGroup) && !has(object.spec.containers[0].securityContext.runAsNonRoot)
+      && !has(object.spec.containers[0].securityContext.seccompProfile) && !has(object.spec.containers[0].securityContext.seLinuxOptions)
+      && !has(object.spec.containers[0].securityContext.appArmorProfile) && !has(object.spec.containers[0].securityContext.procMount)
+      && !has(object.spec.securityContext.seLinuxOptions) && !has(object.spec.securityContext.supplementalGroups)
+      && !has(object.spec.securityContext.sysctls) && !has(object.spec.securityContext.appArmorProfile)
+      && object.spec.containers[0].securityContext.allowPrivilegeEscalation == false
+      && object.spec.containers[0].securityContext.readOnlyRootFilesystem == true
+      && object.spec.containers[0].securityContext.capabilities.drop == ["ALL"] &&
+      (!has(object.spec.containers[0].securityContext.capabilities.add) || object.spec.containers[0].securityContext.capabilities.add.size()
+      == 0) && (!has(object.spec.containers[0].securityContext.privileged) || object.spec.containers[0].securityContext.privileged
+      == false) && object.spec.securityContext.runAsNonRoot == true && object.spec.securityContext.runAsUser
+      == 1001 && object.spec.securityContext.runAsGroup == 1001 && object.spec.securityContext.seccompProfile.type
+      == "RuntimeDefault" && dyn(object.spec.containers[0].resources).requests ==
+      {"cpu":"100m","memory":"256Mi"} && dyn(object.spec.containers[0].resources).limits
+      == {"cpu":"500m","memory":"512Mi"} && object.spec.imagePullSecrets.size() ==
+      1 && object.spec.imagePullSecrets[0].name == "private-registry" && object.spec.volumes.size()
+      == 2 && object.spec.containers[0].volumeMounts.size() == 2 && object.spec.volumes[0].name
+      == "receipts" && object.spec.volumes[0].persistentVolumeClaim.claimName == "identity-receipts"
+      && object.spec.volumes[0].persistentVolumeClaim.readOnly == true && object.spec.volumes[1].name
+      == "identity" && object.spec.volumes[1].downwardAPI.items.size() == 1 && object.spec.volumes[1].downwardAPI.items[0].path
+      == "uid" && object.spec.volumes[1].downwardAPI.items[0].fieldRef.fieldPath ==
+      "metadata.uid" && object.spec.containers[0].volumeMounts[0].name == "receipts"
+      && object.spec.containers[0].volumeMounts[0].mountPath == "/original-receipts"
+      && object.spec.containers[0].volumeMounts[0].subPath == "private/portal" &&
+      object.spec.containers[0].volumeMounts[0].readOnly == true && !has(object.spec.containers[0].volumeMounts[0].subPathExpr)
+      && !has(object.spec.containers[0].volumeMounts[0].mountPropagation) && object.spec.containers[0].volumeMounts[1].name
+      == "identity" && object.spec.containers[0].volumeMounts[1].mountPath == "/reader-identity"
+      && object.spec.containers[0].volumeMounts[1].readOnly == true && !has(object.spec.containers[0].volumeMounts[1].subPath)
+      && !has(object.spec.containers[0].volumeMounts[1].subPathExpr) && !has(object.spec.containers[0].volumeMounts[1].mountPropagation)
+      && !has(object.spec.securityContext.fsGroup) && !has(object.spec.securityContext.fsGroupChangePolicy)
+      && request.userInfo.username == "system:admin" && object.metadata.name == "identity-receipt-export-74cd324a4ee03ae1"
+      && object.metadata.annotations == {"platform.perkforge.io/receipt-export-sha256":"74cd324a4ee03ae1dfa62388856fdb366faa51ab2fbe8d6cd22270603af97095"}
+      && object.metadata.labels == {"platform.perkforge.io/owner":"identity-receipt-export-v1"}
+      && !has(object.metadata.ownerReferences) && !has(object.metadata.finalizers)
+      && !has(object.metadata.generateName) && object.spec.activeDeadlineSeconds ==
+      60 && (!has(object.spec.tolerations) || (object.spec.tolerations.size() <= 2
+      && object.spec.tolerations.all(t, t.key in ["node.kubernetes.io/not-ready","node.kubernetes.io/unreachable"]
+      && t.operator == "Exists" && t.effect == "NoExecute" && t.tolerationSeconds
+      == 300))))'
     message: Identity foundation boundary refused an unreviewed mutation.
     reason: Forbidden

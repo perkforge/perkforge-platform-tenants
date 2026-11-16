@@ -16,8 +16,10 @@ class Export(unittest.TestCase):
  def test_materialized_optin(self):
   from render_identity_foundation import render as material
   from identity_gitops_ownership import sha
-  original=material(d,f)
-  off=copy.deepcopy(f);off['receiptExport']={'schemaVersion':1,'enabled':False};self.assertEqual(material(d,off),original)
+  base=copy.deepcopy(f);base.pop('receiptExport',None)
+  base['ownership']['foundationSHA256']=sha(foundation(d,base['network'],base['custody'],base['initializer']))
+  original=material(d,base)
+  off=copy.deepcopy(base);off['receiptExport']={'schemaVersion':1,'enabled':False};self.assertEqual(material(d,off),original)
   on=copy.deepcopy(off);on['receiptExport']['enabled']=True
   with self.assertRaises(ValueError):material(d,on) # old complete foundation digest is refused
   on['ownership']['foundationSHA256']=sha(foundation(d,on['network'],on['custody'],on['initializer'],True))
