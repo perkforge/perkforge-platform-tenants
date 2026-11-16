@@ -1,5 +1,5 @@
 """Fixed read-only original-byte transport. No credentials, API or network."""
-import base64,fcntl,hashlib,json,os,re,stat,sys
+import errno,base64,fcntl,hashlib,json,os,re,stat,sys
 
 STAGES=frozenset(('DirectoryOpen','DirectoryStat','LockOpen','LockStat','LockAcquire','GroupOpen','GroupStat','GroupRead','GroupRestat','FoundationOpen','FoundationStat','FoundationRead','FoundationRestat','PodIdentityOpen','PodIdentityRead'))
 
@@ -54,6 +54,26 @@ def extract(expected,root='/original-receipts'):
   if lock is not None:os.close(lock)
   os.close(fd)
 
+def directory_metadata():
+ """A separate best-effort observation, never an access decision or fallback."""
+ record={'schemaVersion':1,'outcome':'diagnostic_unavailable'}
+ try:
+  def number(value,maximum=4294967295):
+   if type(value) is not int or not 0<=value<=maximum:raise ValueError('numeric metadata')
+   return value
+  try:s=os.lstat('/original-receipts')
+  except OSError as exc:
+   record={'schemaVersion':1,'outcome':'lstat_errno','errno':number(exc.errno,4095)}
+  else:
+   kind='directory' if stat.S_ISDIR(s.st_mode) else 'symlink' if stat.S_ISLNK(s.st_mode) else 'other'
+   record={'schemaVersion':1,'outcome':'metadata','euid':number(os.geteuid()),'egid':number(os.getegid()),'uid':number(s.st_uid),'gid':number(s.st_gid),'mode':number(stat.S_IMODE(s.st_mode),4095),'type':kind}
+ except Exception:pass
+ try:
+  line='OriginalReceiptDirectoryMetadata:'+json.dumps(record,sort_keys=True,separators=(',',':'))+'\n'
+  if len(line.encode('utf-8'))>1024:return
+  sys.stderr.write(line)
+ except Exception:pass
+
 def main(argv):
  try:
   expected=json.loads(argv[1]);files=extract(expected)
@@ -67,7 +87,10 @@ def main(argv):
   if isinstance(exc,OSError):
    stage=getattr(exc,'receipt_stage',None)
    code=(stage if stage in STAGES else 'Unclassified')+'FilesystemErrno'+str(exc.errno)
-  print('OriginalReceiptExtractionRefused:'+code,file=sys.stderr);return 1
+  try:print('OriginalReceiptExtractionRefused:'+code,file=sys.stderr)
+  except Exception:pass
+  if isinstance(exc,OSError) and getattr(exc,'receipt_stage',None)=='DirectoryOpen' and exc.errno==errno.EACCES:directory_metadata()
+  return 1
  return 0
 
 if __name__=='__main__':sys.exit(main(sys.argv))
