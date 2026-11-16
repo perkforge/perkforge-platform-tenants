@@ -1,5 +1,34 @@
 # Changelog
 
+## [2.11.0](https://github.com/perkforge/perkforge-platform-tenants/compare/v2.10.0...v2.11.0) (2026-11-16)
+
+
+### Features
+
+* **identity:** add opt-in bounded readonly original receipt export ([894d5ee](https://github.com/perkforge/perkforge-platform-tenants/commit/894d5eedabdac2f5eaa46b99a75f2b9c0973ccce))
+* **identity:** bounded read-only original receipt extraction ([14667f2](https://github.com/perkforge/perkforge-platform-tenants/commit/14667f2edc833e8a73ad30c136346d48e482ffab))
+* **identity:** persist strict receipt-export foundation opt-in ([40aed26](https://github.com/perkforge/perkforge-platform-tenants/commit/40aed26224a1618ab84ce237a772243c664a8430))
+* **identity:** select bounded receipt export without phase replay ([0dda7e0](https://github.com/perkforge/perkforge-platform-tenants/commit/0dda7e03745b171db7e9e1799d2286f95fa578a0))
+
+
+### Bug Fixes
+
+* **identity:** bind selected scheduling to current Ready conditions ([8095e0e](https://github.com/perkforge/perkforge-platform-tenants/commit/8095e0e0aa7f2df6d57caa5e51bc6be25c13e987))
+* **identity:** diagnose receipt directory metadata safely ([ec5bee4](https://github.com/perkforge/perkforge-platform-tenants/commit/ec5bee4cd5c76a6ed0976deff5e47472afcd092f))
+* **identity:** diagnose receipt directory metadata safely ([5f60130](https://github.com/perkforge/perkforge-platform-tenants/commit/5f60130630011b018996bfb5f5d6ca9b108f1075))
+* **identity:** fence dependencies on current unsuspended readiness ([56fad7f](https://github.com/perkforge/perkforge-platform-tenants/commit/56fad7fb848b881b56f99fb99e9d3e924d03cfc4))
+* **identity:** gate released partial retry foundation and attestation ([ccfb231](https://github.com/perkforge/perkforge-platform-tenants/commit/ccfb231c3ad0e70af8682d535d320ca0449d2897))
+* **identity:** identify bounded receipt syscall failure stages ([5ef50a5](https://github.com/perkforge/perkforge-platform-tenants/commit/5ef50a5e4bd895580f730e575bf3e593cbb02b4f))
+* **identity:** identify exact receipt-read failure stage ([9d56345](https://github.com/perkforge/perkforge-platform-tenants/commit/9d56345ea21e7401349395cc4940fbe9e6fe1d7d))
+* **identity:** reject receipt aliases and ambiguous JSON ([65fb673](https://github.com/perkforge/perkforge-platform-tenants/commit/65fb673dd185d4d0e038c750bb1f9bc1d7710a57))
+* **identity:** require unsuspended current-generation phase readiness ([07737d4](https://github.com/perkforge/perkforge-platform-tenants/commit/07737d4598bf454bdb2f55ba490a42d6754eb3f0))
+* **identity:** retain bounded receipt extraction diagnostics ([299df76](https://github.com/perkforge/perkforge-platform-tenants/commit/299df7601afe192f400ecd768d3e071ca655352e))
+* **identity:** retain separate fresh-evidence membership release stage ([e3c1878](https://github.com/perkforge/perkforge-platform-tenants/commit/e3c1878a219b402b7b7a1cb3776f1d2fab6e1328))
+* **identity:** select bounded receipt-reader diagnostics ([dd5b5c3](https://github.com/perkforge/perkforge-platform-tenants/commit/dd5b5c339a5aedcc8d5be0490da9f815cda113da))
+* **identity:** select exact receipt stage diagnostics ([c1405c1](https://github.com/perkforge/perkforge-platform-tenants/commit/c1405c16ca0f7a6ddbec230acab6fbf606ec1b50))
+* **identity:** stage released partial-success retry behind all child holds ([6890df6](https://github.com/perkforge/perkforge-platform-tenants/commit/6890df6284170548c389742e61de7a0db6d00ef4))
+* **identity:** stage released partial-success retry with separate gates ([34d1c6d](https://github.com/perkforge/perkforge-platform-tenants/commit/34d1c6d8ccafb10e57c11816ad428f48c6d11fe5))
+
 ## [2.10.0](https://github.com/perkforge/perkforge-platform-tenants/compare/v2.9.0...v2.10.0) (2026-11-15)
 
 
